@@ -2,801 +2,1081 @@
 <html>
 
 <head>
-	<meta charset="UTF-8">
-	<style>
-		#chartdiv {
-			width: 100%;
-			height: 500px;
-		}
-	</style>
+    <meta charset="UTF-8">
+    <style>
+        #chartdiv {
+            width: 100%;
+            height: 500px;
+        }
+    </style>
 
-	<!-- TODO
-		- ennakkotietojen pilkkominen
-		- junanumero labeliksi viivan myötäisesti
-		- junien aikataulu ja toteuma hover yhteen?
-		- dateaxis custom formaatit
-		- dateaxis custom gridlines
-		- dateaxis päivälabel erikseen tuntitickien alle
-		- yaxis custom gridlines
-		- yaxis tuki aikataulupaikkaväleille
-		- infinite scroll, eli kun scrollataan reunaan tai hypätään tyhjälle, niin siirretään xAxis min/max keskikohta vanhaan reunaan. Ja trigataan load ennakkotietodatalle
-		- jump-to-date laatikko
-		- aikataulupiste (erityisesti vaakasuora viiva) kertomaan "raide" eli siis kapasiteetinhallintayksikkö
-		- junien sijainti mukaan
-		- ratatyöt
-	-->
+    <!-- TODO
+        - auttaako päällekäisten tooltippien näkymiseen jos luo joka seriesille uuden tooltip-instanssin?
+        - junanumero labeliksi viivan myötäisesti
+        - dateaxis custom formaatit
+        - dateaxis custom gridlines
+        - dateaxis päivälabel erikseen tuntitickien alle
+        - yaxis custom gridlines
+        - yaxis tuki aikataulupaikkaväleille
+        - infinite scroll, eli kun scrollataan reunaan tai hypätään tyhjälle, niin siirretään xAxis min/max keskikohta vanhaan reunaan. Ja trigataan load ennakkotietodatalle
+        - jump-to-date laatikko
+        - aikataulupiste (erityisesti vaakasuora viiva) kertomaan "raide" eli siis kapasiteetinhallintayksikkö
+		- sijainti heijastumaan urliin
+        - junien sijainti mukaan
+        - ratatyöt
+        - valitut objektit listaksi legendiin, tooltip mukaan
+        - selectioniin valinnan alue tooltipiksi tms
+    -->
 
-	<script src="https://www.amcharts.com/lib/version/4.9.14/core.js"></script>
-	<script src="https://www.amcharts.com/lib/version/4.9.14/charts.js"></script>
-	<script src="https://www.amcharts.com/lib/version/4.9.14/lang/fi_FI.js"></script>
-	<script src="datefns.js"></script>
-	<script>
-		window.infraAPIUrl = 'https://rata.digitraffic.fi/infra-api/0.6/';
-		window.etj2APIUrl = 'https://rata.digitraffic.fi/jeti-api/0.6/';
+    <script src="https://www.amcharts.com/lib/version/4.9.18/core.js"></script>
+	<script src="https://www.amcharts.com/lib/version/4.9.18/charts.js"></script>
+	<script src="https://www.amcharts.com/lib/version/4.9.18/lang/fi_FI.js"></script>
+	<script src="https://www.amcharts.com/lib/version/4.9.18/themes/animated.js"></script>
+    <script src="datefns.js"></script>
+    <script>
+        let log = (msg1, msg2) => {
+            if (console && console.log) {
+                console.log(dateFns.dateFns.format(new Date(), 'yyyy-MM-dd HH:mm:ss.SSS'), ":", msg1, msg2);
+            }
+        };
+
+        window.infraAPIUrl = 'https://rata.digitraffic.fi/infra-api/0.6/';
+        window.etj2APIUrl = 'https://rata.digitraffic.fi/jeti-api/0.6/';
 		window.aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
 
-		let ratanumerotUrl = infraAPIUrl + "radat.json?propertyName=ratakilometrit,ratanumero";
-		let rautatieliikennepaikatUrl = infraAPIUrl + "rautatieliikennepaikat.json?propertyName=lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti";
-		let liikennepaikanOsatUrl = infraAPIUrl + "liikennepaikanosat.json?propertyName=liikennepaikka,lyhenne,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti";
-		let raideosuudetUrl = infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27raideosuus%27&propertyName=tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tyyppi,uickoodi";
-		let laituritUrl = infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27laituri%27&propertyName=tunniste.tunniste,tunniste.kuvaus,tunniste.laskennallisetRatakmvalit,tunniste.tunnus,tyyppi,uickoodi";
-		let eiUrl = etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27hyväksytty%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa';
-		let esUrl = etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa';
-		let vsUrl = etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa';
-		let loUrl = etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika';
-
-		let log = function(msg1, msg2) {
-			if (console && console.log) {
-				console.log(dateFns.dateFns.format(new Date(), 'yyyy-MM-dd HH:mm:ss.SSS'), ":", msg1, msg2);
-			}
-		};
-
-		let errorHandler = function(ev) {
-			log("Virhe!", ev);
-		};
-
-		let on = function(obj, event, f) {
-			obj.on(event, function(a, b, c) {
-				try {
-					return f(a, b, c);
-				} catch (e) {
-					errorHandler(e);
-					throw e;
-				}
-			});
-		};
-
-		let add = function(obj, name, f) {
-			obj.add(name, function(a, b, c) {
-				try {
-					return f(a, b, c);
-				} catch (e) {
-					errorHandler(e);
-					throw e;
-				}
-			});
-		};
-
-		let ajankohtaAikavaleiksi = function(ajankohta) {
-			if (ajankohta.yhtajaksoinen) {
-				return ajankohta.yhtajaksoinen.split("/").map(function(x) { return new Date(x); });
-			} else {
-				let aloitusViikot = ajankohta.toistuva.alkoitusViikot; // viikottain|jokatoinen|jokaneljäs
-				let ensimmainenAloitusPaiva = new Date(ajankohta.toistuva.ensimmainenAloitusPaiva); // "2019-10-29"
-				let aloitusViikonpaivat = ajankohta.toistuva.aloitusViikonpaivat; // [ma|ti|ke|to|pe|la|su]
-				let timezone = ajankohta.toistuva.timezone; // "Europe/Helsinki"
-				let aloitusaika = ajankohta.toistuva.aloitusaika; // "06:00:00"
-				let kesto = ajankohta.toistuva.kesto; // "PT43200S";
-				let viimeinenAloitusPaiva = new Date(ajankohta.toistuva.viimeinenAloitusPaiva); // "2020-05-29"
-			}
-		}
+		let params = new URLSearchParams(window.location.hash.replace("#", "?"));
 		
+        let sijaintiParam = params.get("sijainti") || "009";
+		let aikaParam     = new Date(params.get("aika") || new Date().toISOString());
+		let kestoParam    = dateFns.durationFns.parse(params.get("kesto") || "P1D");
 
-		
+        log("Parametri Sijainti", sijaintiParam);
+		log("Parametri Aika", aikaParam);
+		log("Parametri Kesto", kestoParam);
 
-		window.loadingIndicator = new am4core.DataItem();
-		window.loadingIndicator.categories.aktiiviset = "";
-		window.loadingIndicator.values.count = {value: 0};
+        window.ikkuna = [dateFns.dateFns.sub(aikaParam, kestoParam), dateFns.dateFns.add(aikaParam, kestoParam)];
+		window.rajat  = [dateFns.dateFns.addDays(ikkuna[0], -3), dateFns.dateFns.addDays(ikkuna[1], 3)];
 
-		let monitor = function(ds, type) {
-			ds.events.on("error", errorHandler);
-			on(ds.events, "started", function() {
-				loadingIndicator.setCategory("aktiiviset", loadingIndicator.categories.aktiiviset + " " + type);
-				loadingIndicator.setValue("count", loadingIndicator.values.count.value + 1);
-			});
-			on(ds.events, "ended", function() {
-				loadingIndicator.setCategory("aktiiviset", loadingIndicator.categories.aktiiviset.replace(" " + type, ""));
-				loadingIndicator.setValue("count", loadingIndicator.values.count.value - 1);
-			});
-		}
+		let infraAikavali = '';
+		let etj2Aikavali = '&time=' + rajat.map(function(x) { return x.toISOString().replace(/\.\d\d\d/, ''); }).join("/");
+        let rumaAikavali = '&start=' + rajat[0].toISOString().replace(/\.\d\d\d/, '') + "&end=" + rajat[1].toISOString().replace(/\.\d\d\d/, '');
 
-		let luoDatasource = function(type, url, f) {
-			let ds = new am4core.DataSource();
-			ds.url = url;
-			monitor(ds, type);
-			on(ds.events, "parseended", function(ev) {
-				log("Parsitaan " + type);
-				var ret = {};
-				Object.values(ev.target.data).flat().forEach(function(x) { f(ret, x); });
-				ev.target.data = ret;
-				log("Parsittu " + type);
-			});
-			ds.load();
-			return ds;
+        let ratanumerotUrl            = infraAPIUrl + "radat.json?propertyName=ratakilometrit,ratanumero" + infraAikavali;
+        let rautatieliikennepaikatUrl = infraAPIUrl + "rautatieliikennepaikat.json?propertyName=lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti" + infraAikavali;
+        let liikennepaikanOsatUrl     = infraAPIUrl + "liikennepaikanosat.json?propertyName=liikennepaikka,lyhenne,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti" + infraAikavali;
+        let raideosuudetUrl           = infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27raideosuus%27&propertyName=tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tyyppi,uickoodi" + infraAikavali;
+        let laituritUrl               = infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27laituri%27&propertyName=tunniste.tunniste,tunniste.kuvaus,tunniste.laskennallisetRatakmvalit,tunniste.tunnus,tyyppi,uickoodi" + infraAikavali;
+        let eiUrl = etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27hyväksytty%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali;
+        let esUrl = etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa' + etj2Aikavali;
+        let vsUrl = etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa' + etj2Aikavali;
+        let loUrl = etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika' + etj2Aikavali;
+        let rtUrl = 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?state=ACTIVE' + rumaAikavali;
+        let lrUrl = 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?state=SENT' + rumaAikavali;
+
+        let errorHandler = ev => log("Virhe!", ev);
+
+        let loggingDelegate = f => (a, b, c) => {
+            try {
+                return f(a, b, c);
+            } catch (e) {
+                errorHandler(e);
+                throw e;
+            }
+        };
+
+        let on = (obj, event, f) => {
+            obj.on(event, loggingDelegate(f));
+        };
+
+        let add = (obj, name, f) => {
+            obj.add(name, loggingDelegate(f));
 		};
 
-		window.ratanumerotDS = luoDatasource("Ratanumerot", ratanumerotUrl, function(ret, x) {
-			let kilometrit = x.ratakilometrit.flat();
-			ret[x.ratanumero] = [Math.min.apply(Math, kilometrit)*1000, Math.max.apply(Math, kilometrit)*1000+1000];
-		});
-
-		window.valittuRatanumeroDS = new am4core.DataSource();
-		valittuRatanumeroDS.data = null;
-
-		window.rautatieliikennepaikatDS = luoDatasource("Rautatieliikennepaikat", rautatieliikennepaikatUrl, function(ret, x) {
-			ret[x.tunniste] = {
-				ratakmSijainnit: x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti != null ? [x.virallinenRatakmsijainti] : []),
-				lyhenne: x.lyhenne,
-				nimi: x.nimi,
-				tyyppi: x.tyyppi,
-				uicKoodi: x.uicKoodi,
-				ratakmvalit: x.ratakmvalit
-			};
-		});
-
-		window.liikennepaikanOsatDS = luoDatasource("LiikennepaikanOsat", liikennepaikanOsatUrl, function(ret, x) {
-			ret[x.tunniste] = {
-				ratakmSijainnit: x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti != null ? [x.virallinenRatakmsijainti] : []),
-				lyhenne: x.lyhenne,
-				nimi: x.nimi,
-				tyyppi: "liikennepaikanosa",
-				uicKoodi: x.uicKoodi,
-				ratakmvalit: x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti != null ? [x.virallinenRatakmsijainti] : []).map(function(r) {
-					return {
-						ratanumero: r.ratanumero,
-						alku: {ratakm: r.ratakm, etaisyys: r.etaisyys},
-						loppu: {ratakm: r.ratakm, etaisyys: r.etaisyys}
-					};
-				})
-			};
-		});
-
-		window.raideosuudetDS = luoDatasource("Raideosuudet", raideosuudetUrl, function(ret, x) {
-			ret[x.tunniste[0].tunniste] = {
-				ratakmSijainnit: [],
-				lyhenne: x.tunniste[0].turvalaiteNimi,
-				nimi: x.tunniste[0].turvalaiteNimi,
-				tyyppi: x.tyyppi,
-				uicKoodi: x.uickoodi,
-				ratakmvalit: x.tunniste[0].ratakmvalit
-			};
-		});
-
-		window.laituritDS = luoDatasource("Laiturit", laituritUrl, function(ret, x) {
-			ret[x.tunniste[0].tunniste] = {
-				ratakmSijainnit: [],
-				lyhenne: x.tunniste[0].tunnus,
-				nimi: x.tunniste[0].kuvaus,
-				tyyppi: x.tyyppi,
-				uicKoodi: x.uickoodi,
-				ratakmvalit: x.tunniste[0].laskennallisetRatakmvalit
-			};
-		});
-
-		window.aikataulupaikatDS = new am4core.DataSource();
-		aikataulupaikatDS.data = {};
-		var apHandler = function(ev) {
-			Object.values(ev.target.data).forEach(function(x) {
-				if (x.uicKoodi) {
-					aikataulupaikatDS.data[x.uicKoodi] = x;
-				}
-			});
-			aikataulupaikatDS.dispatch("done", aikataulupaikatDS.data);
-		};
-		on(rautatieliikennepaikatDS.events, "done", apHandler);
-		on(liikennepaikanOsatDS.events, "done", apHandler);
-		on(raideosuudetDS.events, "done", apHandler);
-		on(laituritDS.events, "done", apHandler);
 
 
+        let ajankohtaAikavaleiksi = function(ajankohta) {
+            if (ajankohta.yhtajaksoinen) {
+                let ret = ajankohta.yhtajaksoinen.split("/").map(function(x) { return new Date(x); });
+                return ret[0] < rajat[1] && rajat[0] < ret[1]
+                      ? [ret.map(function(x) { return x < rajat[0] ? rajat[0] : x > rajat[1] ? rajat[1] : x })]
+                      : [];
+            } else {
+                let ensimmainenAloitusPaiva = new Date(ajankohta.toistuva.ensimmainenAloitusPaiva); // "2019-10-29"
+                let viimeinenAloitusPaiva   = new Date(ajankohta.toistuva.viimeinenAloitusPaiva); // "2020-05-29"
+                let aloitusViikot             = ajankohta.toistuva.aloitusViikot; // viikottain|jokatoinen|jokaneljäs
+                let aloitusViikonpaivat     = ajankohta.toistuva.aloitusViikonpaivat; // [ma|ti|ke|to|pe|la|su]
+                let timezone                 = ajankohta.toistuva.timezone; // "Europe/Helsinki"
+                let aloitusaika             = ajankohta.toistuva.aloitusaika; // "06:00:00"
+                let kesto                     = dateFns.durationFns.parse(ajankohta.toistuva.kesto); // "PT43200S";
+                
+                let kelpaaViikonPerusteella = function(paiva) {
+                    if (aloitusViikot == 'viikottain') {
+                        return true;
+                    } else if (aloitusViikot == 'jokatoinen') {
+                        return (dateFns.dateFns.differenceInCalendarISOWeeks(paiva, ensimmainenAloitusPaiva)) % 2 == 0;
+                    } else if (aloitusViikot == 'jokaneljas') {
+                        return (dateFns.dateFns.differenceInCalendarISOWeeks(paiva, ensimmainenAloitusPaiva)) % 4 == 0;
+                    } else {
+                        throw 'Virheellinen aloitusViikot: ' + aloitusViikot;
+                    }
+                };
 
-		var lataaAikataulu = function(paiva, callback) {
-			let aikataulutDS = new am4core.DataSource();
-			aikataulutDS.url = aikatauluAPIUrl + paiva;
-			monitor(aikataulutDS, paiva);
-			on(aikataulutDS.events, "done", function(ev) {
-				log("Parsitaan aikataulut päivälle " + paiva);
-				var aikataulupaikatMap = aikataulupaikatDS.data;
-				var ret = ev.target.data.filter(function(x) { return !x.cancelled; }).map(function(train) {
-					let data = {
-						trainData: {
-							departureDate: new Date(train.departureDate),
-							trainNumber: train.trainNumber,
-							lahtenyt: false
-						},
-						rows: train.timeTableRows.map(function(row) {
-							let sijainti = null;
-							let paikka = aikataulupaikatMap[row.stationUICCode];
-							if (paikka != null) {
-								let rkm = paikka.ratakmSijainnit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; });
-								if (rkm.length > 0) {
-									sijainti = rkm[0].ratakm*1000 + rkm[0].etaisyys;
-								}
-							} else {
-								log("Tuntematon UICKoodi! " + row.stationUICCode);
-							}
+                let ma = aloitusViikonpaivat.includes('ma');
+                let ti = aloitusViikonpaivat.includes('ti');
+                let ke = aloitusViikonpaivat.includes('ke');
+                let to = aloitusViikonpaivat.includes('to');
+                let pe = aloitusViikonpaivat.includes('pe');
+                let la = aloitusViikonpaivat.includes('la');
+                let su = aloitusViikonpaivat.includes('su');
+                let kelpaaViikonpaivanPerusteella = function(paiva) {
+                    return ma && dateFns.dateFns.isMonday(paiva) ||
+                           ti && dateFns.dateFns.isTuesday(paiva) ||
+                           ke && dateFns.dateFns.isWednesday(paiva) ||
+                           to && dateFns.dateFns.isThursday(paiva) ||
+                           pe && dateFns.dateFns.isFriday(paiva) ||
+                           la && dateFns.dateFns.isSaturday(paiva) ||
+                           su && dateFns.dateFns.isSunday(paiva);
+                };
 
-							return {
-								scheduledTime: new Date(row.scheduledTime),
-								actualTime: row.actualTime ? new Date(row.actualTime) : null,
-								sijainti: sijainti,
-								paikka: paikka ? paikka.lyhenne : null,
-								paaty: 0
-							};
-						})
-					};
-					if (data.rows.length > 0) {
-						data.rows[0].paaty = 1;
-						data.rows[data.rows.length-1].paaty = 1;
-					}
-					if (data.rows.find(function(x) { return x.actualTime; })) {
-						data.trainData.lahtenyt = true;
-					}
-					return data;
-				});
-				log("Parsittiin " + ret.length + " aikataulua päivälle " + paiva);
-				ret = ret.filter(function(x) {
-					return x.rows.filter(function(y) {
-						return y.sijainti != null;
-					}).length > 1;
-				});
-				log("Jätettiin " + ret.length + " aikataulua päivälle " + paiva);
-				callback(ret);
-				ev.target.dispose();
-			});
-			aikataulutDS.load();
-		};
-		
+                let aloitusPaivat = dateFns.dateFns.eachDayOfInterval({ start: ensimmainenAloitusPaiva, end: viimeinenAloitusPaiva})
+                                                   .filter(function(x) { return x >= rajat[0] && x <= rajat[1]})
+                                                   .filter(kelpaaViikonPerusteella)
+                                                   .filter(kelpaaViikonpaivanPerusteella);
+
+                return aloitusPaivat.map(function(paiva) {
+                    let alku = dateFns.dateFnsTz.toDate(dateFns.dateFns.format(paiva, 'yyyy-MM-dd') + 'T' + aloitusaika, { timeZone: timezone });
+                    return [alku, dateFns.dateFns.add(alku, kesto)];
+                });
+            }
+        }
+        
+
+        
+
+        window.loadingIndicator = new am4core.DataItem();
+        window.loadingIndicator.categories.aktiiviset = "";
+        window.loadingIndicator.values.count = {value: 0};
+
+        let monitor = function(ds, type) {
+            ds.events.on("error", errorHandler);
+            on(ds.events, "started", function() {
+                loadingIndicator.setCategory("aktiiviset", loadingIndicator.categories.aktiiviset + " " + type);
+                loadingIndicator.setValue("count", loadingIndicator.values.count.value + 1);
+            });
+            on(ds.events, "ended", function() {
+                loadingIndicator.setCategory("aktiiviset", loadingIndicator.categories.aktiiviset.replace(" " + type, ""));
+                loadingIndicator.setValue("count", loadingIndicator.values.count.value - 1);
+            });
+        }
+
+        let luoDatasource = function(type, url, f) {
+            let ds = new am4core.DataSource();
+            ds.url = url;
+            monitor(ds, type);
+            on(ds.events, "parseended", function(ev) {
+                log("Parsitaan " + type);
+                var ret = {};
+                Object.values(ev.target.data).flat().forEach(function(x) { f(ret, x); });
+                ev.target.data = ret;
+                log("Parsittu " + type);
+            });
+            ds.load();
+            return ds;
+        };
+
+        window.ratanumerotDS = luoDatasource("Ratanumerot", ratanumerotUrl, function(ret, x) {
+            let kilometrit = x.ratakilometrit.flat();
+            ret[x.ratanumero] = [Math.min.apply(Math, kilometrit)*1000, Math.max.apply(Math, kilometrit)*1000+1000];
+        });
+
+        window.valittuRatanumeroDS = new am4core.DataSource();
+
+        window.rautatieliikennepaikatDS = luoDatasource("Rautatieliikennepaikat", rautatieliikennepaikatUrl, function(ret, x) {
+            ret[x.tunniste] = {
+                ratakmSijainnit: x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti != null ? [x.virallinenRatakmsijainti] : []),
+                lyhenne: x.lyhenne,
+                nimi: x.nimi,
+                tyyppi: x.tyyppi,
+                uicKoodi: x.uicKoodi,
+                ratakmvalit: x.ratakmvalit
+            };
+        });
+
+        window.liikennepaikanOsatDS = luoDatasource("LiikennepaikanOsat", liikennepaikanOsatUrl, function(ret, x) {
+            ret[x.tunniste] = {
+                ratakmSijainnit: x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti != null ? [x.virallinenRatakmsijainti] : []),
+                lyhenne: x.lyhenne,
+                nimi: x.nimi,
+                tyyppi: "liikennepaikanosa",
+                uicKoodi: x.uicKoodi,
+                ratakmvalit: x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti != null ? [x.virallinenRatakmsijainti] : []).map(function(r) {
+                    return {
+                        ratanumero: r.ratanumero,
+                        alku: {ratakm: r.ratakm, etaisyys: r.etaisyys},
+                        loppu: {ratakm: r.ratakm, etaisyys: r.etaisyys}
+                    };
+                })
+            };
+        });
+
+        window.raideosuudetDS = luoDatasource("Raideosuudet", raideosuudetUrl, function(ret, x) {
+            ret[x.tunniste[0].tunniste] = {
+                ratakmSijainnit: [],
+                lyhenne: x.tunniste[0].turvalaiteNimi,
+                nimi: x.tunniste[0].turvalaiteNimi,
+                tyyppi: x.tyyppi,
+                uicKoodi: x.uickoodi,
+                ratakmvalit: x.tunniste[0].ratakmvalit
+            };
+        });
+
+        window.laituritDS = luoDatasource("Laiturit", laituritUrl, function(ret, x) {
+            ret[x.tunniste[0].tunniste] = {
+                ratakmSijainnit: [],
+                lyhenne: x.tunniste[0].tunnus,
+                nimi: x.tunniste[0].kuvaus,
+                tyyppi: x.tyyppi,
+                uicKoodi: x.uickoodi,
+                ratakmvalit: x.tunniste[0].laskennallisetRatakmvalit
+            };
+        });
+
+        window.aikataulupaikatDS = new am4core.DataSource();
+        aikataulupaikatDS.data = {};
+        var apHandler = function(ev) {
+            Object.values(ev.target.data).forEach(function(x) {
+                if (x.uicKoodi) {
+                    aikataulupaikatDS.data[x.uicKoodi] = x;
+                }
+            });
+            aikataulupaikatDS.dispatch("done", aikataulupaikatDS.data);
+        };
+        on(rautatieliikennepaikatDS.events, "done", apHandler);
+        on(liikennepaikanOsatDS.events, "done", apHandler);
+        on(raideosuudetDS.events, "done", apHandler);
+        on(laituritDS.events, "done", apHandler);
 
 
-		window.onload = function () {
-			am4core.ready(function () {
-				log("Aloitetaan grafiikan alustus");
-				window.chart = am4core.create("chartdiv", am4charts.XYChart);
 
-				chart.events.on("error", errorHandler);
+        var lataaAikataulu = function(paiva, callback) {
+            let aikataulutDS = new am4core.DataSource();
+            aikataulutDS.url = aikatauluAPIUrl + paiva;
+            monitor(aikataulutDS, paiva);
+            on(aikataulutDS.events, "done", function(ev) {
+                log("Parsitaan aikataulut päivälle " + paiva);
+                var aikataulupaikatMap = aikataulupaikatDS.data;
+                var ret = ev.target.data.filter(function(x) { return !x.cancelled; }).map(function(train) {
+                    let data = {
+                        trainData: {
+                            departureDate: train.departureDate,
+                            trainNumber: train.trainNumber,
+                            lahtenyt: false
+                        },
+                        rows: train.timeTableRows.map(function(row) {
+                            let sijainti = null;
+                            let paikka = aikataulupaikatMap[row.stationUICCode];
+                            if (paikka != null) {
+                                let rkm = paikka.ratakmSijainnit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; });
+                                if (rkm.length > 0) {
+                                    sijainti = rkm[0].ratakm*1000 + rkm[0].etaisyys;
+                                }
+                            } else {
+                                log("Tuntematon UICKoodi! " + row.stationUICCode);
+                            }
 
-				chart.dummyData = {};
-				chart.language.locale = am4lang_fi_FI;
-				chart.arrangeTooltips = false;
+                            return {
+                                scheduledTime: new Date(row.scheduledTime),
+                                actualTime: row.actualTime ? new Date(row.actualTime) : null,
+                                sijainti: sijainti,
+                                paikka: paikka ? paikka.lyhenne : null,
+                                paaty: 0
+                            };
+                        })
+                    };
+                    if (data.rows.length > 0) {
+                        data.rows[0].paaty = 1;
+                        data.rows[data.rows.length-1].paaty = 1;
+                    }
+                    if (data.rows.find(function(x) { return x.actualTime; })) {
+                        data.trainData.lahtenyt = true;
+                    }
+                    return data;
+                });
+                log("Parsittiin " + ret.length + " aikataulua päivälle " + paiva);
+                ret = ret.filter(function(x) {
+                    return x.rows.filter(function(y) {
+                        return y.sijainti != null;
+                    }).length > 1;
+                });
+                log("Jätettiin " + ret.length + " aikataulua päivälle " + paiva);
+                callback(ret);
+                ev.target.dispose();
+            });
+            aikataulutDS.load();
+        };
+        
 
-				chart.legend = new am4charts.Legend();
-				chart.legend.position = "right";
 
-				chart.scrollbarX = new am4core.Scrollbar();
-				chart.scrollbarY = new am4core.Scrollbar();
+        window.onload = function () {
+			am4core.useTheme(am4themes_animated);
+			//am4core.options.animationsEnabled = false;
+            am4core.ready(function () {
+                log("Aloitetaan grafiikan alustus");
+                window.chart = am4core.create("chartdiv", am4charts.XYChart);
 
-				//chart.cursor = new am4charts.XYCursor();
-				//chart.cursor.behavior = "panXY";
-				//chart.cursor.maxTooltipDistance = 10;
+                chart.events.on("error", errorHandler);
 
-				function customizeGrip(grip) {
-					grip.icon.disabled = true;
-				}
+                chart.dummyData = {};
+                chart.language.locale = am4lang_fi_FI;
+                chart.arrangeTooltips = false;
 
-				customizeGrip(chart.scrollbarX.startGrip);
-				customizeGrip(chart.scrollbarX.endGrip); 
-				customizeGrip(chart.scrollbarY.startGrip);
-				customizeGrip(chart.scrollbarY.endGrip); 
+                chart.legend = new am4charts.Legend();
+                chart.legend.position = "right";
+
+                chart.scrollbarX = new am4core.Scrollbar();
+                chart.scrollbarY = new am4core.Scrollbar();
+
+                chart.dateFormatter.dateFormat = "dd.MM.yyyy HH:mm:ss";
+                
+                chart.preloader.disabled = true; // tuntuisi aiheuttavan muunkin datan uudelleenlatausta?
+                
+                //chart.scrollbarX.thumb.minWidth = 40;
+                //chart.scrollbarY.thumb.minHeight = 40;
+
+                chart.cursor = new am4charts.XYCursor();
+                chart.cursor.behavior = "panXY";
+                let cursorMod = x => {
+                    x.stroke = am4core.color("#8F3985");
+                    x.strokeWidth = 2;
+                    x.strokeOpacity = 0.2;
+                    x.strokeDasharray = "";
+                };
+                cursorMod(chart.cursor.lineX);
+                cursorMod(chart.cursor.lineY);
+                //chart.cursor.maxTooltipDistance = 10;
 
 
 
-				var xAxis = chart.xAxes.push(new am4charts.DateAxis());
-				var yAxis = chart.yAxes.push(new am4charts.ValueAxis());
+                var xAxis = chart.xAxes.push(new am4charts.DateAxis());
+                var yAxis = chart.yAxes.push(new am4charts.ValueAxis());
 
-				on(chart.events, "datavalidated", function () {
-					xAxis.zoomToDates(
-						dateFns.dateFns.addHours(new Date(), -6),
-						dateFns.dateFns.addHours(new Date(), 6),
-						false,
-    					true
-					);
-				});
+                chart.zoomOutButton.dispose();
 
-				var buttonContainer = chart.plotContainer.createChild(am4core.Container);
-				buttonContainer.shouldClone = false;
-				buttonContainer.align = "right";
-				buttonContainer.valign = "top";
-				buttonContainer.zIndex = Number.MAX_SAFE_INTEGER;
-				buttonContainer.marginTop = 5;
-				buttonContainer.marginRight = 5;
-				buttonContainer.layout = "horizontal";
+                var buttonContainer = chart.plotContainer.createChild(am4core.Container);
+                buttonContainer.shouldClone = false;
+                buttonContainer.align = "right";
+                buttonContainer.valign = "top";
+                buttonContainer.zIndex = Number.MAX_SAFE_INTEGER;
+                buttonContainer.opacity = 0.75;
+                buttonContainer.marginTop = 5;
+                buttonContainer.marginRight = 5;
+                buttonContainer.layout = "horizontal";
 
-				window.ratanumeroChanged = function(val) {
-					if (val != valittuRatanumeroDS.data) {
-						log("Valittiin ratanumero: " + val);
-						yAxis.title.text = "(" + val + ")";
-						valittuRatanumeroDS.data = val;
-						yAxis.min = ratanumerotDS.data[val][0];
-						yAxis.max = ratanumerotDS.data[val][1];
+                window.ratanumeroChanged = function(val) {
+                    if (val != valittuRatanumeroDS.data) {
+                        log("Valittiin ratanumero: " + val);
+                        yAxis.title.text = "(" + val + ")";
+                        valittuRatanumeroDS.data = val;
+                        yAxis.min = ratanumerotDS.data[val][0];
+                        yAxis.max = ratanumerotDS.data[val][1];
 
-						valittuRatanumeroDS.dispatch("done", {target: {data: valittuRatanumeroDS.data}});
-					}
+                        valittuRatanumeroDS.dispatch("done", {target: {data: valittuRatanumeroDS.data}});
+                    }
 				};
-				var ratanumeroButton = buttonContainer.createChild(am4core.Label);
-				ratanumeroButton.html = "<select id='ratanumero' onchange='window.ratanumeroChanged(this.value)'>{}</select>";
-				ratanumeroButton.valign = "bottom";
-				ratanumeroButton.paddingRight = 20;
-				on(ratanumerotDS.events, "done", function(ev) {
+				var container = chart.legend.createChild(am4core.Container);
+				container.paddingBottom = 20;
+				container.paddingLeft = 12;
+				var radioButton = container.createChild(am4core.Label);
+				radioButton.html = "<input type='radio' id='ratanumeroRadio' name='ratanumero' checked='checked' />";
+				var ratanumeroButton = container.createChild(am4core.Label);
+				ratanumeroButton.paddingLeft = 25;
+                ratanumeroButton.html = "<label for='ratanumeroRadio'><select id='ratanumero' onchange='window.ratanumeroChanged(this.value)'>{}</select></label>";
+                on(ratanumerotDS.events, "done", function(ev) {
 					let ratanumerot = Object.keys(ev.target.data).sort();
-					ratanumeroButton.html = ratanumeroButton.html.replace("{}", "<option>" + ratanumerot.join("</option><option>") + "</option>");
-					ratanumeroChanged(ratanumerot[0]);
-				});
-				on(ratanumeroButton.events, "hit", function(ev) {
-					var diff = xAxis.maxZoomed - xAxis.minZoomed;
-					var delta = diff * 0.5;
-					xAxis.zoomToDates(new Date(xAxis.minZoomed - delta), new Date(xAxis.maxZoomed - delta));
-				});
+					ratanumeroButton.html = ratanumeroButton.html.replace("{}", ratanumerot.map(function(x) { return "<option " + (sijaintiParam == x ? "selected='selected'" : "") + ">" + x + "</option>"; }).join());
+					ratanumeroChanged(sijaintiParam);
+                });
+                on(ratanumeroButton.events, "hit", function(ev) {
+                    var diff = xAxis.maxZoomed - xAxis.minZoomed;
+                    var delta = diff * 0.5;
+                    xAxis.zoomToDates(new Date(xAxis.minZoomed - delta), new Date(xAxis.maxZoomed - delta));
+                });
 
-				var scrollLeftButton = buttonContainer.createChild(am4core.Button);
-				scrollLeftButton.label.text = "<";
-				on(scrollLeftButton.events, "hit", function(ev) {
-					var diff = xAxis.maxZoomed - xAxis.minZoomed;
-					var delta = diff * 0.5;
-					xAxis.zoomToDates(new Date(xAxis.minZoomed - delta), new Date(xAxis.maxZoomed - delta));
-				});
-				var nowButton = buttonContainer.createChild(am4core.Button);
-				nowButton.label.text = "|";
-				on(nowButton.events, "hit", function(ev) {
-					var diff = xAxis.maxZoomed - xAxis.minZoomed;
-					xAxis.zoomToDates(new Date(new Date().getTime() - diff), new Date(new Date().getTime() + diff));
-				});
-				var scrollRightButton = buttonContainer.createChild(am4core.Button);
-				scrollRightButton.label.text = ">";
-				on(scrollRightButton.events, "hit", function(ev) {
-					var diff = xAxis.maxZoomed - xAxis.minZoomed;
-					var delta = diff * 0.5;
-					xAxis.zoomToDates(new Date(xAxis.minZoomed + delta), new Date(xAxis.maxZoomed + delta));
-				});
 
-				var zoomInButton = buttonContainer.createChild(am4core.Button);
-				zoomInButton.label.text = "+";
-				zoomInButton.align = "right";
-				on(zoomInButton.events, "hit", function(ev) {
-					var diff = xAxis.maxZoomed - xAxis.minZoomed;
-					var delta = diff * 0.2;
-					xAxis.zoomToDates(new Date(xAxis.minZoomed + delta), new Date(xAxis.maxZoomed - delta));
-				});
-				var zoomOutButton = buttonContainer.createChild(am4core.Button);
-				zoomOutButton.label.text = "-";
-				on(zoomOutButton.events, "hit", function(ev) {
-					var diff = xAxis.maxZoomed - xAxis.minZoomed;
-					var delta = diff * 0.25;
-					xAxis.zoomToDates(new Date(xAxis.minZoomed - delta), new Date(xAxis.maxZoomed + delta));
-				});
 
-				window.loading = chart.plotContainer.createChild(am4core.Label);
-				loading.dataItem = loadingIndicator;
-				loading.fontSize = 10;
-				add(loading.adapter, "text", function(text, target) {
-					if (!target.dataItem) {
-						return text;
-					}
-					let aktiiviset = target.dataItem.categories.aktiiviset;
-					return aktiiviset == "" ? "" : "Ladataan: " + aktiiviset.trim().split(" ").join(", ");
-				});
+                var zoomButton; 
+                var selectButton;
 
-				xAxis.min = dateFns.dateFns.addMonths(new Date(), -6);
-				xAxis.max = dateFns.dateFns.addMonths(new Date(), 6);
-				xAxis.strictMinMax = true;
-				xAxis.snapTooltip = false;
-				xAxis.keepSelection = true;
-				xAxis.cursorTooltipEnabled = false;
-				xAxis.baseInterval = { timeUnit: "second" };
+                let alustaMoodiNappi = (text, behavior) => {
+                    button = buttonContainer.createChild(am4core.Button);
+                    button.label.text = text;
+                    button.background.states.create("active").properties.fill = button.background.fill.lighten(-0.5);
+                    on(button.events, "hit", function(ev) {
+                        if (ev.target.isActive) {
+                            chart.cursor.behavior = "panXY";
+                            ev.target.isActive = false;
+                        } else {
+                            chart.cursor.behavior = behavior;
+                            zoomButton.isActive = false;
+                            selectButton.isActive = false;
+                            ev.target.isActive = true;
+                        }
+                    });
+                    return button;
+                }
 
-				xAxis.renderer.labels.template.location = 0.0001;
-				xAxis.renderer.labels.template.tooltip = new am4core.Tooltip();
-				xAxis.renderer.labels.template.tooltipText = "{value.formatDate('yyyy-MM-dd HH:mm:ss')}";
+                zoomButton = alustaMoodiNappi("zoom", "zoomXY");
+                on(chart.cursor.events, "zoomended", function(ev) {
+                    chart.cursor.behavior = "panXY";
+                    zoomButton.isActive = false;
+                });
+
+                selectButton = alustaMoodiNappi("select", "selectXY");
+                on(chart.cursor.events, "selectended", ev => {
+                    chart.cursor.behavior = "panXY";
+                    ev.target.isActive = false;
+                });
+                on(chart.cursor.events, "selectended", ev => {
+                    let x = ev.target.xRange;
+                    let y = ev.target.yRange;
+                    if (x && y) {
+                        let fromX = xAxis.positionToDate(xAxis.toAxisPosition(x.start));
+                        let toX = xAxis.positionToDate(xAxis.toAxisPosition(x.end));
+                        let fromY = yAxis.positionToValue(yAxis.toAxisPosition(y.start));
+                        let toY = yAxis.positionToValue(yAxis.toAxisPosition(y.end));
+                        log(fromX + "->" + toX, fromY + "->" + toY);
+                    }
+                });
+
+
+                let scrollLeftButton = buttonContainer.createChild(am4core.Button);
+                scrollLeftButton.label.text = "<";
+                on(scrollLeftButton.events, "hit", ev => {
+                    let diff = xAxis.maxZoomed - xAxis.minZoomed;
+                    let delta = diff * 0.5;
+                    xAxis.zoomToDates(new Date(xAxis.minZoomed - delta), new Date(xAxis.maxZoomed - delta));
+                });
+                let nowButton = buttonContainer.createChild(am4core.Button);
+                nowButton.label.text = "|";
+                on(nowButton.events, "hit", ev => {
+                    let diff = xAxis.maxZoomed - xAxis.minZoomed;
+                    xAxis.zoomToDates(new Date(new Date().getTime() - diff), new Date(new Date().getTime() + diff));
+                });
+                let scrollRightButton = buttonContainer.createChild(am4core.Button);
+                scrollRightButton.label.text = ">";
+                on(scrollRightButton.events, "hit", ev => {
+                    let diff = xAxis.maxZoomed - xAxis.minZoomed;
+                    let delta = diff * 0.5;
+                    xAxis.zoomToDates(new Date(xAxis.minZoomed + delta), new Date(xAxis.maxZoomed + delta));
+                });
+
+                let zoomOutButton = buttonContainer.createChild(am4core.Button);
+                zoomOutButton.label.text = "-";
+                on(zoomOutButton.events, "hit", ev => {
+                    let diff = xAxis.maxZoomed - xAxis.minZoomed;
+                    let delta = diff * 0.25;
+                    xAxis.zoomToDates(new Date(xAxis.minZoomed - delta), new Date(xAxis.maxZoomed + delta));
+                });
+                let zoomInButton = buttonContainer.createChild(am4core.Button);
+                zoomInButton.label.text = "+";
+                on(zoomInButton.events, "hit", ev => {
+                    let diffX = xAxis.maxZoomed - xAxis.minZoomed;
+                    let deltaX = diffX * 0.2;
+                    xAxis.zoomToDates(new Date(xAxis.minZoomed + deltaX), new Date(xAxis.maxZoomed - deltaX));
+                });
+
+                zoomOutButton.marginLeft = 10;
+                scrollLeftButton.marginLeft = 10;
+
+                
+
+                window.loading = chart.plotContainer.createChild(am4core.Label);
+                loading.dataItem = loadingIndicator;
+                loading.fontSize = 10;
+                add(loading.adapter, "text", function(text, target) {
+                    if (!target.dataItem) {
+                        return text;
+                    }
+                    let aktiiviset = target.dataItem.categories.aktiiviset;
+                    return aktiiviset == "" ? "" : "Ladataan: " + aktiiviset.trim().split(" ").join(", ");
+                });
+
+                xAxis.strictMinMax = true;
+                xAxis.snapTooltip = false;
+                xAxis.keepSelection = true;
+				//xAxis.cursorTooltipEnabled = false;
+				xAxis.showOnInit = false;
+				xAxis.baseInterval = { timeUnit: "second" }; // automatiikka tuntuu asettavan joksikin muuksi
+				xAxis.mainBaseInterval = { timeUnit: "second" };
+                xAxis.min = rajat[0].getTime();
+                xAxis.max = rajat[1].getTime();
+                
+                xAxis.renderer.labels.template.location = 0.0001; // akselin labelit mielellään aina grid-viivojen kohdalle
+                xAxis.renderer.labels.template.tooltip = new am4core.Tooltip();
+                xAxis.renderer.labels.template.tooltipText = "{value.formatDate(dd.MM.yyyy HH:mm:ss)}";
 				
+				on(chart.events, "ready", function () {
+                    xAxis.zoomToDates(
+                        ikkuna[0],
+                        ikkuna[1],
+                        false,
+                        true
+                    );
+                });
 
 
 
-				yAxis.snapTooltip = false;
-				yAxis.keepSelection = true;
-				yAxis.cursorTooltipEnabled = false;
-				yAxis.extraMax = 0.1;
-				yAxis.renderer.numberFormatter.numberFormat = "#";
-				yAxis.renderer.labels.template.paddingRight = 40;
-				add(yAxis.renderer.labels.template.adapter, "text", function(text) {
-					let n = parseInt(text);
-					return Math.floor(n/1000) + "+" + (n%1000);
-				});
+                let nykyhetki = xAxis.axisRanges.create();
+                nykyhetki.date = new Date();
+                nykyhetki.grid.stroke = "red";
+                nykyhetki.grid.strokeWidth = 2;
+                nykyhetki.grid.strokeDasharray = "8,4";
+                nykyhetki.bullet = new am4core.Triangle();
+                nykyhetki.bullet.width = 10;
+                nykyhetki.bullet.height = 10;
+                nykyhetki.bullet.fill = am4core.color("red");
+                nykyhetki.bullet.horizontalCenter = "middle";
+                nykyhetki.bullet.tooltipText = "{date}";
 
-				add(yAxis.adapter, "getTooltipText", function(text) {
-					let n = parseInt(text);
-					return Math.floor(n/1000) + "+" + (n%1000);
-				});
-
-				
-
-				log("Alustetaan ranget ja breakit");
-
-				var handler = function(ev) {
-					Object.values(ev.target.data).flat().forEach(function(x) {
-						let radalla = x.ratakmvalit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; });
-						radalla.forEach(function(r) {
-							var range = yAxis.axisRanges.create();
-							range.value = r.alku.ratakm*1000 + r.alku.etaisyys;
-							range.endValue = r.loppu.ratakm*1000 + r.loppu.etaisyys;
-							range.axisFill.fill = am4core.color("#396478");
-							range.axisFill.fillOpacity = 0.1;
-							range.grid.strokeOpacity = 0;
-							range.label.inside = true;
-							range.label.fontSize = 12;
-							range.label.text = x.lyhenne;
-							range.label.dx = -35;
-							range.label.adapter.add("text", function(text) {
-								return x.lyhenne;
-							});
-							range.label.tooltip = new am4core.Tooltip();
-							range.label.tooltipText = x.tyyppi + ": " + x.nimi;
+                setInterval(() => nykyhetki.date = new Date(), 1000);
 
 
-							var axisBreak = yAxis.axisBreaks.create();
-							axisBreak.startValue = range.value;
-							axisBreak.endValue = range.endValue;
-							axisBreak.breakSize = 0.05;
-							axisBreak.opacity = 0.2;
-							range.label.events.on("over", function() {
-								axisBreak.animate(
-									[{ property: "breakSize", to: 1 }, { property: "opacity", to: 0.1 }],
-									100,
-									am4core.ease.sinOut
-								);
-							});
-							range.label.events.on("hit", function() {
-								axisBreak.animate(
-									[{ property: "breakSize", to: 0.05 }, { property: "opacity", to: 0.2 }],
-									100,
-									am4core.ease.quadOut
-								);
-							});
+                yAxis.snapTooltip = false;
+                yAxis.keepSelection = true;
+                //yAxis.cursorTooltipEnabled = false;
+                yAxis.extraMax = 0.1;
+                yAxis.renderer.numberFormatter.numberFormat = "#";
+                yAxis.renderer.labels.template.paddingRight = 40;
+                add(yAxis.renderer.labels.template.adapter, "text", function(text) {
+                    let n = parseInt(text);
+                    return Math.floor(n/1000) + "+" + (n%1000);
+                });
+
+                add(yAxis.adapter, "getTooltipText", function(text) {
+                    let n = parseInt(text);
+                    return Math.floor(n/1000) + "+" + (n%1000);
+                });
+
+                
+
+                var handler = function(ev) {
+                    log("Luodaan rangeja ja breakkeja");
+                    Object.values(ev.target.data).flat().forEach(function(x) {
+                        let radalla = x.ratakmvalit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; });
+                        radalla.forEach(function(r) {
+                            var range = yAxis.axisRanges.create();
+                            range.value = r.alku.ratakm*1000 + r.alku.etaisyys;
+                            range.endValue = r.loppu.ratakm*1000 + r.loppu.etaisyys;
+                            range.axisFill.fill = am4core.color("#396478");
+                            range.axisFill.fillOpacity = 0.1;
+                            range.grid.strokeOpacity = 0;
+                            range.label.inside = true;
+                            range.label.fontSize = 12;
+                            range.label.text = x.lyhenne;
+                            range.label.dx = -35;
+                            range.label.adapter.add("text", function(text) {
+                                return x.lyhenne;
+                            });
+                            range.label.tooltip = new am4core.Tooltip();
+                            range.label.tooltipText = x.tyyppi + ": " + x.nimi;
+
+
+                            var axisBreak = new am4charts.ValueAxisBreak();
+                            axisBreak.startValue = range.value;
+                            axisBreak.endValue = range.endValue;
+                            axisBreak.breakSize = 0.05;
+                            axisBreak.opacity = 0.1;
+                            range.label.events.on("over", function() {
+                                axisBreak.animate(
+                                    [{ property: "breakSize", to: 1 }, { property: "opacity", to: 0.1 }],
+                                    100,
+                                    am4core.ease.sinOut
+                                );
+                            });
+                            range.label.events.on("hit", function() {
+                                axisBreak.animate(
+                                    [{ property: "breakSize", to: 0.05 }, { property: "opacity", to: 0.2 }],
+                                    100,
+                                    am4core.ease.quadOut
+                                );
+                            });
+                            yAxis.axisBreaks.insert(axisBreak);
+                        });
+                    });
+                    log("ranget ja breakit luotu");
+                };
+                
+                on(rautatieliikennepaikatDS.events, "done", handler);
+                on(liikennepaikanOsatDS.events,     "done", handler);
+                on(raideosuudetDS.events,           "done", handler);
+                on(laituritDS.events,               "done", handler);
+                on(valittuRatanumeroDS.events,      "done", function() {
+                    yAxis.axisRanges.clear()
+                    yAxis.axisBreaks.clear()
+                    rautatieliikennepaikatDS.load();
+                    liikennepaikanOsatDS.load();
+                    raideosuudetDS.load();
+                    laituritDS.load();
+                });
+
+
+
+                let muotoileAikavali = function(vali) { return vali.split("/").map(function(d) { return dateFns.dateFns.format(new Date(d), "dd.MM.yyyy HH:mm:ss"); }).join(" - "); };
+                let muotoileEtaisyys = function(x) { return (x < 10 ? "000" : x < 100 ? "00" : x < 1000 ? "0" : "") + x };
+                let muotoileKohde = function(kohde) {
+                    return kohde.laskennallisetRatakmvalit.map(function(x) { return '(' + x.ratanumero + ') ' + x.alku.ratakm + '+' + muotoileEtaisyys(x.alku.etaisyys) + " - " + x.loppu.ratakm + muotoileEtaisyys(x.loppu.etaisyys); })
+                                                          .join("\n");
+                };
+
+                var luoEnnakkotieto = function(x, xs) {
+                    return function(rkmv) {
+                        let alkuRkm = rkmv.alku.ratakm*1000+rkmv.alku.etaisyys;
+                        let loppuRkm = rkmv.loppu.ratakm*1000+rkmv.loppu.etaisyys;
+                        return {
+                            tunniste: x.tunniste,
+                            sisainenTunniste: x.sisainenTunniste,
+                            alkuX: xs[0],
+                            loppuX: xs[1],
+                            alkuY: alkuRkm < yAxis.min ? yAxis.min : alkuRkm,
+                            loppuY: loppuRkm > yAxis.max ? yAxis.max : loppuRkm,
+                            voimassa: muotoileAikavali(x.voimassa),
+                            ajankohdat: x.ajankohdat.map(function(a) { 
+                                return a.yhtajaksoinen ? muotoileAikavali(a.yhtajaksoinen) :
+                                       a.toistuva.ensimmainenAloitusPaiva + " - " + a.toistuva.viimeinenAloitusPaiva + " " + a.toistuva.aloitusViikot + " " + a.toistuva.aloitusViikonpaivat.join("/") + " " + a.toistuva.aloitusaika + " " + a.toistuva.kesto;
+                            }).join("\n"),
+                            alue: x.liikennevaikutusalue ? muotoileKohde(x.liikennevaikutusalue):
+                                  x.tyonosat ? x.tyonosat.map(function(t) { return muotoileKohde(t.tekopaikka); }).join("\n") :
+                                  x.kohde ? muotoileKohde(x.kohde) : '',
+                            ratanumero: rkmv.ratanumero,
+                            alkuratakm: rkmv.alku.ratakm,
+                            alkuetaisyys: rkmv.alku.etaisyys,
+                            loppuratakm: rkmv.loppu.ratakm,
+                            loppuetaisyys: rkmv.loppu.etaisyys,
+                            zIndex: -1 * (loppuRkm - alkuRkm) * (xs[1].getTime() - xs[0].getTime())
+                        };
+                    };
+                };
+                
+                let compareByInterval = function(a,b) {
+                    return a.alkuX < b.alkuX ? -1 : a.alkuX > b.alkuX ? 1 :
+                           a.loppuX < b.loppuX ? -1 : a.loppuX > b.loppuX ? 1 :
+                           0;
+                };
+
+                let luoEnnakkotietoSeries = function(nimi, vari, url) {
+                    log("Alustetaan " + nimi);
+                    let series = new am4charts.ColumnSeries()
+                    series.name = nimi;
+                    series.fill = vari;
+                    series.stroke = vari.lighten(-0.2);
+                    series.baseAxis = yAxis; // https://github.com/amcharts/amcharts4/issues/2379
+                    series.dataFields.openValueY = "alkuY";
+                    series.dataFields.valueY = "loppuY";
+                    series.dataFields.openDateX = "alkuX";
+                    series.dataFields.dateX = "loppuX";
+                    series.cursorTooltipEnabled = false;
+                    series.showOnInit = false;
+                    series.simplifiedProcessing = true;
+                    series.fillOpacity = 0.25;
+                    series.strokeWidth = 1;
+                    series.hidden = true;
+                    series.columns.template.tooltipPosition = "pointer";
+					series.columns.template.tooltipText = "{sisainenTunniste} ({tunniste})\n{alkuX} - {loppuX} \n({ratanumero}) {alkuratakm}+{alkuetaisyys} - {loppuratakm}+{loppuetaisyys}";
+					series.columns.template.cloneTooltip = false;
+                    series.columns.template.propertyFields.zIndex = "zIndex";
+                    series.columns.template.togglable = true;
+
+                    let activeState = series.columns.template.states.create("active");
+                    let hoverState = series.columns.template.states.create("hover");
+
+                    hoverState.properties.zIndex = 999;
+                    hoverState.properties.fillOpacity = 1;
+                    hoverState.properties.stroke = vari.lighten(-0.8);
+
+                    activeState.properties.zIndex = 999;
+                    activeState.properties.fillOpacity = 1;
+                    activeState.properties.stroke = vari.lighten(-0.8);
+
+
+                    monitor(series.dataSource, nimi);
+
+                    let columnCache;
+                    on(series.dataSource.events, "parseended", function() {
+                        columnCache = {};
+                    });
+                    on(series.events, "validated", function(ev) {
+                        log("Populoidaan " + ev.target.name + " column cache");
+                        ev.target.columns.each(function(x) {
+                            let tun = columnCache[x.dataItem.dataContext.sisainenTunniste];
+                            if (!tun) {
+                                tun = [];
+                                columnCache[x.dataItem.dataContext.sisainenTunniste] = tun;
+                            }
+                            tun.push(x);
+                        });
+                        log(ev.target.name + " column cache populoitu");
+                    });
+
+                    on(series.columns.template.events, "over", function(ev) {
+                        let cols = columnCache[ev.target.dataItem.dataContext.sisainenTunniste];
+                        if (!cols) {
+                            log("Ei löydetty sarakkeita " + ev.target.dataItem.dataContext.sisainenTunniste);
+                        } else {
+                            cols.forEach(function(x) {
+                                x.isHover = true;
+                            });
+                        }
+                    });
+                    on(series.columns.template.events, "out", function(ev) {
+                        columnCache[ev.target.dataItem.dataContext.sisainenTunniste].forEach(function(x) {
+                            x.isHover = false;
+                        });
+                    });
+
+                    on(series.columns.template.events, "hit", function(ev) {
+                        columnCache[ev.target.dataItem.dataContext.sisainenTunniste].forEach(function(x) {
+                            if (x.column != ev.target.column) {
+                                x.isActive = !x.isActive;
+                            }
+                        });
+                    });
+                    
+                    on(chart.events, "ready", function () {
+                        let aktiiviset;
+                        let paivitaAktiiviset = function(column, sisainenTunniste) {
+                            let uudetAktiiviset = series.columns.values.flatMap(function(x) {
+                                return (column == x.column && columnCache[sisainenTunniste].length == 1 && !x.isActive) || (column != x.column && x.isActive) ? [x.dataItem.dataContext.sisainenTunniste] : [];
+                            });
+                            aktiiviset.data = [...new Set(uudetAktiiviset)].map(function(y) { return {"name": y }; });
+                        };
+
+                        chart.legend.itemContainers.each(function(x) {
+                            if (x.dataItem.name == series.name) {
+                                aktiiviset = new am4charts.Legend();
+                                aktiiviset.parent = x.parent;
+                                aktiiviset.insertAfter(x);
+                                aktiiviset.paddingBottom = 16;
+                                aktiiviset.position = "left";
+                                aktiiviset.maxHeight = 50;
+                                aktiiviset.scrollable = true;
+                                aktiiviset.markers.template.disabled = true;
+                                aktiiviset.paddingLeft = 16;
+                                aktiiviset.itemContainers.template.paddingTop = 0;
+                                aktiiviset.itemContainers.template.paddingBottom = 0;
+
+                                on(aktiiviset.events, "hit", function(ev) {
+                                    let nimi = ev.target.data[0].name;
+                                    columnCache[nimi].forEach(function(x) {
+                                        x.isActive = !x.isActive;
+                                        paivitaAktiiviset(x, nimi);
+                                    });
+                                });
+                            }
+                        });
+                        on(series.columns.template.events, "hit", function(ev) { paivitaAktiiviset(ev.target.column, ev.target.dataItem.dataContext.sisainenTunniste); });
+                    });
+
+                    on(series.events, "shown", function() {
+                        series.dataSource.url = url;
+                        series.dataSource.load();
+                    });
+                    on(valittuRatanumeroDS.events, "done", function() {
+                        if (!series.isHidden) {
+                            series.dataSource.load();
+                        }
+                    });
+
+                    return series;
+                };
+
+                
+
+                window.seriesEI = luoEnnakkotietoSeries("Ennakkoilmoitukset", am4core.color("orange"), eiUrl);
+                on(seriesEI.dataSource.events, "parseended", function(ev) {
+                    log("Parsitaan EI");
+                    ev.target.data = ev.target.data.flatMap(function(ei) {
+                        return ei.ajankohdat.flatMap(ajankohtaAikavaleiksi)
+                                            .flatMap(function(xs) {
+                            return ei.liikennevaikutusalue.laskennallisetRatakmvalit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; })
+                                                                                    .map(luoEnnakkotieto(ei, xs))
+                                                                                    .sort(compareByInterval);
+                        });
+                    });
+                    log("Parsittu EI: " + ev.target.data.length);
+                });
+
+                window.seriesLO = luoEnnakkotietoSeries("LOilmoitukset", am4core.color("purple"), loUrl);
+                on(seriesLO.dataSource.events, "parseended", function(ev) {
+                    log("Parsitaan LO done");
+                    ev.target.data = ev.target.data.flatMap(function(lo) {
+                        var xs = [lo.ensimmainenAktiivisuusaika, lo.viimeinenAktiivisuusaika].map(function (d) { return new Date(d).getTime(); });
+                        return lo.kohde.laskennallisetRatakmvalit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; })
+                                                                .map(luoEnnakkotieto(lo, xs));
+                    });
+                    log("Parsittu LO: " + ev.target.data.length);
+                });
+
+                window.seriesES = luoEnnakkotietoSeries("Ennakkosuunnitelmat", am4core.color("green"), esUrl);
+                on(seriesES.dataSource.events, "parseended", function(ev) {
+                    log("Parsitaan ES done");
+                    ev.target.data = ev.target.data.flatMap(function(es) {
+                        return es.tyonosat.flatMap(function(to) {
+                            return to.ajankohdat.flatMap(ajankohtaAikavaleiksi)
+                                                .flatMap(function(xs) {
+                                return to.tekopaikka.laskennallisetRatakmvalit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; })
+                                                                              .map(luoEnnakkotieto(es, xs))
+                                                                              .sort(compareByInterval);
+                            });
+                        });
+                    });
+                    log("Parsittu ES: " + ev.target.data.length);
+                });
+
+                window.seriesVS = luoEnnakkotietoSeries("Vuosisuunnitelmat", am4core.color("violet"), vsUrl);
+                on(seriesVS.dataSource.events, "parseended", function(ev) {
+                    log("Parsitaan VS done");
+                    ev.target.data = ev.target.data.flatMap(function(vs) {
+                        return vs.ajankohdat.flatMap(ajankohtaAikavaleiksi)
+                                            .flatMap(function(xs) {
+                            return vs.kohde.laskennallisetRatakmvalit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; })
+                                                                     .map(luoEnnakkotieto(vs, xs));
+                        });
+                    });
+                    log("Parsittu VS: " + ev.target.data.length);
+                });
+                
+                chart.series.pushAll([seriesEI, seriesLO, seriesES, seriesVS]);
+
+
+
+                let useTimetables = true;
+                if (useTimetables) {
+                    log("Alustetaan aikatauluviivat");
+
+                    let luoJunaSeries = function() {
+                        var series = new am4charts.LineSeries();
+                        series.strokeWidth = 1;
+                        series.dataFields.valueY = "sijainti";
+                        series.cursorTooltipEnabled = false;
+                        series.tooltipPosition = "pointer";
+						series.tooltipText = "Lähtöpäivä: {dummyData.departureDate}\nJunanumero: {dummyData.trainNumber}";
+						series.cloneTooltip = false;
+                        series.numberFormatter.numberFormat = "#";
+                        series.showOnInit = false;
+                        series.simplifiedProcessing = true;
+                        series.hiddenInLegend = true;
+                        //series.minBulletDistance = 50;
+
+						var bullet = new am4core.Circle();
+						bullet.radius = 3;
+						bullet.propertyFields.fillOpacity = "paaty";
+						bullet.states.create("hover").properties.scale = 1.5;
+						bullet.tooltipText = "{paikka}\n{dateX}";
+						bullet.cloneTooltip = false;
+						series.bullets.push(bullet);
+
+                        let segment = series.segments.template;
+						segment.interactionsEnabled = true;
+						segment.cloneTooltip = false;
+						segment.states.create("hover").properties.strokeWidth = 3;
+						segment.states.create("active").properties.strokeWidth = 3;
+						segment.togglable = true;
+						on(segment.events, "hit", function(ev) {
+							ev.target.parent.parent.parent.isActive = !ev.target.isActive;
 						});
-					});
-				};
-				
-				on(rautatieliikennepaikatDS.events, "done", handler);
-				on(liikennepaikanOsatDS.events, "done", handler);
-				on(raideosuudetDS.events, "done", handler);
-				on(laituritDS.events, "done", handler);
-				on(valittuRatanumeroDS.events, "done", function() {
-					rautatieliikennepaikatDS.load();
-					liikennepaikanOsatDS.load();
-					raideosuudetDS.load();
-					laituritDS.load();
-				});
+
+                        return series;
+                    }
+
+                    var aikataulutToggle = new am4charts.LineSeries();
+                    aikataulutToggle.name = "Aikataulut";
+                    aikataulutToggle.dataFields.dateX = "scheduledTime";
+                    aikataulutToggle.dataFields.valueY = "sijainti";
+                    aikataulutToggle.stroke = am4core.color("blue");
+                    aikataulutToggle.fill = am4core.color("blue");
+                    aikataulutToggle.hidden = true;
+                    on(aikataulutToggle.events, "hidden", function() {
+                        log("Piilotetaan aikataulut");
+                        chart.series.each(function(x) { if (x.name == "Aikataulu") { x.hide(); } });
+                    });
+                    on(aikataulutToggle.events, "shown", function() {
+                        log("Näytetään aikataulut");
+                        chart.series.each(function(x) { if (x.name == "Aikataulu") { x.show(); } });
+                    });
+
+                    var toteumatToggle = new am4charts.LineSeries();
+                    toteumatToggle.name = "Toteumat";
+                    toteumatToggle.dataFields.dateX = "actualTime";
+                    toteumatToggle.dataFields.valueY = "sijainti";
+                    toteumatToggle.stroke = am4core.color("red");
+                    toteumatToggle.fill = am4core.color("red");
+                    toteumatToggle.hidden = true;
+                    on(toteumatToggle.events, "hidden", function() {
+                        log("Piilotetaan toteumat");
+                        chart.series.each(function(x) { if (x.name == "Toteuma") { x.hide(); } });
+                    });
+                    on(toteumatToggle.events, "shown", function() {
+                        log("Näytetään toteumat");
+                        chart.series.each(function(x) { if (x.name == "Toteuma") { x.show(); } });
+                    });
+
+                    chart.series.pushAll([aikataulutToggle, toteumatToggle]);
 
 
+                    var junienEsitysaikavali = 1000*60*60*24*3;
+					chart.dummyData.ladatutAikataulut = {};
+					chart.dummyData.ladatutToteumat = {};
 
-				var luoEnnakkotieto = function(x, xs) {
-					return function(rkmv) {
-						let alkuRkm = rkmv.alku.ratakm*1000+rkmv.alku.etaisyys;
-						let loppuRkm = rkmv.loppu.ratakm*1000+rkmv.loppu.etaisyys;
-						return {
-							tunniste: x.tunniste,
-							sisainenTunniste: x.sisainenTunniste,
-							alkuX: new Date(xs[0] < xAxis.min ? xAxis.min : xs[0]),
-							loppuX: new Date(xs[1] > xAxis.max ? xAxis.max : xs[1]),
-							alkuY: alkuRkm < yAxis.min ? yAxis.min : alkuRkm,
-							loppuY: loppuRkm > yAxis.max ? yAxis.max : loppuRkm,
-							alku: new Date(xs[0]),
-							loppu: new Date(xs[1]),
-							ratanumero: rkmv.ratanumero,
-							alkuratakm: rkmv.alku.ratakm,
-							alkuetaisyys: rkmv.alku.etaisyys,
-							loppuratakm: rkmv.loppu.ratakm,
-							loppuetaisyys: rkmv.loppu.etaisyys,
-							zIndex: -1 * (loppuRkm - alkuRkm) * (xs[1] - xs[0])
-						};
+                    var luoAikataulut = function(data) {
+                        chart.series.pushAll(data.map(function(train) {
+                            var seriesA = luoJunaSeries();
+                            seriesA.name = "Aikataulu";
+                            seriesA.dataFields.dateX = "scheduledTime";
+                            seriesA.stroke = am4core.color("blue");
+                            seriesA.fill = am4core.color("blue");
+                            seriesA.dummyData = train.trainData;
+                            seriesA.data = train.rows;
+							seriesA.hidden = aikataulutToggle.isHidden;
+
+                            chart.dummyData.ladatutAikataulut[train.trainData.departureDate][train.trainData.trainNumber] = seriesA;
+
+							on(seriesA.events, "over", function(ev) {
+                                let seriesT = chart.dummyData.ladatutToteumat[ev.target.dummyData.departureDate][ev.target.dummyData.trainNumber];
+								if (seriesT) {
+                                    log("Näytetään toteuma junalle " + ev.target.dummyData.trainNumber + " " + ev.target.dummyData.departureDate);
+                                    seriesT.show();
+                                } else {
+                                    log("Luodaan toteuma junalle " + ev.target.dummyData.trainNumber + " " + ev.target.dummyData.departureDate);
+									let toteuma = luoToteuma(train);
+									toteuma.hidden = false;
+									chart.series.push(toteuma);
+                                };
+							});
+
+							on(seriesA.events, "out", function(ev) {
+								if (toteumatToggle.isHidden && !ev.target.isActive) {
+									let seriesT = chart.dummyData.ladatutToteumat[ev.target.dummyData.departureDate][ev.target.dummyData.trainNumber];
+                                    log("Piilotetaan toteuma junalle " + ev.target.dummyData.trainNumber + " " + ev.target.dummyData.departureDate);
+                                    seriesT.hide();
+								}
+							});
+
+                            return seriesA;
+                        }));
 					};
-				};
+					var luoToteuma = function(train) {
+						var seriesT = luoJunaSeries();
+						seriesT.name = "Toteuma";
+						seriesT.dataFields.dateX = "actualTime";
+						seriesT.stroke = am4core.color("red");
+						seriesT.fill = am4core.color("red");
+						seriesT.dummyData = train.trainData;
+						seriesT.data = train.rows;
+						seriesT.hidden = toteumatToggle.isHidden;
 
-				chart.series.template = new am4charts.ColumnSeries()
-				chart.series.template.dataFields.openValueY = "alkuY";
-				chart.series.template.dataFields.valueY = "loppuY";
-				chart.series.template.dataFields.openDateX = "alkuX";
-				chart.series.template.dataFields.dateX = "loppuX";
-				chart.series.template.cursorTooltipEnabled = false;
-				chart.series.template.showOnInit = false;
-				chart.series.template.simplifiedProcessing = true;
-				chart.series.template.fillOpacity = 0.25;
-				chart.series.template.strokeWidth = 1;
-				chart.series.template.hidden = true;
-				chart.series.template.columns.template.tooltipPosition = "pointer";
-				chart.series.template.columns.template.tooltipText = "{sisainenTunniste}\n{tunniste}\n{alku} - {loppu}\n({ratanumero}) {alkuratakm}+{alkuetaisyys} - {loppuratakm}+{loppuetaisyys}";
-				chart.series.template.columns.template.propertyFields.zIndex = "zIndex";
-				let hoverState = chart.series.template.columns.template.states.create("hover");
-				hoverState.properties.zIndex = 999;
-				hoverState.properties.fillOpacity = 1;
+                        chart.dummyData.ladatutToteumat[train.trainData.departureDate][train.trainData.trainNumber] = seriesT;
 
-				log("Alustetaan ennakkotiedot");
-				var seriesEI = chart.series.create();
-				seriesEI.name = "EI";
-				seriesEI.fill = "orange";
-				seriesEI.hidden = false;
-				seriesEI.stroke = seriesEI.fill.lighten(-0.2);
-				seriesEI.columns.template.states.create("hover").properties.stroke = seriesEI.stroke.lighten(-0.7);
-				monitor(seriesEI.dataSource, "Ennakkoilmoitukset");
-				on(seriesEI.dataSource.events, "parseended", function(ev) {
-					var data = ev.target.data;
-					var uusiData = [];
-					for (var i = 0; i < data.length; i++) {
-						var x = data[i];
-						var xs = x.voimassa.split("/").map(function (d) { return new Date(d).getTime(); });
-						uusiData = uusiData.concat(x.liikennevaikutusalue.laskennallisetRatakmvalit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; }).map(luoEnnakkotieto(x, xs)));
-					}
-					ev.target.data = uusiData;
-				});
-				seriesEI.dataSource.url = eiUrl;
-				on(seriesEI.events, "shown", function() {
-					seriesEI.dataSource.load();
-				});
-				on(valittuRatanumeroDS.events, "done", function() {
-					seriesEI.dataSource.load();
-				});
-
-
-
-				log("Alustetaan loilmoitukset");
-				var seriesLO = chart.series.create();
-				seriesLO.name = "LOI";
-				seriesLO.fill = "purple";
-				seriesLO.hidden = false;
-				seriesLO.stroke = seriesLO.fill.lighten(-0.2);
-				seriesLO.columns.template.states.create("hover").properties.stroke = seriesLO.stroke.lighten(-0.7);
-				monitor(seriesLO.dataSource, "LOilmoitukset");
-				on(seriesLO.dataSource.events, "parseended", function(ev) {
-					var data = ev.target.data;
-					var uusiData = [];
-					for (var i = 0; i < data.length; i++) {
-						var x = data[i];
-						var xs = [x.ensimmainenAktiivisuusaika, x.viimeinenAktiivisuusaika].map(function (d) { return new Date(d).getTime(); });
-						uusiData = uusiData.concat(x.kohde.laskennallisetRatakmvalit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; }).map(luoEnnakkotieto(x, xs)));
-					}
-					ev.target.data = uusiData;
-				});
-				seriesLO.dataSource.url = loUrl;
-				on(seriesLO.events, "shown", function() {
-					seriesLO.dataSource.load();
-				});
-				on(valittuRatanumeroDS.events, "done", function() {
-					seriesLO.dataSource.load();
-				});
-
-
-
-				log("Alustetaan ennakkosuunnitelmat");
-				var seriesES = chart.series.create();
-				seriesES.name = "ES";
-				seriesES.fill = "green";
-				seriesES.stroke = seriesES.fill.lighten(-0.2);
-				seriesES.columns.template.states.create("hover").properties.stroke = seriesES.stroke.lighten(-0.7);
-				monitor(seriesES.dataSource, "Ennakkosuunnitelmat");
-				on(seriesES.dataSource.events, "parseended", function(ev) {
-					var data = ev.target.data;
-					var uusiData = [];
-					for (var i = 0; i < data.length; i++) {
-						var x = data[i];
-						var xs = x.voimassa.split("/").map(function (d) { return new Date(d).getTime(); });
-						var rkmv = x.tyonosat.flatMap(function(t) { return t.tekopaikka.laskennallisetRatakmvalit; });
-						var radalla = rkmv.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; });
-						uusiData = uusiData.concat(radalla.map(luoEnnakkotieto(x, xs)));
-					}
-					ev.target.data = uusiData;
-				});
-				seriesES.dataSource.url = esUrl;
-				on(seriesES.events, "shown", function() {
-					seriesES.dataSource.load();
-				});
-				on(valittuRatanumeroDS.events, "done", function() {
-					seriesES.dataSource.load();
-				});
-
-
-
-				log("Alustetaan vuosisuunnitelmat");
-				var seriesVS = chart.series.create();
-				seriesVS.name = "VS";
-				seriesVS.fill = "violet";
-				seriesVS.stroke = seriesVS.fill.lighten(-0.2);
-				seriesVS.columns.template.states.create("hover").properties.stroke = seriesVS.stroke.lighten(-0.7);
-				monitor(seriesVS.dataSource, "Vuosisuunnitelmat");
-				on(seriesVS.dataSource.events, "parseended", function(ev) {
-					var data = ev.target.data;
-					var uusiData = [];
-					for (var i = 0; i < data.length; i++) {
-						var x = data[i];
-						var xs = x.voimassa.split("/").map(function (d) { return new Date(d).getTime(); });
-						uusiData = uusiData.concat(x.kohde.laskennallisetRatakmvalit.filter(function(x) { return x.ratanumero == valittuRatanumeroDS.data; }).map(luoEnnakkotieto(x, xs)));
-					}
-					ev.target.data = uusiData;
-				});
-				seriesVS.dataSource.url = vsUrl;
-				on(seriesVS.events, "shown", function() {
-					seriesVS.dataSource.load();
-				});
-				on(valittuRatanumeroDS.events, "done", function() {
-					seriesVS.dataSource.load();
-				});
-
-
-				let useTimetables = true;
-				if (useTimetables) {
-					log("Alustetaan aikatauluviivat");
-
-					chart.series.template = new am4charts.LineSeries()
-					chart.series.template.strokeWidth = 1;
-					chart.series.template.stroke = am4core.color("blue");
-					chart.series.template.fill = am4core.color("blue");
-					chart.series.template.dataFields.dateX = "scheduledTime";
-					chart.series.template.dataFields.valueY = "sijainti";
-					chart.series.template.cursorTooltipEnabled = false;
-					chart.series.template.tooltipPosition = "pointer";
-					chart.series.template.tooltipText = "Lähtöpäivä: {dummyData.departureDate}\nJunanumero: {dummyData.trainNumber}";
-					chart.series.template.numberFormatter.numberFormat = "#";
-					chart.series.template.showOnInit = false;
-					chart.series.template.simplifiedProcessing = true;
-
-					var aikataulutToggle = chart.series.create();
-					aikataulutToggle.name = "Aikataulut";
-					aikataulutToggle.hidden = true;
-					on(aikataulutToggle.events, "hidden", function() {
-						log("Piilotetaan aikataulut");
-						chart.series.values.forEach(function(x) { if (x.name == "Aikataulu") { x.hide(); } });
-					});
-
-					on(aikataulutToggle.events, "shown", function() {
-						log("Näytetään aikataulut");
-						chart.series.values.forEach(function(x) { if (x.name == "Aikataulu") { x.show(); } });
-					});
-
-					var toteumatToggle = chart.series.create();
-					toteumatToggle.stroke = am4core.color("red");
-					toteumatToggle.fill = am4core.color("red");
-					toteumatToggle.name = "Toteumat";
-					toteumatToggle.hidden = true;
-					on(toteumatToggle.events, "hidden", function() {
-						log("Piilotetaan toteumat");
-						chart.series.values.forEach(function(x) { if (x.name == "Toteuma") { x.hide(); } });
-					});
-
-					on(toteumatToggle.events, "shown", function() {
-						log("Näytetään toteumat");
-						chart.series.values.forEach(function(x) { if (x.name == "Toteuma") { x.show(); } });
-					});
-
-					chart.series.template.hiddenInLegend = true;
-
-					var aikataulujenEsitysaikavali = 1000*60*60*24*3;
-					chart.dummyData.ladatutLahtopaivat = {};
-
-					var luoLineSeries = function(data) {
-						data.forEach(function(train) {
-							if (train.trainData.lahtenyt) {
-								var series2 = chart.series.create();
-								series2.name = "Toteuma";
-								series2.dataFields.dateX = "actualTime";
-								series2.stroke = am4core.color("red");
-								series2.fill = am4core.color("red");
-								series2.dummyData = train.trainData;
-								series2.data = train.rows;
-								series2.hidden = toteumatToggle.isHidden;
-
-								var bullet2 = series2.bullets.push(new am4core.Circle());
-								bullet2.radius = 3;
-								bullet2.propertyFields.fillOpacity = "paaty";
-								bullet2.states.create("hover").properties.scale = 1.5;
-								bullet2.tooltipText = "{paikka}\n{actualTime.formatDate('yyyy-MM-dd HH:mm:ss')}";
-								
-								let segment2 = series2.segments.template;
-								segment2.interactionsEnabled = true;
-								segment2.states.create("hover").properties.strokeWidth = 3;
-							}
-
-							var series3 = chart.series.create();
-							series3.name = "Aikataulu";
-							series3.dummyData = train.trainData;
-							series3.data = train.rows;
-							series3.hidden = aikataulutToggle.isHidden;
-
-							var bullet3 = series3.bullets.push(new am4core.Circle());
-							bullet3.radius = 3;
-							bullet3.propertyFields.fillOpacity = "paaty";
-							bullet3.states.create("hover").properties.scale = 1.5;
-							bullet3.tooltipText = "{paikka}\n{scheduledTime.formatDate('yyyy-MM-dd HH:mm:ss')}";
-
-							let segment3 = series3.segments.template;
-							segment3.interactionsEnabled = true;
-							segment3.states.create("hover").properties.strokeWidth = 3;
-						});
+						return seriesT;
 					};
-					var haeAikataulu = function(d) {
-						var paiva = dateFns.dateFns.format(d, 'yyyy-MM-dd');
-						if (!chart.dummyData.ladatutLahtopaivat[paiva]) {
-							chart.dummyData.ladatutLahtopaivat[paiva] = true;
-							lataaAikataulu(paiva, luoLineSeries);
-						}
+					var luoToteumat = function(data) {
+                        chart.series.pushAll(data.map(luoToteuma));
 					};
-					var haeAikatauluja = function() {
-						let start = xAxis.minZoomed;
-						let end = xAxis.maxZoomed;
-						if (end-start <= aikataulujenEsitysaikavali && (!aikataulutToggle.isHidden || !toteumatToggle.isHidden)) {
-							dateFns.dateFns.eachDay(start, end).forEach(haeAikataulu);
-						}
+					
+                    var haeAikataulut = function(d) {
+                        var paiva = dateFns.dateFns.format(d, 'yyyy-MM-dd');
+                        if (!chart.dummyData.ladatutAikataulut[paiva] || chart.dummyData.ladatutAikataulut[paiva] == {}) {
+                            chart.dummyData.ladatutAikataulut[paiva] = {};
+                            chart.dummyData.ladatutToteumat[paiva] = {};
+                            lataaAikataulu(paiva, luoAikataulut);
+                        }
 					};
-					var poistaAikataulu = function(paiva, series) {
-						log("Siivotaan pois junat lähtöpäivältä " + paiva);
-						chart.dummyData.ladatutLahtopaivat[paiva] = false;
-						let index = chart.series.indexOf(series);
-						if (index >= 0) {
-							let removed = chart.series.removeIndex(index);
-							setTimeout(function() {
-								log("Viivästetysti siivotaan lähtöpäivä " + paiva);
-								removed.dispose();
-							}, 60000);
-						}
+					var haeToteumat = function(d) {
+                        var paiva = dateFns.dateFns.format(d, 'yyyy-MM-dd');
+                        if (!chart.dummyData.ladatutToteumat[paiva] || chart.dummyData.ladatutToteumat[paiva] == {}) {
+                            chart.dummyData.ladatutAikataulut[paiva] = {};
+                            chart.dummyData.ladatutToteumat[paiva] = {};
+                            lataaAikataulu(paiva, luoToteumat);
+                        }
+                    };
+                    var haeAikatauluja = function() {
+                        let start = xAxis.minZoomed || ikkuna[0].getTime();
+                        let end = xAxis.maxZoomed || ikkuna[1].getTime();
+                        if (end-start <= junienEsitysaikavali && !aikataulutToggle.isHidden) {
+                            dateFns.dateFns.eachDayOfInterval({start: new Date(start), end: new Date(end)}).forEach(haeAikataulut);
+                        }
 					};
+					var haeToteumia = function() {
+                        let start = xAxis.minZoomed || ikkuna[0].getTime();
+                        let end = xAxis.maxZoomed || ikkuna[1].getTime();
+                        if (end-start <= junienEsitysaikavali && !toteumatToggle.isHidden) {
+                            dateFns.dateFns.eachDayOfInterval({start: new Date(start), end: new Date(end)}).forEach(haeToteumat);
+                        }
+                    };
+                    var poistaAikataulu = function(series, paiva) {
+                        log("Siivotaan pois junat lähtöpäivältä", paiva);
+						chart.dummyData.ladatutAikataulut[paiva] = {};
+						chart.dummyData.ladatutToteumat[paiva] = {};
+                        let index = chart.series.indexOf(series);
+                        if (index >= 0) {
+                            let removed = chart.series.removeIndex(index);
+                            setTimeout(function() {
+                                log("Viivästetysti siivotaan lähtöpäivä", paiva);
+                                removed.dispose();
+                            }, 60000);
+                        }
+                    };
 
 					on(xAxis.events, "selectionextremeschanged", haeAikatauluja);
-					on(aikataulutToggle.events, "shown", haeAikatauluja);
-					on(toteumatToggle.events, "shown", haeAikatauluja);
-					on(valittuRatanumeroDS.events, "done", function() {
-						chart.series.values.forEach(function(x) { if (x.name == "Aikataulu" || x.name == "Toteuma") { poistaAikataulu(x); } });
+					on(xAxis.events, "selectionextremeschanged", haeToteumia);
+                    on(aikataulutToggle.events, "shown", haeAikatauluja);
+                    on(toteumatToggle.events, "shown", haeToteumia);
+                    on(valittuRatanumeroDS.events, "done", function() {
+                        chart.series.each(function(x) { if (x.name == "Aikataulu" || x.name == "Toteuma") { poistaAikataulu(x); } });
 						haeAikatauluja();
-					});
+						haeToteumia();
+                    });
 
-					on(xAxis.events, "selectionextremeschanged", function(ev) {
-						let start = ev.target.minZoomed;
-						let end = ev.target.maxZoomed;
-						if (end-start > aikataulujenEsitysaikavali) {
-							log("Piilotetaan junat");
-							aikataulutToggle.hide();
-							toteumatToggle.hide();
-							chart.series.values.forEach(function(x) { if (x.name == "Aikataulu" || x.name == "Toteuma") { x.hide(); } });
-						}
-					});
-
-					let disposeFurtherThanDays = 3;
-					on(xAxis.events, "selectionextremeschanged", function(ev) {
-						let start = ev.target.minZoomed;
-						let end = ev.target.maxZoomed;
-						
-						for (let i = 0; i < chart.series.values.length; ++i) {
-							let series = chart.series.values[i];
-							if (series.name == "Aikataulu" || series.name == "Toteuma") {
-								let departureDate = series.dummyData.dd;
-								if (departureDate < dateFns.dateFns.addDays(start, -1*disposeFurtherThanDays) ||
-									departureDate > dateFns.dateFns.addDays(end,      disposeFurtherThanDays)) {
-
-									let paiva = dateFns.dateFns.format(departureDate, 'yyyy-MM-dd');
-									poistaAikataulu(paiva, series);
-									break;
-								}
-							}
-						};
-					});
-				}
+                    on(xAxis.events, "selectionextremeschanged", function(ev) {
+                        let start = ev.target.minZoomed;
+                        let end = ev.target.maxZoomed;
+                        if (end-start > junienEsitysaikavali && (!aikataulutToggle.hidden || !toteumatToggle.hidden)) {
+                            log("Piilotetaan junat");
+                            aikataulutToggle.hide();
+                            toteumatToggle.hide();
+                            chart.series.each(function(x) { if (x.name == "Aikataulu" || x.name == "Toteuma") { x.hide(); } });
+                        }
+                    });
 
 
+                    let disposeFurtherThanDays = 3;
+                    on(xAxis.events, "selectionextremeschanged", function(ev) {
+                        let start = ev.target.minZoomed;
+                        let end = ev.target.maxZoomed;
+                        
+                        chart.series.each(function(series) {
+                            if (series.name == "Aikataulu" || series.name == "Toteuma") {
+                                let departureDate = series.dummyData.dd;
+                                if (departureDate < dateFns.dateFns.addDays(start, -1*disposeFurtherThanDays) ||
+                                    departureDate > dateFns.dateFns.addDays(end,      disposeFurtherThanDays)) {
 
-				log("Grafiikka valmis");
-			});
-		}
-	</script>
+                                    var paiva = dateFns.dateFns.format(departureDate, 'yyyy-MM-dd');
+                                    poistaAikataulu(series, paiva);
+                                }
+                            }
+                        });
+                    });
+                }
+
+
+
+                log("Grafiikka valmis");
+            });
+        }
+    </script>
 </head>
 
 <body>
-	<div id="chartdiv"></div>
+    <div id="chartdiv"></div>
 </body>
 
 </html>
