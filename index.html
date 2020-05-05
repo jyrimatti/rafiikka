@@ -8,6 +8,13 @@
             width: 100%;
             height: 500px;
         }
+        h1 {
+            font-weight: 100;
+            font-style: italic;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin-left: 1em;
+            margin-bottom: 0;
+        }
     </style>
 
     <!-- TODO
@@ -22,12 +29,12 @@
         - jump-to-date laatikko
         - aikataulupiste (erityisesti vaakasuora viiva) kertomaan "raide" eli siis kapasiteetinhallintayksikkö
 		- sijainti heijastumaan urliin
-        - junien sijainti mukaan
         - ratatyöt
         - valitut objektit listaksi legendiin, tooltip mukaan
         - selectioniin valinnan alue tooltipiksi tms
         - ratanumero-akseli nyt olettaa ratakm=1000m. Miten korjata?
-        - bugirapsa siitä, että column-template-active-staten asettamien sotkee legendin
+        - columnille Label-lapsi, jossa EI123
+        - kielivalinta fi/en
     -->
 
     <script src="https://www.amcharts.com/lib/version/4.9.19/core.js"></script>
@@ -665,7 +672,7 @@
                         alkuY:            alkuRkm < yAxis.min ? yAxis.min : alkuRkm,
                         loppuY:           loppuRkm > yAxis.max ? yAxis.max : loppuRkm,
                         voimassa:         muotoileAikavali(x.voimassa),
-                        ajankohdat:       x.ajankohdat.map(a =>  a.yhtajaksoinen ? muotoileAikavali(a.yhtajaksoinen)
+                        /*ajankohdat:       x.ajankohdat.map(a =>  a.yhtajaksoinen ? muotoileAikavali(a.yhtajaksoinen)
                                                                                  : a.toistuva.ensimmainenAloitusPaiva + " - " +
                                                                                    a.toistuva.viimeinenAloitusPaiva + " " +
                                                                                    a.toistuva.aloitusViikot + " " +
@@ -675,7 +682,7 @@
                                                       .join("\n"),
                         alue:             x.tyonosat ? x.tyonosat.map(t => muotoileKohde(t.tekopaikka)).join("\n") :
                                           x.liikennevaikutusalue ? muotoileKohde(x.liikennevaikutusalue) :
-                                          x.kohde ? muotoileKohde(x.kohde) : '',
+                                          x.kohde ? muotoileKohde(x.kohde) : '',*/
                         ratanumero:       rkmv.ratanumero,
                         alkuratakm:       rkmv.alku.ratakm,
                         alkuetaisyys:     rkmv.alku.etaisyys,
@@ -749,6 +756,11 @@
 					series.columns.template.cloneTooltip          = false;
                     series.columns.template.togglable             = true;
                     series.columns.template.propertyFields.zIndex = "zIndex";
+                    let columnLabel = series.columns.template.children.push(new am4core.Label());
+                    columnLabel.fontSize = 13;
+                    columnLabel.fill = series.stroke;
+                    columnLabel.strokeWidth = 0;
+                    columnLabel.text = "{sisainenTunniste}";
 
                     let luoState = stateName => {
                         let state = series.columns.template.states.create(stateName);
@@ -893,18 +905,26 @@
 
                 window.junatSeries = new am4charts.XYSeries()
                 junatSeries.name = "Junat";
+                junatSeries.fill = "red";
                 junatSeries.hidden = true;
                 junatSeries.data = [];
                 junatSeries.dataFields.dateX = "timestamp";
                 junatSeries.dataFields.valueY = "sijainti";
-                let bullet          = new am4core.Circle();
-                bullet.radius       = 3;
-                bullet.stroke       = am4core.color("red");
-                bullet.fill         = am4core.color("red").lighten(0.5);
-                bullet.cloneTooltip = false;
+                let bullet           = new am4charts.CircleBullet();
+                bullet.circle.radius = 3;
+                bullet.circle.stroke = am4core.color("red");
+                bullet.circle.fill   = am4core.color("red").lighten(0.5);
+                bullet.cloneTooltip  = false;
+                bullet.tooltipText   = 'Lähtöpäivä: {departureDate}\nJunanumero: {trainNumber}';
                 bullet.states.create("hover").properties.scale = 1.5;
                 bullet.states.create("active").properties.scale = 1.5;
-                bullet.tooltipText  = 'Lähtöpäivä: {departureDate}\nJunanumero: {trainNumber}';
+                let label         = bullet.children.push(new am4core.Label());
+                label.strokeWidth = 0;
+                label.fontSize    = 11;
+                label.dx          = 2;
+                label.dy          = 2;
+                label.fill        = bullet.circle.fill;
+                label.text        = "{trainNumber}";
                 
                 on(bullet.events, "hit", ev => valitseJuna(ev.target.dataItem.dataContext));
                 on(aktiivisetJunatDS.events, "done", ev => {
@@ -1285,6 +1305,7 @@
 </head>
 
 <body>
+    <h1>Rafiikka - Rataverkon reaaliaika- ja työrakografiikka</h1>
     <div id="chartdiv"></div>
 </body>
 
