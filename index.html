@@ -33,7 +33,6 @@
         - valitut objektit listaksi legendiin, tooltip mukaan
         - selectioniin valinnan alue tooltipiksi tms
         - ratanumero-akseli nyt olettaa ratakm=1000m. Miten korjata?
-        - columnille Label-lapsi, jossa EI123
         - kielivalinta fi/en
     -->
 
@@ -340,6 +339,7 @@
 
                 chart.legend = new am4charts.Legend();
                 chart.legend.position = "right";
+                chart.legend.useDefaultMarker = true; // https://github.com/amcharts/amcharts4/issues/2444
 
                 chart.scrollbarX = new am4core.Scrollbar();
                 chart.scrollbarY = new am4core.Scrollbar();
@@ -710,12 +710,14 @@
                     return [...new Set(uudetAktiiviset)].map(y => { return {"name": y }; });
                 };
 
-                let luoAktiivinenListaus = (series, haeAktiiviset) => {
+                let luoAktiivinenListaus = series => {
                     let legend = chart.legend.itemContainers.values.find(x => x.dataItem.name == series.name);
                     let aktiiviset           = new am4charts.Legend();
+                    legend.paddingBottom = 0;
                     aktiiviset.parent        = legend.parent;
                     aktiiviset.insertAfter(legend);
                     aktiiviset.paddingBottom = 16;
+                    aktiiviset.fontSize      = 12;
                     aktiiviset.position      = "left";
                     aktiiviset.maxHeight     = 50;
                     aktiiviset.scrollable    = true;
@@ -724,13 +726,6 @@
                     aktiiviset.itemContainers.template.paddingTop    = 0;
                     aktiiviset.itemContainers.template.paddingBottom = 0;
 
-                    on(aktiiviset.events, "hit", ev => {
-                        let nimi = ev.target.data[0].name;
-                        series.dummyData.objectCache[nimi].forEach(x => {
-                            x.isActive = !x.isActive;
-                            aktiiviset.data = haeAktiiviset(series, x, nimi);
-                        });
-                    });
                     return aktiiviset;
                 };
 
@@ -821,7 +816,15 @@
                     });
 
                     on(chart.events, "ready", () => {
-                        let aktiiviset = luoAktiivinenListaus(series, haeAktiivisetColumnit)
+                        let aktiiviset = luoAktiivinenListaus(series);
+                        on(aktiiviset.itemContainers.template.events, "hit", ev => {
+                            let nimi = ev.target.dataItem.dataContext.name;
+                            series.dummyData.objectCache[nimi].forEach(x => {
+                                x.isActive = !x.isActive;
+                                aktiiviset.data = haeAktiivisetColumnit(series, x, nimi);
+                            });
+                            aktiiviset.data = haeAktiivisetColumnit(series, series.dummyData.objectCache[nimi][0], nimi);
+                        });
                         on(series.columns.template.events, "hit", ev => {
                             aktiiviset.data = haeAktiivisetColumnit(series, ev.target.column, ev.target.dataItem.dataContext.sisainenTunniste);
                         });
@@ -1008,6 +1011,21 @@
                 })
                 junatSeries.dataSource.updateCurrentData = true;
                 junatSeries.dataSource.events.on("error", errorHandler);
+
+                let haeAktiivisetJunat = () => {
+                    return Object.keys(aktiivisetJunatDS.data).flatMap(dd => Object.keys(aktiivisetJunatDS.data[dd]).map(tn => { return {departureDate: dd, trainNumber: tn, "name": tn + " (" + dd + ")" }; }));
+                };
+
+                on(chart.events, "ready", () => {
+                    let aktiiviset = luoAktiivinenListaus(junatSeries);
+                    on(aktiiviset.itemContainers.template.events, "hit", ev => {
+                        valitseJuna(ev.target.dataItem.dataContext);
+                        aktiiviset.data = haeAktiivisetJunat();
+                    });
+                    on(aktiivisetJunatDS.events, "done", ev => {
+                        aktiiviset.data = haeAktiivisetJunat();
+                    });
+                });
 
                 window.junasijainnit = new Paho.MQTT.Client("rata.digitraffic.fi", 443, "rafiikka_" + parseInt(Math.random() * 10000, 10));
                 junasijainnit.onConnectionLost = errorHandler;
