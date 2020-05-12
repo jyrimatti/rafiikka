@@ -15,6 +15,9 @@
             margin-left: 1em;
             margin-bottom: 0;
         }
+        select {
+            max-width: 7em;
+        }
     </style>
 
     <!-- TODO
@@ -335,7 +338,10 @@
                                 if (rkm.length > 0) {
                                     sijainti = rkm[0].ratakm*1000 + rkm[0].etaisyys;
                                 } else if (valittuAikataulupaikkaDS.data.length > 0) {
-                                    sijainti = valittuAikataulupaikkaDS.data.indexOf(row.stationUICCode);
+                                    let sij = valittuAikataulupaikkaDS.data.indexOf(row.stationUICCode);
+                                    if (sij > -1) {
+                                        sijainti = sij;
+                                    }
                                 }
                             } else {
                                 log("Tuntematon UICKoodi! " + row.stationUICCode);
@@ -391,9 +397,18 @@
                 chart.legend = new am4charts.Legend();
                 chart.legend.position = "right";
                 chart.legend.useDefaultMarker = true; // https://github.com/amcharts/amcharts4/issues/2444
+                chart.legend.exportable = false; 
+
+                chart.exporting.menu = new am4core.ExportMenu();
+                chart.exporting.filePrefix = "rafiikka";
+                chart.exporting.title = "Rafiikka";
+                chart.exporting.menu.items[0].label = "⤵";
 
                 chart.scrollbarX = new am4core.Scrollbar();
                 chart.scrollbarY = new am4core.Scrollbar();
+                chart.scrollbarX.exportable = false;
+                chart.scrollbarY.exportable = false;
+
                 //chart.scrollbarX.thumb.minWidth = 40; // Hmm, tuntuisi rajoittavan zoomia...
                 //chart.scrollbarY.thumb.minHeight = 40;
 
@@ -444,20 +459,27 @@
                 //yAxis.cursorTooltipEnabled = false;
                 yAxis.extraMax = 0.1;
                 yAxis.renderer.numberFormatter.numberFormat = "#";
-                yAxis.renderer.labels.template.paddingRight = 40;
+                add(yAxis.renderer.labels.template.adapter, "paddingRight", paddingRight => {
+                    return valittuAikataulupaikkaDS.data.length > 0 ? 0 : 40;
+                });
+
                 add(yAxis.renderer.labels.template.adapter, "text", text => {
                     let n = parseInt(text);
-                    return Math.floor(n/1000) + "+" + (n%1000);
+                    return valittuAikataulupaikkaDS.data.length > 0 ? "" : Math.floor(n/1000) + "+" + (n%1000);
                 });
 
                 add(yAxis.adapter, "getTooltipText", text => {
                     let n = parseInt(text);
-                    return Math.floor(n/1000) + "+" + (n%1000);
+                    return valittuAikataulupaikkaDS.data.length > 0 ? "" : Math.floor(n/1000) + "+" + (n%1000);
                 });
 
 
 
                 window.ratanumeroChanged = val => {
+                    if (!ratanumerotDS.data[val]) {
+                        log("Ohitetaan, ehkä data ei ollut vielä latautunut...");
+                        return false;
+                    }
                     if (val != valittuRatanumeroDS.data) {
                         log("Valittiin ratanumero: " + val);
                         yAxis.title.text = "(" + val + ")";
@@ -485,8 +507,8 @@
                 };
                 let valissa = (ratakmsijainti,vali) => [vali[0],ratakmsijainti,vali[1]].sort(ratakmsijaintiComparator) == [vali[0],ratakmsijainti,vali[1]];
 
-                window.aikataulupaikkaChanged = val => {
-                    let newVal = val.split("-").map(x => Object.values(aikataulupaikatDS.data).find(a => a.lyhenne == x.trim()));
+                window.aikataulupaikkaChanged = (val1, val2) => {
+                    let newVal = [val1, val2].map(x => Object.values(aikataulupaikatDS.data).find(a => a.lyhenne == x.trim()));
                     if (newVal.includes(undefined)) {
                         log("Ohitetaan, ehkä data ei ollut vielä latautunut...");
                         return false;
@@ -494,7 +516,7 @@
                     newVal = newVal.map(x => x.tunniste);
                     let reittiDS = new am4core.DataSource();
                     reittiDS.url = reittiUrl.replace('{alku}', newVal[0]).replace('{loppu}', newVal[newVal.length-1]); // ignoroidaan muut kun alku ja loppu
-                    monitor(reittiDS, val);
+                    monitor(reittiDS, newVal.join("-"));
                     on(reittiDS.events, "done", ev => {
                         let data = ev.target.data;
                         let lpJaOsat = data.liikennepaikat.flatMap(x => aikataulupaikatDS.data[x] ? [x] : data.liikennepaikanOsat.filter(y => liikennepaikanOsatDS.data[y].liikennepaikka == x).map(y => liikennepaikanOsatDS.data[y].tunniste));
@@ -546,28 +568,48 @@
 				radioButton1.html = "<input type='radio' id='ratanumeroRadio' name='yAkseliValinta' " + (ratanumeroValittuna ? "checked='checked'" : "") + " onclick='window.ratanumeroChanged(document.getElementById(\"ratanumero\").value)' />";
                 let ratanumeroSelect = ratanumeroContainer.createChild(am4core.Label);
 				ratanumeroSelect.paddingLeft = 25;
-                ratanumeroSelect.html = "<label for='ratanumeroRadio'><select id='ratanumero' placeholder='009' onchange='window.ratanumeroChanged(this.value)'>{}</select></label>";
+                ratanumeroSelect.html = "<label for='ratanumeroRadio'><select id='ratanumero' onchange='window.ratanumeroChanged(this.value)'>{}</select></label>";
                 on(ratanumerotDS.events, "done", ev => {
                     if (!alustettu) {
                         let ratanumerot = Object.keys(ev.target.data).sort();
-                        ratanumeroSelect.html = ratanumeroSelect.html.replace("{}", ratanumerot.map(x => "<option " + (sijaintiParam == x ? "selected='selected'" : "") + ">" + x + "</option>").join());
+                        ratanumeroSelect.html = ratanumeroSelect.html.replace("{}", ratanumerot.map(x => "<option " + (sijaintiParam == x ? "selected='selected'" : "") + ">" + x + "</option>").join(""));
                         if (ratanumeroValittuna) {
-                            alustettu = true;
-                            ratanumeroChanged(sijaintiParam);
+                            if (ratanumeroChanged(sijaintiParam)) {
+                                alustettu = true;
+                            }
                         }
                     }
                 });
 
+                let sijaintiParams = sijaintiParam.split("-");
+                if (sijaintiParams.length != 2) {
+                    sijaintiParams = [undefined,undefined];
+                }
                 let aikataulupaikkaContainer = yAkseliValintaContainer.createChild(am4core.Container);
                 let radioButton2 = aikataulupaikkaContainer.createChild(am4core.Label);
-                radioButton2.html = "<input type='radio' id='aikataulupaikkaRadio' name='yAkseliValinta' " + (ratanumeroValittuna ? "" : "checked='checked'") + "onclick='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka\").value)' />";
-                let aikataulupaikkaInput = aikataulupaikkaContainer.createChild(am4core.Label);
-				aikataulupaikkaInput.paddingLeft = 25;
-                aikataulupaikkaInput.html = "<label for='aikataulupaikkaRadio'><input type='text' id='aikataulupaikka' placeholder='Tpe-Ov' onchange='window.aikataulupaikkaChanged(this.value)' value='" + sijaintiParam + "'></label>";
+                radioButton2.html = "<input type='radio' id='aikataulupaikkaRadio' name='yAkseliValinta' " + (ratanumeroValittuna ? "" : "checked='checked'") + "onclick='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value,document.getElementById(\"aikataulupaikka2\").value)' />";
+                let aikataulupaikkaSelect = aikataulupaikkaContainer.createChild(am4core.Label);
+				aikataulupaikkaSelect.paddingLeft = 25;
                 on(aikataulupaikatDS.events, "done", ev => {
-                    if (!alustettu && !ratanumeroValittuna) {
-                        if (aikataulupaikkaChanged(sijaintiParam)) {
-                            alustettu = true;
+                    aikataulupaikkaSelect.html = "<label for='aikataulupaikkaRadio'><select id='aikataulupaikka1' onchange='window.aikataulupaikkaChanged(this.value, document.getElementById(\"aikataulupaikka2\").value)' value='" + sijaintiParams[0] + "'>{1}</select> - " +
+                                                                                   "<select id='aikataulupaikka2' onchange='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value, this.value)' value='" + sijaintiParams[1] + "'>{2}</select></label>";
+                    let aikataulupaikat1 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).sort( (a,b) => a.lyhenne < b.lyhenne ? -1 : a.lyhenne > b.lyhenne ? 1 : 0);
+                    let aikataulupaikat2 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).sort( (a,b) => a.lyhenne < b.lyhenne ? -1 : a.lyhenne > b.lyhenne ? 1 : 0);
+                    let valittu1 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).find(x => x.lyhenne.toLowerCase() == sijaintiParams[0].toLowerCase());
+                    if (valittu1) {
+                        aikataulupaikat2.sort( (a,b) => {
+                            let da = valittu1.geometria.distance(a.geometria);
+                            let db = valittu1.geometria.distance(b.geometria);
+                            return da < db ? -1 : da > db ? 1 : 0;
+                        });
+                    }
+                    aikataulupaikkaSelect.html = aikataulupaikkaSelect.html.replace("{1}", aikataulupaikat1.map(x => "<option " + (sijaintiParams[0].toLowerCase() == x.lyhenne.toLowerCase() ? "selected='selected'" : "") + ">" + x.lyhenne + " (" + x.nimi + ")" + "</option>").join(""))
+                                                                           .replace("{2}", aikataulupaikat2.map(x => "<option " + (sijaintiParams[1].toLowerCase() == x.lyhenne.toLowerCase() ? "selected='selected'" : "") + ">" + x.lyhenne + " (" + x.nimi + ")" + "</option>").join(""));
+                    if (!alustettu) {
+                        if (!ratanumeroValittuna) {
+                            if (aikataulupaikkaChanged(sijaintiParams[0], sijaintiParams[1])) {
+                                alustettu = true;
+                            }
                         }
                     }
                 });
@@ -575,12 +617,12 @@
                 let paivitaTilat = ev => {
                     let toinenValittu = ev.target == radioButton2;
                     ratanumeroSelect.disabled = toinenValittu;
-                    aikataulupaikkaInput.disabled = !toinenValittu;
+                    aikataulupaikkaSelect.disabled = !toinenValittu;
                 };
                 on(chart.events, "ready", () => {
                     let toinenValittu = !ratanumeroValittuna;
                     ratanumeroSelect.disabled = toinenValittu;
-                    aikataulupaikkaInput.disabled = !toinenValittu;
+                    aikataulupaikkaSelect.disabled = !toinenValittu;
                 });
                 on(radioButton1.events, "hit", paivitaTilat);
                 on(radioButton2.events, "hit", paivitaTilat);
@@ -591,6 +633,7 @@
                 chart.zoomOutButton.dispose(); // default-nappi pois
 
                 let buttonContainer = chart.plotContainer.createChild(am4core.Container);
+                buttonContainer.exportable = false;
                 buttonContainer.shouldClone = false;
                 buttonContainer.align = "right";
                 buttonContainer.valign = "top";
@@ -701,7 +744,7 @@
 
                 let luoRangetJaBreakit = ev => {
                     log("Luodaan rangeja ja breakkeja");
-                    Object.values(ev.target.data).flat().filter(x => valittuAikataulupaikkaDS.data.includes(x.uicKoodi)).forEach(x => {
+                    Object.values(ev.target.data).flat().forEach(x => {
                         x.ratakmvalit.filter(x => x.ratanumero == valittuRatanumeroDS.data)
                                     .forEach(function(r) {
                             let range                        = new am4charts.ValueAxisDataItem();
@@ -783,16 +826,16 @@
                 on(raideosuudetDS.events,           "done", luoRangetJaBreakit);
                 on(laituritDS.events,               "done", luoRangetJaBreakit);
                 on(valittuRatanumeroDS.events,      "done", () => {
-                    yAxis.axisRanges.clear()
-                    yAxis.axisBreaks.clear()
+                    yAxis.axisBreaks.clear();
+                    yAxis.axisRanges.clear();
                     rautatieliikennepaikatDS.load();
                     liikennepaikanOsatDS.load();
                     raideosuudetDS.load();
                     laituritDS.load();
                 });
                 on(valittuAikataulupaikkaDS.events, "done", () => {
-                    yAxis.axisRanges.clear()
-                    yAxis.axisBreaks.clear()
+                    yAxis.axisBreaks.clear();
+                    yAxis.axisRanges.clear();
                     luoRanget();
                 });
 
@@ -908,6 +951,10 @@
 					series.columns.template.cloneTooltip          = false;
                     series.columns.template.togglable             = true;
                     series.columns.template.propertyFields.zIndex = "zIndex";
+
+                    series.hiddenState.transitionDuration = 0;
+                    series.defaultState.transitionDuration = 0;
+
                     let columnLabel = series.columns.template.children.push(new am4core.Label());
                     columnLabel.fontSize = 13;
                     columnLabel.fill = series.stroke;
@@ -1365,7 +1412,10 @@
 						segment.cloneTooltip        = false;
                         //segment.togglable           = true;
 						segment.states.create("hover").properties.strokeWidth  = 3;
-						segment.states.create("active").properties.strokeWidth = 3;
+                        segment.states.create("active").properties.strokeWidth = 3;
+
+                        series.hiddenState.transitionDuration = 0;
+                        series.defaultState.transitionDuration = 0;
 
                         return series;
                     }
@@ -1482,13 +1532,13 @@
                                     junaOver(train)(ev);
                                 } else {
                                     let seriesA = chart.dummyData.ladatutAikataulut[train.trainData.departureDate][train.trainData.trainNumber];
-                                    if (seriesA && !seriesA.isHidden) {
+                                    if (seriesA && !seriesA.isHidden && aikataulutToggle.hidden) {
                                         log("Piilotetaan aikataulu junalle " + train.trainData.trainNumber + " " + train.trainData.departureDate);
                                         seriesA.hide();
                                     }
 
                                     let seriesT = chart.dummyData.ladatutToteumat[train.trainData.departureDate][train.trainData.trainNumber];
-                                    if (seriesT && !seriesT.isHidden) {
+                                    if (seriesT && !seriesT.isHidden && toteumatToggle.hidden) {
                                         log("Piilotetaan toteuma junalle " + train.trainData.trainNumber + " " + train.trainData.departureDate);
                                         seriesT.hide();
                                     }  
