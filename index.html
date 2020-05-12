@@ -112,10 +112,8 @@
             }
         };
 
-        let on = (obj, event, f) => obj.on(event, loggingDelegate(f));
-
-        let add = (obj, name, f) => obj.add(name, loggingDelegate(f));
-
+        let on  = (obj, event, f) => obj.on(event, loggingDelegate(f));
+        let add = (obj, name,  f) => obj.add(name, loggingDelegate(f));
 
 
         let ajankohtaAikavaleiksi = ajankohta => {
@@ -210,7 +208,8 @@
 
         window.ratanumerotDS = luoDatasource("Ratanumerot", ratanumerotUrl, (ret, x) => {
             let kilometrit = x.ratakilometrit.flat();
-            ret[x.ratanumero] = [Math.min.apply(Math, kilometrit)*1000, Math.max.apply(Math, kilometrit)*1000+1000];
+            ret[x.ratanumero] = [Math.min.apply(Math, kilometrit)*1000,
+                                 Math.max.apply(Math, kilometrit)*1000+1000];
         });
 
         window.liikennepaikkavalitDS = luoDatasource("Liikennepaikkavalit", liikennepaikkavalitUrl, (ret, x) => {
@@ -224,6 +223,9 @@
         window.valittuAikataulupaikkaDS = new am4core.DataSource();
         window.valittuRatanumeroDS.data = null;
         window.valittuAikataulupaikkaDS.data = [];
+
+        let valittunaRatanumero      = () => valittuRatanumeroDS.data != null;
+        let valittunaAikataulupaikka = () => valittuAikataulupaikkaDS.data.length > 0;
 
         window.rautatieliikennepaikatDS = luoDatasource("Rautatieliikennepaikat", rautatieliikennepaikatUrl, (ret, x) => {
             ret[x.tunniste] = {
@@ -337,7 +339,7 @@
                                 let rkm = paikka.ratakmSijainnit.filter(x => x.ratanumero == valittuRatanumeroDS.data);
                                 if (rkm.length > 0) {
                                     sijainti = rkm[0].ratakm*1000 + rkm[0].etaisyys;
-                                } else if (valittuAikataulupaikkaDS.data.length > 0) {
+                                } else if (valittunaAikataulupaikka()) {
                                     let sij = valittuAikataulupaikkaDS.data.indexOf(row.stationUICCode);
                                     if (sij > -1) {
                                         sijainti = sij;
@@ -460,17 +462,17 @@
                 yAxis.extraMax = 0.1;
                 yAxis.renderer.numberFormatter.numberFormat = "#";
                 add(yAxis.renderer.labels.template.adapter, "paddingRight", paddingRight => {
-                    return valittuAikataulupaikkaDS.data.length > 0 ? 0 : 40;
+                    return valittunaAikataulupaikka() ? 0 : 40;
                 });
 
                 add(yAxis.renderer.labels.template.adapter, "text", text => {
                     let n = parseInt(text);
-                    return valittuAikataulupaikkaDS.data.length > 0 ? "" : Math.floor(n/1000) + "+" + (n%1000);
+                    return valittunaAikataulupaikka() ? "" : Math.floor(n/1000) + "+" + (n%1000);
                 });
 
                 add(yAxis.adapter, "getTooltipText", text => {
                     let n = parseInt(text);
-                    return valittuAikataulupaikkaDS.data.length > 0 ? "" : Math.floor(n/1000) + "+" + (n%1000);
+                    return valittunaAikataulupaikka() ? "" : Math.floor(n/1000) + "+" + (n%1000);
                 });
 
 
@@ -508,7 +510,8 @@
                 let valissa = (ratakmsijainti,vali) => [vali[0],ratakmsijainti,vali[1]].sort(ratakmsijaintiComparator) == [vali[0],ratakmsijainti,vali[1]];
 
                 window.aikataulupaikkaChanged = (val1, val2) => {
-                    let newVal = [val1, val2].map(x => Object.values(aikataulupaikatDS.data).find(a => a.lyhenne == x.trim()));
+                    let newVal = [val1, val2].map(x => x.replace(/ .*/,''))
+                                             .map(x => Object.values(aikataulupaikatDS.data).find(a => a.lyhenne == x.trim()));
                     if (newVal.includes(undefined)) {
                         log("Ohitetaan, ehkä data ei ollut vielä latautunut...");
                         return false;
@@ -594,22 +597,24 @@
                     aikataulupaikkaSelect.html = "<label for='aikataulupaikkaRadio'><select id='aikataulupaikka1' onchange='window.aikataulupaikkaChanged(this.value, document.getElementById(\"aikataulupaikka2\").value)' value='" + sijaintiParams[0] + "'>{1}</select> - " +
                                                                                    "<select id='aikataulupaikka2' onchange='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value, this.value)' value='" + sijaintiParams[1] + "'>{2}</select></label>";
                     let aikataulupaikat1 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).sort( (a,b) => a.lyhenne < b.lyhenne ? -1 : a.lyhenne > b.lyhenne ? 1 : 0);
-                    let aikataulupaikat2 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).sort( (a,b) => a.lyhenne < b.lyhenne ? -1 : a.lyhenne > b.lyhenne ? 1 : 0);
-                    let valittu1 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).find(x => x.lyhenne.toLowerCase() == sijaintiParams[0].toLowerCase());
+                    let aikataulupaikat2 = [...aikataulupaikat1];
+                    let valittu1 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1)
+                                                              .map(x => ev.target.data[x])
+                                                              .find(x => x.lyhenne.toLowerCase() == sijaintiParams[0].toLowerCase());
                     if (valittu1) {
+                        // järjestetään toinen lista ensimmäisestä valinnasta etäisyyden mukaan.
                         aikataulupaikat2.sort( (a,b) => {
                             let da = valittu1.geometria.distance(a.geometria);
                             let db = valittu1.geometria.distance(b.geometria);
                             return da < db ? -1 : da > db ? 1 : 0;
                         });
                     }
-                    aikataulupaikkaSelect.html = aikataulupaikkaSelect.html.replace("{1}", aikataulupaikat1.map(x => "<option " + (sijaintiParams[0].toLowerCase() == x.lyhenne.toLowerCase() ? "selected='selected'" : "") + ">" + x.lyhenne + " (" + x.nimi + ")" + "</option>").join(""))
-                                                                           .replace("{2}", aikataulupaikat2.map(x => "<option " + (sijaintiParams[1].toLowerCase() == x.lyhenne.toLowerCase() ? "selected='selected'" : "") + ">" + x.lyhenne + " (" + x.nimi + ")" + "</option>").join(""));
-                    if (!alustettu) {
-                        if (!ratanumeroValittuna) {
-                            if (aikataulupaikkaChanged(sijaintiParams[0], sijaintiParams[1])) {
-                                alustettu = true;
-                            }
+                    let mkOption = (aikataulupaikat, lyhenne) => aikataulupaikat.map(x => "<option " + (lyhenne.toLowerCase() == x.lyhenne.toLowerCase() ? "selected='selected'" : "") + ">" + x.lyhenne + " (" + x.nimi + ")" + "</option>").join("");
+                    aikataulupaikkaSelect.html = aikataulupaikkaSelect.html.replace("{1}", mkOption(aikataulupaikat1, sijaintiParams[0]))
+                                                                           .replace("{2}", mkOption(aikataulupaikat2, sijaintiParams[1]));
+                    if (!alustettu && !ratanumeroValittuna) {
+                        if (aikataulupaikkaChanged(sijaintiParams[0], sijaintiParams[1])) {
+                            alustettu = true;
                         }
                     }
                 });
@@ -1064,7 +1069,7 @@
                     ev.target.data = ev.target.data.flatMap(ei =>
                         ei.ajankohdat.flatMap(ajankohtaAikavaleiksi)
                                      .flatMap(xs => {
-                            if (valittuAikataulupaikkaDS.data.length == 0) {
+                            if (valittunaRatanumero()) {
                                 return ei.liikennevaikutusalue.laskennallisetRatakmvalit.filter(x => x.ratanumero == valittuRatanumeroDS.data)
                                                                                         .map(luoEnnakkotieto(ei, xs))
                                                                                         .sort(compareByInterval);
@@ -1105,7 +1110,7 @@
                         es.tyonosat.flatMap(to =>
                             to.ajankohdat.flatMap(ajankohtaAikavaleiksi)
                                          .flatMap(xs => {
-                                if (valittuAikataulupaikkaDS.data.length == 0) {
+                                if (valittunaRatanumero()) {
                                     return to.tekopaikka.laskennallisetRatakmvalit.filter(x => x.ratanumero == valittuRatanumeroDS.data)
                                                                                   .map(luoEnnakkotieto(es, xs))
                                                                                   .sort(compareByInterval);
@@ -1133,7 +1138,7 @@
                     ev.target.data = ev.target.data.flatMap(vs => {
                         return vs.ajankohdat.flatMap(ajankohtaAikavaleiksi)
                                             .flatMap(xs => {
-                            if (valittuAikataulupaikkaDS.data.length == 0) {
+                            if (valittunaRatanumero()) {
                                 return vs.kohde.laskennallisetRatakmvalit.filter(x => x.ratanumero == valittuRatanumeroDS.data)
                                                                          .map(luoEnnakkotieto(vs, xs));
                             } else {
@@ -1237,7 +1242,7 @@
                 let etaisyys = (piste1, piste2) => Math.sqrt(Math.pow(piste1[0]-piste2[0], 2) + Math.pow(piste1[1]-piste2[1], 2));
 
                 let koordinaatti2sijainti = data => {
-                    if (valittuAikataulupaikkaDS.data.length > 0) {
+                    if (valittunaAikataulupaikka()) {
                         let junanKoordinaatti = geometryFactory.buildGeometry(javascript.util.Arrays.asList([geojsonReader.read(data.location)]));
 
                         let sisaltyva = valittuAikataulupaikkaDS.data.flatMap( (x,index) => {
