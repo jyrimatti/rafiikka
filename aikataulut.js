@@ -54,7 +54,7 @@ let lataaAikataulu = (paiva, callback) => {
         if (valittunaRatanumero()) {
             ret = ret.filter(x => x.rows.filter(y => y.sijainti != null).length > 1);
         } else if (valittunaAikataulupaikka()) {
-            ret = ret.filter(x => x.rows.find(y => valittuDS.data.includes(y.uicKoodi)));
+            ret = ret.filter(x => x.rows.filter(y => y.sijainti != null).length > 1);
         }
         log("Jätettiin " + ret.length + " aikataulua päivälle " + paiva);
         callback(ret);

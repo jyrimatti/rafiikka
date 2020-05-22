@@ -36,6 +36,11 @@ window.ratanumeroChanged = val => {
 };
 
 window.aikataulupaikkaChanged = (val1, val2) => {
+    if (val1 == val2) {
+        valittuDS.data = [];
+        valittuDS.dispatch("done", {target: {data: valittuDS.data}});
+        return false;
+    }
     let uusiVali = [val1, val2].map(x => x.replace(/ .*/,''))
                                 .map(x => Object.values(aikataulupaikatDS.data).find(a => a.lyhenne == x.trim()));
     if (uusiVali.includes(undefined)) {
@@ -264,8 +269,8 @@ window.onload = () => {
         aikataulupaikkaSelect.paddingLeft = 25;
         let aikataulupaikatAlustettu = false;
         on(aikataulupaikatDS.events, "done", ev => {
-            aikataulupaikkaSelect.html = "<label for='aikataulupaikkaRadio'><select id='aikataulupaikka1' onchange='window.aikataulupaikkaChanged(this.value, document.getElementById(\"aikataulupaikka2\").value)'>{1}</select> - " +
-                                                                            "<select id='aikataulupaikka2' onchange='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value, this.value)'>{2}</select></label>";
+            aikataulupaikkaSelect.html = "<label for='aikataulupaikkaRadio'><select id='aikataulupaikka1' onchange='window.aikataulupaikkaChanged(this.value, document.getElementById(\"aikataulupaikka2\").value)'><option></option>{1}</select> - " +
+                                                                            "<select id='aikataulupaikka2' onchange='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value, this.value)'><option></option>{2}</select></label>";
             let aikataulupaikat1 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).sort( (a,b) => a.lyhenne < b.lyhenne ? -1 : a.lyhenne > b.lyhenne ? 1 : 0);
             let aikataulupaikat2 = [...aikataulupaikat1];
             let sijaintiParams = sijaintiParam.split("-");
@@ -955,6 +960,8 @@ window.onload = () => {
         let poistaAikataulu = series => {
             let juna = series.dummyData;
             log("Siivotaan pois juna", juna.departureDate, juna.trainNumber);
+            delete kokonaanLadatutAikataulut[juna.departureDate];
+            delete kokonaanLadatutToteumat[juna.departureDate];
             delete ladatutAikataulut[juna.departureDate][juna.trainNumber];
             delete ladatutToteumat[juna.departureDate][juna.trainNumber];
             let index = chart.series.indexOf(series);
