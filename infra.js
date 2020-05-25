@@ -99,15 +99,6 @@ window.laituritDS = luoDatasource("Laiturit", laituritUrl, (ret, x) => {
     };
 });
 
-if (seedParam) {
-    window.ratanumerotDS.load();
-    window.liikennepaikkavalitDS.load();
-    window.rautatieliikennepaikatDS.load();
-    window.liikennepaikanOsatDS.load();
-    window.raideosuudetDS.load();
-    window.laituritDS.load();
-}
-
 window.aikataulupaikatDS = new am4core.DataSource();
 aikataulupaikatDS.data = {};
 let apHandler = ev => {

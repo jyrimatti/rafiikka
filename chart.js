@@ -559,14 +559,6 @@ window.onload = () => {
             on(series.events, "shown", paivitaUrl);
             on(valittuDS.events, "done", paivitaUrl);
 
-            if (seedParam) {
-                [urlRatanumero, urlAikataulupaikka].forEach(url => {
-                    let ds = new am4core.DataSource();
-                    ds.url = url;
-                    ds.load();
-                });
-            }
-
             let objectCache = {}
             on(series.dataSource.events, "parseended", () => {
                 objectCache = {};

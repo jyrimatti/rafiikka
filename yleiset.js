@@ -63,6 +63,16 @@ let ratakmMuunnosUrl = infraAPIUrl + 'koordinaatit/{coord}.json?propertyName=rat
 let rtUrl = 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?state=ACTIVE' + rumaAikavali;
 let lrUrl = 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?state=SENT' + rumaAikavali;
 
+if (seedParam) {
+    [ratanumerotUrl, liikennepaikkavalitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl,
+     eiUrlRatanumero, esUrlRatanumero, vsUrlRatanumero, loUrlRatanumero,
+     eiUrlAikataulupaikka, esUrlAikataulupaikka, vsUrlAikataulupaikka, loUrlAikataulupaikka].forEach(url => {
+        let ds = new am4core.DataSource();
+        ds.url = url;
+        ds.load();
+    });
+}
+
 let errorHandler = ev => log("Virhe!", ev);
 
 let loggingDelegate = f => (a, b, c) => {
@@ -106,8 +116,5 @@ let luoDatasource = (type, url, f) => {
         ev.target.data = ret;
         log("Parsittu " + type);
     });
-    if (seedParam) {
-        ds.load();
-    }
     return ds;
 };
