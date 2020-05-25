@@ -17,6 +17,7 @@ window.ratanumerotDS = luoDatasource("Ratanumerot", ratanumerotUrl, (ret, x) => 
     ret[x.ratanumero] = [Math.min.apply(Math, kilometrit)*1000,
                          Math.max.apply(Math, kilometrit)*1000+1000];
 });
+window.ratanumerotDS.load();
 
 window.liikennepaikkavalitDS = luoDatasource("Liikennepaikkavalit", liikennepaikkavalitUrl, (ret, x) => {
     ret[x.tunniste] = {
@@ -24,6 +25,7 @@ window.liikennepaikkavalitDS = luoDatasource("Liikennepaikkavalit", liikennepaik
         loppuliikennepaikka: x.loppuliikennepaikka
     };
 });
+window.liikennepaikkavalitDS.load();
 
 window.rautatieliikennepaikatDS = luoDatasource("Rautatieliikennepaikat", rautatieliikennepaikatUrl, (ret, x) => {
     ret[x.tunniste] = {
@@ -96,6 +98,15 @@ window.laituritDS = luoDatasource("Laiturit", laituritUrl, (ret, x) => {
         ratakmvalit:     x.tunniste[0].laskennallisetRatakmvalit
     };
 });
+
+if (seedParam) {
+    window.ratanumerotDS.load();
+    window.liikennepaikkavalitDS.load();
+    window.rautatieliikennepaikatDS.load();
+    window.liikennepaikanOsatDS.load();
+    window.raideosuudetDS.load();
+    window.laituritDS.load();
+}
 
 window.aikataulupaikatDS = new am4core.DataSource();
 aikataulupaikatDS.data = {};

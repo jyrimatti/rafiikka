@@ -64,9 +64,6 @@ let muotoileAikavali = vali => vali.split("/")
                                    .map(d => dateFns.dateFns.format(new Date(d), "dd.MM.yyyy HH:mm:ss"))
                                    .join(" - ");
 
-let muotoileKohde = kohde => kohde.laskennallisetRatakmvalit.map(muotoileRkmv)
-                                                            .join("\n");
-
 let ennakkotiedonKohteet = ennakkotieto =>
     [ennakkotieto.liikennevaikutusalue ||              // ei:n lva
      ennakkotieto.kohde ||                             // vs:n kohde

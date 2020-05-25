@@ -20,6 +20,7 @@ let params = new URLSearchParams(window.location.hash.replace("#", "?"));
 let sijaintiParam = params.get("sijainti") || "009";
 let aikaParam     = new Date(params.get("aika") || new Date().toISOString());
 let kestoParam    = dateFns.durationFns.parse(params.get("kesto") || "P1D");
+let seedParam     = params.has("seed") ? true : false;
 
 log("Parametri Sijainti", sijaintiParam);
 log("Parametri Aika", aikaParam);
@@ -29,9 +30,10 @@ window.ikkuna = [dateFns.dateFns.sub(aikaParam, kestoParam), dateFns.dateFns.add
 window.rajat  = [dateFns.dateFns.addDays(ikkuna[0], -3), dateFns.dateFns.addDays(ikkuna[1], 3)];
 
 let pyoristaAjanhetki = x => dateFns.dateFns.format(x, "yyy-MM-dd'T00:00:00Z'");
+let laajennaAikavali = x => [dateFns.dateFns.startOfMonth(x[1]), dateFns.dateFns.endOfMonth(x[1])];
 
 let infraAikavali = '&time=' + pyoristaAjanhetki(aikaParam) + "/" + pyoristaAjanhetki(aikaParam);
-let etj2Aikavali = '&time=' + rajat.map(function(x) { return pyoristaAjanhetki(x); }).join("/");
+let etj2Aikavali = '&time=' + laajennaAikavali(rajat).map(function(x) { return pyoristaAjanhetki(x); }).join("/");
 let rumaAikavali = '&start=' + pyoristaAjanhetki(rajat[0]) + "&end=" + pyoristaAjanhetki(rajat[1]);
 
 let junienEsitysaikavali = 1000*60*60*24*3;
@@ -45,10 +47,15 @@ let liikennepaikanOsatUrl     = infraAPIUrl + "liikennepaikanosat.json?propertyN
 let raideosuudetUrl           = infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27raideosuus%27&propertyName=geometria,tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tyyppi,uickoodi&srsName=crs:84" + infraAikavali;
 let laituritUrl               = infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27laituri%27&propertyName=geometria,tunniste.tunniste,tunniste.kuvaus,tunniste.laskennallisetRatakmvalit,tunniste.tunnus,tyyppi,uickoodi&srsName=crs:84" + infraAikavali;
 
-let eiUrl = etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27hyväksytty%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetLiikennepaikat,liikennevaikutusalue.laskennallisetLiikennepaikkavalit,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali;
-let esUrl = etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetLiikennepaikat,tyonosat.tekopaikka.laskennallisetLiikennepaikkavalit,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa' + etj2Aikavali;
-let vsUrl = etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetLiikennepaikat,kohde.laskennallisetLiikennepaikkavalit,kohde.laskennallisetRatakmvalit,voimassa' + etj2Aikavali;
-let loUrl = etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika' + etj2Aikavali;
+let eiUrlRatanumero = etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27hyväksytty%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali;
+let esUrlRatanumero = etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa' + etj2Aikavali;
+let vsUrlRatanumero = etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa' + etj2Aikavali;
+let loUrlRatanumero = etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika' + etj2Aikavali;
+
+let eiUrlAikataulupaikka = etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27hyväksytty%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetLiikennepaikat,liikennevaikutusalue.laskennallisetLiikennepaikkavalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali;
+let esUrlAikataulupaikka = etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetLiikennepaikat,tyonosat.tekopaikka.laskennallisetLiikennepaikkavalit,tunniste,voimassa' + etj2Aikavali;
+let vsUrlAikataulupaikka = etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetLiikennepaikat,kohde.laskennallisetLiikennepaikkavalit,voimassa' + etj2Aikavali;
+let loUrlAikataulupaikka = etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika' + etj2Aikavali;
 
 let junasijainnitUrl = 'https://rata.digitraffic.fi/api/v1/train-locations/latest/';
 let ratakmMuunnosUrl = infraAPIUrl + 'koordinaatit/{coord}.json?propertyName=ratakmsijainnit&srsName=crs:84';
@@ -99,6 +106,8 @@ let luoDatasource = (type, url, f) => {
         ev.target.data = ret;
         log("Parsittu " + type);
     });
-    ds.load();
+    if (seedParam) {
+        ds.load();
+    }
     return ds;
 };

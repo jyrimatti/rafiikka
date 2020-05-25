@@ -337,7 +337,7 @@ window.onload = () => {
         }
 
         zoomButton = alustaMoodiNappi("zoom", "zoomXY");
-        on(chart.cursor.events, "zoomended", ev => {
+        on(chart.cursor.events, "zoomended", () => {
             chart.cursor.behavior = "panXY";
             zoomButton.isActive = false;
         });
@@ -362,7 +362,7 @@ window.onload = () => {
         let luoAikavalinSiirtoButton = (label, deltaMin, deltaMax) => {
             let button = buttonContainer.createChild(am4core.Button);
             button.label.text = label;
-            on(button.events, "hit", ev => {
+            on(button.events, "hit", () => {
                 let diff = xAxis.maxZoomed - xAxis.minZoomed;
                 xAxis.zoomToDates(new Date(xAxis.minZoomed + deltaMin(diff)),
                                     new Date(xAxis.maxZoomed + deltaMax(diff)));
@@ -375,7 +375,7 @@ window.onload = () => {
 
         let nowButton = buttonContainer.createChild(am4core.Button);
         nowButton.label.text = "|";
-        on(nowButton.events, "hit", ev => {
+        on(nowButton.events, "hit", () => {
             let diff = xAxis.maxZoomed - xAxis.minZoomed;
             xAxis.zoomToDates(new Date(new Date().getTime() - diff),
                                 new Date(new Date().getTime() + diff));
@@ -528,7 +528,7 @@ window.onload = () => {
             return series;
         };
 
-        let viimeisteleEnnakkotietoSeries = (series, url) => {
+        let viimeisteleEnnakkotietoSeries = (series, urlRatanumero, urlAikataulupaikka) => {
             series.fillOpacity           = 0.15;
 
             series.columns.template.tooltipPosition       = "pointer";
@@ -549,10 +549,23 @@ window.onload = () => {
                 state.properties.fillOpacity = 1;
             });
 
-            on(series.events, "shown", () => {
-                series.dataSource.url = url;
-                series.dataSource.load();
-            });
+            let paivitaUrl = () => {
+                let uusiUrl = valittunaRatanumero() ? urlRatanumero : valittunaAikataulupaikka() ? urlAikataulupaikka : undefined;
+                if (series.isReady() && !series.isHidden && uusiUrl && series.dataSource.url != uusiUrl) {
+                    series.dataSource.url = uusiUrl;
+                    series.dataSource.load();
+                }
+            };
+            on(series.events, "shown", paivitaUrl);
+            on(valittuDS.events, "done", paivitaUrl);
+
+            if (seedParam) {
+                [urlRatanumero, urlAikataulupaikka].forEach(url => {
+                    let ds = new am4core.DataSource();
+                    ds.url = url;
+                    ds.load();
+                });
+            }
 
             let objectCache = {}
             on(series.dataSource.events, "parseended", () => {
@@ -643,10 +656,10 @@ window.onload = () => {
         chart.series.pushAll([seriesLO, seriesEI, seriesES, seriesVS]);
 
         [seriesVS, seriesES, seriesEI, seriesLO].forEach(lisaaScrollbareihin);
-        viimeisteleEnnakkotietoSeries(seriesEI, eiUrl);
-        viimeisteleEnnakkotietoSeries(seriesLO, loUrl);
-        viimeisteleEnnakkotietoSeries(seriesES, esUrl);
-        viimeisteleEnnakkotietoSeries(seriesVS, vsUrl);
+        viimeisteleEnnakkotietoSeries(seriesEI, eiUrlRatanumero, eiUrlAikataulupaikka);
+        viimeisteleEnnakkotietoSeries(seriesLO, loUrlRatanumero, loUrlAikataulupaikka);
+        viimeisteleEnnakkotietoSeries(seriesES, esUrlRatanumero, esUrlAikataulupaikka);
+        viimeisteleEnnakkotietoSeries(seriesVS, vsUrlRatanumero, vsUrlAikataulupaikka);
 
         
 
