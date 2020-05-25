@@ -71,6 +71,7 @@ if (seedParam) {
         ds.url = url;
         ds.load();
     });
+    throw "seedattu";
 }
 
 let errorHandler = ev => log("Virhe!", ev);
