@@ -10,7 +10,8 @@ let lataaAikataulu = (paiva, callback) => {
                 trainData: {
                     departureDate: train.departureDate,
                     trainNumber:   train.trainNumber,
-                    lahtenyt:      false
+                    lahtenyt:      false,
+                    vari:          train.trainCategory == 'Cargo' ? 'blue' : 'red'
                 },
                 rows: train.timeTableRows.map(row => {
                     let sijainti = null;

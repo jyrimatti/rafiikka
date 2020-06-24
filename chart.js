@@ -742,7 +742,6 @@ window.onload = () => {
         let luoJunaSeries = () => {
             let series                          = new am4charts.LineSeries();
             series.showOnInit                   = false;
-            series.strokeWidth                  = 1;
             series.hiddenInLegend               = true;
             series.dataFields.valueY            = "sijainti";
             series.simplifiedProcessing         = true;
@@ -794,7 +793,7 @@ window.onload = () => {
         };
 
         let aikataulutToggle = luoAikatauluToteumaToggle("Aikataulut", "blue", "scheduledTime", ladatutAikataulut);
-        let toteumatToggle   = luoAikatauluToteumaToggle("Toteumat", "red", "actualTime", ladatutToteumat);
+        let toteumatToggle   = luoAikatauluToteumaToggle("Toteumat", "blue", "actualTime", ladatutToteumat);
         chart.series.pushAll([aikataulutToggle, toteumatToggle]);
 
         let junaOverAction = (series, train, luo, viimeistele) => {
@@ -871,11 +870,12 @@ window.onload = () => {
             let series              = luoJunaSeries();
             series.name             = "Aikataulu";
             series.data             = train.rows;
-            series.fill             = am4core.color("blue");
-            series.stroke           = am4core.color("blue");
+            series.fill             = am4core.color(train.trainData.vari);
+            series.stroke           = series.fill;
             series.hidden           = aikataulutToggle.isHidden;
             series.zIndex           = 70;
             series.dummyData        = train.trainData;
+            series.strokeWidth      = 1;
             series.dataFields.dateX = "scheduledTime";
 
             return [series];
@@ -900,11 +900,12 @@ window.onload = () => {
             let series              = luoJunaSeries();
             series.name             = "Toteuma";
             series.data             = train.rows;
-            series.fill             = am4core.color("red");
-            series.stroke           = am4core.color("red");
+            series.fill             = am4core.color(train.trainData.vari);
+            series.stroke           = series.fill;
             series.hidden           = toteumatToggle.isHidden;
             series.zIndex           = 80;
             series.dummyData        = train.trainData;
+            series.strokeWidth      = 2;
             series.dataFields.dateX = "actualTime";
             return [series];
         };
