@@ -666,6 +666,7 @@ window.onload = () => {
         junatSeries.dataSource.data = [];
         junatSeries.dataSource.updateCurrentData = true;
         junatSeries.dataSource.events.on("error", errorHandler);
+        initDS(junatSeries.dataSource);
 
         chart.series.push(junatSeries);
 

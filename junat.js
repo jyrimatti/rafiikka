@@ -51,6 +51,7 @@ window.sijainnitMap = {};
 let lataaSijainti = coord => {
     if (valittunaRatanumero() && valittuDS.data) {
         let sijaintiDS = new am4core.DataSource();
+        initDS(sijaintiDS);
         sijaintiDS.url = ratakmMuunnosUrl.replace("{coord}", coord.join(","));
         on(sijaintiDS.events, "done", ev => {
             if (ev.target.data[0] && ev.target.data[0].ratakmsijainnit) {

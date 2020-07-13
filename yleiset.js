@@ -63,12 +63,21 @@ let ratakmMuunnosUrl = infraAPIUrl + 'koordinaatit/{coord}.json?propertyName=rat
 let rtUrl = 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?state=ACTIVE' + rumaAikavali;
 let lrUrl = 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?state=SENT' + rumaAikavali;
 
+let initDS = ds => {
+    // nah, cannot use, would trigger a pre-flight request...
+    /*ds.requestOptions.requestHeaders = [{
+        "key": "Digitraffic-User",
+        "value": "Rafiikka"
+      }];*/
+}
+
 if (seedParam) {
     [ratanumerotUrl, liikennepaikkavalitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl,
      eiUrlRatanumero, esUrlRatanumero, vsUrlRatanumero, loUrlRatanumero,
      eiUrlAikataulupaikka, esUrlAikataulupaikka, vsUrlAikataulupaikka, loUrlAikataulupaikka].forEach(url => {
         let ds = new am4core.DataSource();
         ds.url = url;
+        initDS(ds);
         ds.load();
     });
     throw "seedattu";
@@ -95,6 +104,7 @@ window.loadingIndicator.categories.aktiiviset = "";
 window.loadingIndicator.values.count = {value: 0};
 
 let monitor = (ds, type) => {
+    initDS(ds);
     ds.events.on("error", errorHandler);
     on(ds.events, "started", () => {
         loadingIndicator.setCategory("aktiiviset", loadingIndicator.categories.aktiiviset + " " + type);
