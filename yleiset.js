@@ -10,6 +10,7 @@ let geojsonReader = new jsts.io.GeoJSONReader();
 let infraAPIUrl = 'https://rata.digitraffic.fi/infra-api/0.6/';
 let etj2APIUrl = 'https://rata.digitraffic.fi/jeti-api/0.6/';
 let aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
+let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
 
 let mqttUrl = "rata.digitraffic.fi";
 let mqttPort = 443;
