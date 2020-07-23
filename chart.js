@@ -205,23 +205,29 @@ window.onload = () => {
         yAxis.extraMax      = 0.1;
         yAxis.renderer.numberFormatter.numberFormat = "#";
 
-        add(yAxis.renderer.labels.template.adapter, "paddingRight", paddingRight => valittunaAikataulupaikka() ? 0 : 40);
+        add(yAxis.renderer.labels.template.adapter, "paddingRight", () => valittunaAikataulupaikka() ? 0 : 40);
         let renderLabel = text => {
             let n = parseInt(text);
             return valittunaAikataulupaikka() ? "" : Math.floor(n/1000) + "+" + (n%1000);
         };
         add(yAxis.renderer.labels.template.adapter, "text",           renderLabel);
+        on(yAxis.renderer.labels.template.events, "doublehit", ev => {
+            if (valittunaRatanumero() && ev.target.currentText.match(/[0-9]+[+][0-9]+/)) {
+                kartta('(' + valittuDS.data + ') ' + ev.target.currentText, null, 'radat/' + valittuDS.data + '/' + ev.target.currentText);
+            }
+        });
         add(yAxis.adapter,                          "getTooltipText", renderLabel);
 
         
         // säädetään scrollbar-charttien zoomit samalla kun päächartin zoomi muuttuu
-        on(xAxis.events, "selectionextremeschanged", ev => chart.scrollbarY.scrollbarChart.xAxes.each(x => x.zoomToDates(xAxis.minZoomed, xAxis.maxZoomed, false, true)));
-        on(yAxis.events, "selectionextremeschanged", ev => chart.scrollbarX.scrollbarChart.yAxes.each(x => x.zoomToValues(yAxis.minZoomed, yAxis.maxZoomed, false, true)));
+        on(xAxis.events, "selectionextremeschanged", () => chart.scrollbarY.scrollbarChart.xAxes.each(x => x.zoomToDates(xAxis.minZoomed, xAxis.maxZoomed, false, true)));
+        on(yAxis.events, "selectionextremeschanged", () => chart.scrollbarX.scrollbarChart.yAxes.each(x => x.zoomToValues(yAxis.minZoomed, yAxis.maxZoomed, false, true)));
 
 
         on(valittuDS.events, "done", ev => {
             if (valittunaRatanumero()) {
                 yAxis.title.text = "(" + ev.target.data + ")";
+                on(yAxis.title.events, 'doublehit', () => kartta(yAxis.title.text, null, "radat.geojson?&cql_filter=ratanumero='009'"));
                 yAxis.min = ratanumerotDS.data[ev.target.data][0];
                 yAxis.max = ratanumerotDS.data[ev.target.data][1];
             } else if (valittunaAikataulupaikka()) {
@@ -441,6 +447,7 @@ window.onload = () => {
                     range.label.tooltip     = new am4core.Tooltip();
                     range.label.tooltipText = x.tyyppi + ": " + x.nimi;
                     range.label.adapter.add("text", () => x.lyhenne);
+                    on(range.label.events, "doublehit", () => kartta(x.tunniste, x.tyyppi + ' ' + x.nimi + (x.lyhenne != x.nimi ? ' (' + x.lyhenne + ')' : '')));
 
                     if (range.value != range.endValue) {
                         range.grid.strokeWidth = 0;
@@ -468,7 +475,7 @@ window.onload = () => {
         let luoRanget = () => {
             log("Luodaan rangeja");
             Object.values(valittuDS.data).forEach((uicKoodi,index) => {
-                let aikataulupaikka = aikataulupaikatDS.data[uicKoodi];
+                let x = aikataulupaikatDS.data[uicKoodi];
                 let range               = new am4charts.ValueAxisDataItem();
                 yAxis.axisRanges.push(range);
                 range.value             = index;
@@ -478,8 +485,9 @@ window.onload = () => {
                 range.label.inside      = true;
                 range.label.fontSize    = 12;
                 range.label.tooltip     = new am4core.Tooltip();
-                range.label.tooltipText = aikataulupaikka.tyyppi + ": " + aikataulupaikka.nimi;
-                range.label.adapter.add("text", () => aikataulupaikka.lyhenne);
+                range.label.tooltipText = x.tyyppi + ": " + x.nimi;
+                range.label.adapter.add("text", () => x.lyhenne);
+                on(range.label.events, "doublehit", () => kartta(x.tunniste, x.tyyppi + ' ' + x.nimi + (x.lyhenne != x.nimi ? ' (' + x.lyhenne + ')' : '')));
             });
         };
         
@@ -589,18 +597,20 @@ window.onload = () => {
 
             on(chart.events, "ready", () => {
                 let aktiiviset = luoAktiivinenListaus(series);
-                on(aktiiviset.itemContainers.template.events, "hit", ev => {
+                aktiiviset.itemContainers.template.draggable = true;
+                on(aktiiviset.itemContainers.template.events, "dragged", ev => {
                     let nimi = ev.target.dataItem.dataContext.name;
                     aktiiviset.dataSource.data.splice(aktiiviset.dataSource.data.findIndex(x => x.name == nimi), 1);
                     aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
                 });
+                on(aktiiviset.itemContainers.template.events, "doublehit", ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.name));
                 on(series.columns.template.events, "hit", ev => {
                     let nimi = ev.target.dataItem.dataContext.sisainenTunniste;
                     let index = aktiiviset.dataSource.data.findIndex(x => x.name == nimi);
                     if (index > -1) {
                         aktiiviset.dataSource.data.splice(index, 1);
                     } else {
-                        aktiiviset.dataSource.data.push({name: nimi});
+                        aktiiviset.dataSource.data.push({name: nimi, tunniste: ev.target.dataItem.dataContext.tunniste});
                     }
                     aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
                 });
@@ -610,6 +620,7 @@ window.onload = () => {
                         x[1].forEach(y => y.isActive = isActive);
                     });
                 });
+                on(series.columns.template.events, 'doublehit', ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.sisainenTunniste));
             });
         };
 

@@ -130,3 +130,121 @@ let luoDatasource = (type, url, f) => {
     });
     return ds;
 };
+
+let dragElement = elmnt => {
+    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    if (elmnt.querySelector(".header")) {
+      // if present, the header is where you move the DIV from:
+      elmnt.querySelector(".header").onmousedown = dragMouseDown;
+    } else {
+      // otherwise, move the DIV from anywhere inside the DIV: 
+      elmnt.onmousedown = dragMouseDown;
+    }
+  
+    function dragMouseDown(e) {
+      e = e || window.event;
+      e.preventDefault();
+      // get the mouse cursor position at startup:
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      // call a function whenever the cursor moves:
+      document.onmousemove = elementDrag;
+    }
+  
+    function elementDrag(e) {
+      e = e || window.event;
+      e.preventDefault();
+      // calculate the new cursor position:
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      // set the element's new position:
+      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+    }
+  
+    function closeDragElement() {
+      // stop moving when mouse button is released:
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+};
+
+let withoutProp = (obj, unwantedProp) => {
+    var ret = {};
+    for (var key in obj) {
+        if (key !== unwantedProp) {
+            ret[key] = obj[key];
+        }
+    }
+    return ret;
+};
+
+let customPrettyPrinting = obj => {
+    if (obj.ratanumero && obj.alku && obj.loppu) {
+        var x = '(' + obj.ratanumero + ') ' + obj.alku.ratakm + '+' + obj.alku.etaisyys + ' - ' + obj.loppu.ratakm + '+' + obj.loppu.etaisyys;
+        return x + (obj.kohtaamissuunta == 'nouseva' ? ' ↑' : obj.kohtaamissuunta == 'laskeva' ? ' ↓' : (obj.kohtaamissuunta || ''));
+    } else if (obj.ratanumero && obj.ratakm && obj.etaisyys) {
+        var x = '(' + obj.ratanumero + ') ' + obj.ratakm + '+' + obj.etaisyys;
+        return x + (obj.kohtaamissuunta == 'nouseva' ? ' ↑' : obj.kohtaamissuunta == 'laskeva' ? ' ↓' : (obj.kohtaamissuunta || ''));
+    } else if (obj.numero && obj.etaisyys && obj.suunta) {
+        var x = obj.numero + (obj.suunta == 'n' ? '+' : obj.suunta == 'l' ? '-' : obj.suunta) + obj.etaisyys;
+        return x + (obj.kohtaamissuunta == 'nouseva' ? ' ↑' : obj.kohtaamissuunta == 'laskeva' ? ' ↓' : (obj.kohtaamissuunta || ''));
+    } else if (typeof obj == 'string' && obj.indexOf('1.2.246.586.') == 0) {
+        return obj;
+    }
+    return null;
+};
+
+let prettyPrint = obj => {
+    if (obj instanceof Array && obj.length > 0) {
+        return '<span class="array">' + obj.map(function(val) {
+            var printedVal = (val && typeof val === 'object') ? prettyPrint(val) : val == null ? '' : customPrettyPrinting ? customPrettyPrinting(val) : val;
+            return (printedVal ? printedVal : val) + ' ';
+        }).join('<br />') + '</span>';
+    } else {
+        var r = '';
+        if (customPrettyPrinting) {
+            r = customPrettyPrinting(obj);
+        }
+        if (!r) {
+            r = '';
+            for (var key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    if (r === '') {
+                        r = '<table>';
+                    }
+                    var val = obj[key];
+                    if (val instanceof Array && val.length === 0) {
+                        // skip empty arrays
+                    } else {
+                        var printedVal = (val && typeof val === 'object') ? prettyPrint(val) : val == null ? null : customPrettyPrinting ? customPrettyPrinting(val) : val;
+                        r += '<tr>' + '<th>' + key + '</th><td>' + (printedVal ? printedVal : val) + '</td></tr>';
+                    }
+                }
+            }
+            r = r === '' ? '' : r + '</table>';
+        }
+        return r;
+    }
+};
+
+let toISOStringNoMillis = (d) => {
+    function pad(n) {
+        return n < 10 ? '0' + n : n;
+    }
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + 'T' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()) + 'Z';
+};
+
+let nyt = () => {
+    var d = new Date();
+    d.setUTCHours(0);
+    d.setUTCMinutes(0);
+    d.setUTCSeconds(0);
+    d.setUTCMilliseconds(0);
+    return toISOStringNoMillis(d);
+};
+
+let instant = new URLSearchParams(window.location.search).get('time') || nyt();

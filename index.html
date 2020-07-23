@@ -3,6 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
+
+    <title>Rafiikka</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.3.1/css/ol.css" />
+    <link rel="stylesheet" href="https://unpkg.com/ol-layerswitcher@3.5.0/src/ol-layerswitcher.css" />
+
     <style>
         #chartdiv {
             width: 100%;
@@ -18,7 +24,93 @@
         select {
             max-width: 7em;
         }
+
+        .karttaContainer {
+            position: absolute;
+            top: 1em;
+            left: 1em;
+            width: 400px;
+            height: 400px;
+            border: 1px solid Gray;
+            background: white;
+            resize: both;
+            overflow: auto;
+        }
+        .karttaContainer .header {
+            width: 100%;
+            height: 1em;
+            border-bottom: 1px solid Gray;
+            background-color: LightGray;
+            position: relative;
+            cursor: move;
+        }
+        .karttaContainer .header .title {
+            position: absolute;
+            cursor: text;
+        }
+        .karttaContainer .header .open {
+            position: absolute;
+            right: 1em;
+        }
+        .karttaContainer .header .open img {
+            width: 1em;
+            height: 1em;
+            cursor: alias;
+        }
+        .karttaContainer .header .close {
+            height: 100%;
+            width: 1em;
+            position: absolute;
+            right: 0;
+            background: indianred;
+            font-family: verdana;
+            text-align: center;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+        .kartta {
+            width: 100%;
+            height: 100%;
+        }
+
+        body.fi .en, body.en .fi {
+            display: none !important;
+        }
+
+        .layer-switcher {
+            font-size: 0.5em;
+            font-family: Verdana;
+        }
+        .layer-switcher ul {
+            padding-left: 1em;
+        }
+        .layer-switcher input {
+            margin: 1px;
+            width: 10px;
+            height: 10px;
+        }
+        .layer-switcher .group > input {
+            display: none;
+        }
+
+        #hovertitle {
+            background-color: white;
+            opacity: 0.75;
+            border: 1px dotted gray;
+            border-radius: 7px;
+            font-size: 0.6em;
+            overflow-y: scroll;
+            max-height: 200px;
+        }
+        #hovertitle th {
+            text-align: right;
+            vertical-align: top;
+        }
+        #hovertitle th, #hovertitle td {
+            padding: 0;
+        }
     </style>
+
 
     <!-- TODO
         - columneille vastaava 2-portainen aktiivisuus kuin junille
@@ -52,6 +144,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsts/2.2.2/jsts.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/javascript.util/0.12.12/javascript.util.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.3.1/build/ol.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.6.2/proj4.min.js"></script>
+    <script src="https://unpkg.com/ol-layerswitcher@3.5.0"></script>
     <script src="datefns.js"></script>
     <script src="yleiset.js"></script>
     <script src="infra.js"></script>
@@ -59,18 +154,21 @@
     <script src="junat.js"></script>
     <script src="aikataulut.js"></script>
     <script src="chart.js"></script>
+    <script src="karttaStyles.js"></script>
+    <script src="kartta.js"></script>
     <script>
         
     </script>
 </head>
 
-<body>
+<body class="fi">
     <a href="https://github.com/jyrimatti/rafiikka/"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
-    <h1>Rafiikka - Rataverkon reaaliaika- ja työrakografiikka</h1>
+    <h1>Rafiikka - Rataverkon reaaliaikagrafiikka, työrakografiikka ja karttakäyttöliittymä</h1>
     <div id="chartdiv"></div>
 
     <h2>Työkalu on vielä kehityksessä. Muutamia huomioita:</h2>
     <ul>
+        <li>Tupleklikkaa ratainfran tietoa tai ennakkotietoa avataksesi kyseisen objektin kartalla</li>
         <li>Y-akseliksi voi ratanumeron tai aikataulupaikkavälin (lyhenteillä tai UICkoodeilla)</li>
         <li>LOIlmoitusten sijoittaminen y-akselin aikataulupaikoille ei vielä toteutettu</li>
         <li>EI/ES/VS sijoittaminen y-akselin aikataulupaikoille ei toimi vielä tarkasti</li>
@@ -83,6 +181,8 @@
         <li>Aloitusajanhetken voi valita urlin fragmentilla, esim: #aika=2020-02-14T00:00:00Z</li>
         <li>Aloitusaikavälin voi valita urlin fragmentilla, esim: #kesto=PT1H</li>
     </ul>
+
+    <div id="hovertitle"> </div>
 </body>
 
 </html>
