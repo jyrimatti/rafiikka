@@ -52,6 +52,7 @@ window.aikataulupaikkaChanged = (val1, val2) => {
     let reittiDS = new am4core.DataSource();
     reittiDS.url = reittiUrl.replace('{alku}',  uusiVali[0])
                             .replace('{loppu}', uusiVali[1]);
+    initDS(reittiDS);
     monitor(reittiDS, uusiVali.map(x => aikataulupaikatDS.data[x].lyhenne).join("-"));
     on(reittiDS.events, "done", ev => {
         let data = ev.target.data;
@@ -532,6 +533,7 @@ window.onload = () => {
             series.defaultState.transitionDuration = 0;
 
             monitor(series.dataSource, nimi);
+            initDS(series.dataSource);
 
             return series;
         };
@@ -677,7 +679,7 @@ window.onload = () => {
         junatSeries.dataSource.data = [];
         junatSeries.dataSource.updateCurrentData = true;
         junatSeries.dataSource.events.on("error", errorHandler);
-        initDS(junatSeries.dataSource);
+        //initDS(junatSeries.dataSource);
 
         chart.series.push(junatSeries);
 

@@ -72,12 +72,10 @@ let rtUrl = 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?sta
 let lrUrl = 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?state=SENT' + rumaAikavali;
 
 let initDS = ds => {
-    if (!ds.url || ds.url.indexOf(aikatauluAPIUrl) < 0) {
-        ds.requestOptions.requestHeaders = [{
-            "key": "Digitraffic-User",
-            "value": "Rafiikka"
-        }];
-    }
+    ds.requestOptions.requestHeaders = [{
+        "key": "Digitraffic-User",
+        "value": "Rafiikka"
+    }];
 }
 
 if (seedParam) {
@@ -113,7 +111,6 @@ window.loadingIndicator.categories.aktiiviset = "";
 window.loadingIndicator.values.count = {value: 0};
 
 let monitor = (ds, type) => {
-    initDS(ds);
     ds.events.on("error", errorHandler);
     on(ds.events, "started", () => {
         loadingIndicator.setCategory("aktiiviset", loadingIndicator.categories.aktiiviset + " " + type);
