@@ -227,7 +227,7 @@ window.onload = () => {
         on(valittuDS.events, "done", ev => {
             if (valittunaRatanumero()) {
                 yAxis.title.text = "(" + ev.target.data + ")";
-                on(yAxis.title.events, 'doublehit', () => kartta(yAxis.title.text, null, "radat.geojson?&cql_filter=ratanumero='009'"));
+                on(yAxis.title.events, 'doublehit', () => kartta(yAxis.title.text, null, "radat.geojson?&cql_filter=ratanumero='" + ev.target.data + "'"));
                 yAxis.min = ratanumerotDS.data[ev.target.data][0];
                 yAxis.max = ratanumerotDS.data[ev.target.data][1];
             } else if (valittunaAikataulupaikka()) {
@@ -248,7 +248,7 @@ window.onload = () => {
         let ratanumeroContainer = yAkseliValintaContainer.createChild(am4core.Container);
         let radioButton1 = ratanumeroContainer.createChild(am4core.Label);
         on(chart.events, "ready", () => {
-            radioButton1.html = "<input type='radio' id='ratanumeroRadio' name='yAkseliValinta' " + (valittunaRatanumero() ? "checked='checked'" : "") + " onclick='window.ratanumeroChanged(document.getElementById(\"ratanumero\").value)' />";
+            radioButton1.html = "<input type='radio' id='ratanumeroRadio' name='yAkseliValinta' " + (valittunaAikataulupaikka() ? "" : "checked='checked'") + " onclick='window.ratanumeroChanged(document.getElementById(\"ratanumero\").value)' />";
         });
         let ratanumeroSelect = ratanumeroContainer.createChild(am4core.Label);
         ratanumeroSelect.paddingLeft = 25;
