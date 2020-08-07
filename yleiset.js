@@ -14,8 +14,8 @@ let geometryFactory = new jsts.geom.GeometryFactory();
 let geojsonReader = new jsts.io.GeoJSONReader();
 
 // safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
-let infraAPIUrl = 'https://' + (isSafari ? 'lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.6/';
-let etj2APIUrl = 'https://' + (isSafari ? 'lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.6/';
+let infraAPIUrl = 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.6/';
+let etj2APIUrl = 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.6/';
 let aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
 let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
 
