@@ -4,11 +4,18 @@ let log = (msg1, msg2, msg3, msg4, msg5, msg6) => {
     }
 };
 
+// https://stackoverflow.com/a/31732310
+let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
+               navigator.userAgent &&
+               navigator.userAgent.indexOf('CriOS') == -1 &&
+               navigator.userAgent.indexOf('FxiOS') == -1;
+
 let geometryFactory = new jsts.geom.GeometryFactory();
 let geojsonReader = new jsts.io.GeoJSONReader();
 
-let infraAPIUrl = 'https://rata.digitraffic.fi/infra-api/0.6/';
-let etj2APIUrl = 'https://rata.digitraffic.fi/jeti-api/0.6/';
+// safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
+let infraAPIUrl = 'https://' + (isSafari ? 'lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.6/';
+let etj2APIUrl = 'https://' + (isSafari ? 'lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.6/';
 let aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
 let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
 
