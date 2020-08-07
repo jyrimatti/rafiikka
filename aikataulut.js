@@ -91,7 +91,8 @@ let lataaAikatauluGraphQL = (paiva, callback) => {
     fetch(graphQLUrl, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Digitraffic-User': 'Rafiikka'
         },
         body: aikataulutGraphQL(paiva)
     }).then(response => response.json())

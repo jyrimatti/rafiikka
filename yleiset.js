@@ -65,11 +65,10 @@ let rtUrl = 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?sta
 let lrUrl = 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?state=SENT' + rumaAikavali;
 
 let initDS = ds => {
-    // nah, cannot use, would trigger a pre-flight request...
-    /*ds.requestOptions.requestHeaders = [{
+    ds.requestOptions.requestHeaders = [{
         "key": "Digitraffic-User",
         "value": "Rafiikka"
-      }];*/
+      }];
 }
 
 if (seedParam) {

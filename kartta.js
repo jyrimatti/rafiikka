@@ -49,7 +49,8 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
         strategy: tiling ? ol.loadingstrategy.tile(tileGrid) : ol.loadingstrategy.all,
         loader: extent => {
             fetch((u1 + (tiling ? '&bbox=' + extent.join(',') : '') + (kaavio ? '&presentation=diagram' : '') + u2).replace('?&','?'), {
-                method: 'GET'
+                method: 'GET',
+                headers: {'Digitraffic-User': 'Rafiikka'}
             }).then(response => response.json())
               .then(response => {
                 var features = format.readFeatures(response);
