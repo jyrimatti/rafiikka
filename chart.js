@@ -717,6 +717,9 @@ window.onload = () => {
 
         on(bullet.events, "hit", ev => valitseJuna(ev.target.dataItem.dataContext));
         on(bullet.events, "inited", ev => ev.target.isActive = onkoAktiivinen(ev.target.dataItem.dataContext));
+        on(bullet.events, "doublehit", ev => {
+            kartta(ev.target.dataItem.dataContext.departureDate + ' (' + ev.target.dataItem.dataContext.trainNumber + ')');
+        });
 
         on(aktiivisetJunatDS.events, "done", ev => {
             let juna = ev;
@@ -742,7 +745,9 @@ window.onload = () => {
                 aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data});
             });
 
-            on(aktiiviset.itemContainers.template.events, "hit", ev => valitseJuna(ev.target.dataItem.dataContext));
+            aktiiviset.itemContainers.template.draggable = true;
+            on(aktiiviset.itemContainers.template.events, "dragged", ev => valitseJuna(ev.target.dataItem.dataContext));
+            on(aktiiviset.itemContainers.template.events, "doublehit", ev => kartta(ev.target.dataItem.dataContext.departureDate + ' (' + ev.target.dataItem.dataContext.trainNumber + ')'));
         });
         
         junasijainnit.onMessageArrived = onJunasijaintiArrived(junatSeries);

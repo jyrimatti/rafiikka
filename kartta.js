@@ -222,7 +222,11 @@ let luoKarttaElementti = (tunniste, title) => {
     let container = document.createElement("div");
     container.setAttribute("class", "karttaContainer");
     document.body.appendChild(container);
-    
+
+    let elemPopup = document.createElement("div");
+    elemPopup.setAttribute("class", "popup");
+    container.appendChild(elemPopup);
+
     let elemHeader = document.createElement("div");
     elemHeader.setAttribute("class", "header");
     container.appendChild(elemHeader);
@@ -262,10 +266,19 @@ let onDrop = (source, target) => {
     if (targetMap != sourceMap) {
         sourceMap.getLayers().getArray()
                  .filter(layer => !targetMap.getLayers().getArray().find(l => l.get('title') == layer.get('title')))
-                 .forEach(layer => {
-            sourceMap.removeLayer(layer);
-            targetMap.addLayer(layer);
+                 .forEach(x => {
+            sourceMap.removeLayer(x);
+            targetMap.addLayer(x);
         });
+        sourceMap.getInteractions().getArray().forEach(x => {
+            sourceMap.removeInteraction(x);
+            targetMap.addInteraction(x);
+        });
+        sourceMap.getOverlays().getArray().forEach(x => {
+            sourceMap.removeOverlay(x);
+            targetMap.addOverlay(x);
+        });
+
         source.parentElement.removeChild(source);
         source.remove();
         target.getElementsByClassName('title')[0].innerText = '...';
@@ -273,10 +286,56 @@ let onDrop = (source, target) => {
     }
 }
 
+let etsiJuna = tunniste => window.junatSeries.dataSource.data.find(j => j.departureDate + ' (' + j.trainNumber + ')' == tunniste);
+
+let mkPoint = coordinates => new ol.geom.Point(coordinates).transform(ol.proj.get('EPSG:4326'), projection);
+
+let junaLayer = tunniste => {
+    let src = new ol.source.Vector({
+        strategy: ol.loadingstrategy.all,
+        loader: _ => {
+            let juna = etsiJuna(tunniste);
+            if (juna) {
+                src.addFeature(new ol.Feature({
+                    geometry: mkPoint(juna.location),
+                    name: tunniste
+                }));
+            };
+        }
+    });
+
+    let layer = new ol.layer.Vector({
+        title: mkLayerTitle(tunniste, tunniste),
+        source: src
+    });
+
+    let paivitaYksikot = () => {
+        if (layer.getVisible()) {
+            src.getFeatures().forEach(f => {
+                let juna = etsiJuna(tunniste);
+                if (juna) {
+                    layer.setVisible(true);
+                    let loc = mkPoint(juna.location);
+                    let geom = f.getGeometry();
+                    if (geom.getCoordinates()[0] != loc.getCoordinates()[0] || geom.getCoordinates()[1] != loc.getCoordinates()[1]) {
+                        log("Siirretään junaa", tunniste, geom.getCoordinates(), "->", loc.getCoordinates());
+                        geom.translate(loc.getCoordinates()[0] - geom.getCoordinates()[0], loc.getCoordinates()[1] - geom.getCoordinates()[1]);
+                    }
+                } else {
+                    layer.setVisible(false);
+                }
+            });
+        }
+    }
+    setInterval(paivitaYksikot, 1000);
+
+    return layer;
+}
+
 let kartta = (tunniste, title, infraAPIPath) => {
     let elem = luoKarttaElementti(tunniste, title || tunniste);
     let overlay = new ol.Overlay({
-        element: document.getElementById('hovertitle'),
+        element: elem.parentElement.getElementsByClassName('popup')[0],
         offset: [5, 5]
     });
     let map = new ol.Map({
@@ -306,15 +365,17 @@ let kartta = (tunniste, title, infraAPIPath) => {
         ]
     });
     elem.kartta = map;
-    hover(map, overlay, layers);
+    map.addInteraction(hover(overlay, layers));
 
-    let preselectLayer = newVectorLayerNoTile((tunniste.startsWith('1.2.246.586.2') ? etj2APIUrl : infraAPIUrl) + (infraAPIPath || tunniste), tunniste, tunniste, tunniste);
+    let preselectLayer = tunniste.match(/[0-9]{4}-[0-9]{2}-[0-9]{2}\s*\([0-9]+\)/)
+        ? junaLayer(tunniste)
+        : newVectorLayerNoTile((tunniste.startsWith('1.2.246.586.2') ? etj2APIUrl : infraAPIUrl) + (infraAPIPath || tunniste), tunniste, tunniste, tunniste);
     preselectLayer.setVisible(true);
     map.addLayer(preselectLayer);
     preselectLayer.once('change', () => {
         map.getView().fit(preselectLayer.getSource().getExtent(), {'maxZoom': 10, 'padding': [50,50,50,50], 'duration': 1000});
     });
-    hover(map, overlay, [preselectLayer]);
+    map.addInteraction(hover(overlay, [preselectLayer]));
 
     var observer = new MutationObserver(mutations => {
         mutations.forEach( () => {
@@ -326,7 +387,7 @@ let kartta = (tunniste, title, infraAPIPath) => {
     return map;
 }
 
-let hover = (map, overlay, layers) => {
+let hover = (overlay, layers) => {
     let hoverInteraction = new ol.interaction.Select({
         hitTolerance: 2,
         //multi: true,
@@ -337,9 +398,8 @@ let hover = (map, overlay, layers) => {
         var hasFeature = false;
         evt.selected.forEach(feature => {
             var coordinate = evt.mapBrowserEvent.coordinate;
-            let popup = document.getElementById('hovertitle');
-            if (popup) {
-                popup.innerHTML = prettyPrint(withoutProp(feature.getProperties(), 'geometry'));
+            if (overlay.getElement()) {
+                overlay.getElement().innerHTML = prettyPrint(withoutProp(feature.getProperties(), 'geometry'));
             }
             overlay.setPosition(coordinate);
             hasFeature = true;
@@ -348,5 +408,5 @@ let hover = (map, overlay, layers) => {
             overlay.setPosition(undefined);
         }
     });
-    map.addInteraction(hoverInteraction);
+    return hoverInteraction;
 }

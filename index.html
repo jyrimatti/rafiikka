@@ -96,7 +96,7 @@
             display: none;
         }
 
-        #hovertitle {
+        .popup {
             background-color: white;
             opacity: 0.75;
             border: 1px dotted gray;
@@ -105,11 +105,11 @@
             overflow-y: scroll;
             max-height: 200px;
         }
-        #hovertitle th {
+        .popup th {
             text-align: right;
             vertical-align: top;
         }
-        #hovertitle th, #hovertitle td {
+        .popup th, .popup td {
             padding: 0;
         }
 
@@ -158,8 +158,7 @@
     <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.3.1/build/ol.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.6.2/proj4.min.js"></script>
     <script src="https://unpkg.com/ol-layerswitcher@3.5.0"></script>
-    <!-- https://github.com/Bernardo-Castilho/dragdroptouch -->
-    <script src="DragDropTouch.js"></script>
+    <script src="DragDropTouch.js"></script> <!-- https://github.com/Bernardo-Castilho/dragdroptouch -->
     <script src="datefns.js"></script>
     <script src="yleiset.js"></script>
     <script src="infra.js"></script>
@@ -181,7 +180,7 @@
 
     <h2>Työkalu on vielä kehityksessä. Muutamia huomioita:</h2>
     <ul>
-        <li>Tupleklikkaa ratainfran tietoa tai ennakkotietoa avataksesi kyseisen objektin kartalla.</li>
+        <li>Tupleklikkaa ratainfran tietoa, ennakkotietoa tai junaa avataksesi kyseisen objektin kartalla.</li>
         <li>Voit yhdistää karttaikkunoita raahaamalla niitä päällekäin.</li>
         <li>Y-akseliksi voi ratanumeron tai aikataulupaikkavälin (lyhenteillä tai UICkoodeilla)</li>
         <li>EI/ES/VS sijoittaminen y-akselin aikataulupaikoille ei toimi vielä tarkasti</li>
@@ -194,8 +193,6 @@
         <li>Aloitusajanhetken voi valita urlin fragmentilla, esim: #aika=2020-02-14T00:00:00Z</li>
         <li>Aloitusaikavälin voi valita urlin fragmentilla, esim: #kesto=PT1H</li>
     </ul>
-
-    <div id="hovertitle"> </div>
 </body>
 
 </html>
