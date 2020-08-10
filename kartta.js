@@ -250,17 +250,28 @@ let luoKarttaElementti = (tunniste, title) => {
     let kartta = document.createElement("div");
     kartta.setAttribute("class", "kartta");
     container.appendChild(kartta);
-    dragElement(container);
-    elemHeader.ondragover = ev => ev.preventDefault();
-    elemHeader.ondragenter = ev => ev.target.classList.add('over');
-    elemHeader.ondragleave = ev => ev.target.classList.remove('over');
-    elemHeader.ondrop = ev => {
-        ev.target.classList.remove('over');
-        drop(kartta)(ev);
-    };
+
+    dragElement(container, onDrop);
+
     return kartta;
 };
 
+let onDrop = (source, target) => {
+    let sourceMap = source.getElementsByClassName('kartta')[0].kartta;
+    let targetMap = target.getElementsByClassName('kartta')[0].kartta;
+    if (targetMap != sourceMap) {
+        sourceMap.getLayers().getArray()
+                 .filter(layer => !targetMap.getLayers().getArray().find(l => l.get('title') == layer.get('title')))
+                 .forEach(layer => {
+            sourceMap.removeLayer(layer);
+            targetMap.addLayer(layer);
+        });
+        source.parentElement.removeChild(source);
+        source.remove();
+        target.getElementsByClassName('title')[0].innerText = '...';
+        target.getElementsByClassName('header')[0].getElementsByTagName('a').forEach(e => { e.innerHTML = ''; });
+    }
+}
 
 let kartta = (tunniste, title, infraAPIPath) => {
     let elem = luoKarttaElementti(tunniste, title || tunniste);

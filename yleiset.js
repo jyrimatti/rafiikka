@@ -141,7 +141,7 @@ let dragstart = ev => {
     if (!ev.target.id) {
         ev.target.id = Math.random().toString(36);
     }
-    elementDragged = [ev.target.id, ev.clientX, ev.clientY, ev.target.getElementsByClassName('kartta')[0]];
+    elementDragged = [ev.target.id, ev.clientX, ev.clientY];
 };
 let dragend = ev => {
     let clientX = elementDragged[1];
@@ -152,26 +152,18 @@ let dragend = ev => {
         elem.style.left = (elem.offsetLeft - (clientX - ev.clientX)) + 'px';
     }
 };
-let drop = targetMapElem => ev => {
-    ev.preventDefault();
-    let targetMap = targetMapElem.kartta;
-    if (targetMap != elementDragged[3].kartta) {
-        elementDragged[3].kartta.getLayers().getArray()
-                        .filter(layer => !targetMap.getLayers().getArray().find(l => l.get('title') == layer.get('title')))
-                        .forEach(layer => {
-            elementDragged[3].kartta.removeLayer(layer);
-            targetMap.addLayer(layer);
-        });
-        elementDragged[3].parentElement.parentElement.removeChild(elementDragged[3].parentElement);
-        elementDragged[3].parentElement.remove();
-        targetMapElem.parentElement.getElementsByClassName('title')[0].innerText = '...';
-        targetMapElem.parentElement.getElementsByClassName('header')[0].getElementsByTagName('a').forEach(e => { e.innerHTML = ''; });
-    }
-}
-let dragElement = elem => {
+let dragElement = (elem, onDrop) => {
     elem.setAttribute("draggable", "true");
     elem.ondragstart = dragstart;
+    elem.ondragenter = ev => ev.target.classList.add('over');
+    elem.ondragover = ev => ev.preventDefault();
+    elem.ondragleave = ev => ev.target.classList.remove('over');
     elem.ondragend = dragend;
+    elem.ondrop = ev => {
+        ev.target.classList.remove('over');
+        ev.preventDefault();
+        onDrop(document.getElementById(elementDragged[0]), elem);
+    };
 };
 
 let withoutProp = (obj, unwantedProp) => {
