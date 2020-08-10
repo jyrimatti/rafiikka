@@ -251,6 +251,13 @@ let luoKarttaElementti = (tunniste, title) => {
     kartta.setAttribute("class", "kartta");
     container.appendChild(kartta);
     dragElement(container);
+    elemHeader.ondragover = ev => ev.preventDefault();
+    elemHeader.ondragenter = ev => ev.target.classList.add('over');
+    elemHeader.ondragleave = ev => ev.target.classList.remove('over');
+    elemHeader.ondrop = ev => {
+        ev.target.classList.remove('over');
+        drop(kartta)(ev);
+    };
     return kartta;
 };
 
@@ -287,6 +294,7 @@ let kartta = (tunniste, title, infraAPIPath) => {
             new ol.control.LayerSwitcher()
         ]
     });
+    elem.kartta = map;
     hover(map, overlay, layers);
 
     let preselectLayer = newVectorLayerNoTile((tunniste.startsWith('1.2.246.586.2') ? etj2APIUrl : infraAPIUrl) + (infraAPIPath || tunniste), tunniste, tunniste, tunniste);

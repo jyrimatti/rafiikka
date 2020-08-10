@@ -136,45 +136,42 @@ let luoDatasource = (type, url, f) => {
     return ds;
 };
 
-let dragElement = elmnt => {
-    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    if (elmnt.querySelector(".header")) {
-      // if present, the header is where you move the DIV from:
-      elmnt.querySelector(".header").onmousedown = dragMouseDown;
-    } else {
-      // otherwise, move the DIV from anywhere inside the DIV: 
-      elmnt.onmousedown = dragMouseDown;
+var elementDragged;
+let dragstart = ev => {
+    if (!ev.target.id) {
+        ev.target.id = Math.random().toString(36);
     }
-  
-    function dragMouseDown(e) {
-      e = e || window.event;
-      e.preventDefault();
-      // get the mouse cursor position at startup:
-      pos3 = e.clientX;
-      pos4 = e.clientY;
-      document.onmouseup = closeDragElement;
-      // call a function whenever the cursor moves:
-      document.onmousemove = elementDrag;
+    elementDragged = [ev.target.id, ev.clientX, ev.clientY, ev.target.getElementsByClassName('kartta')[0]];
+};
+let dragend = ev => {
+    let clientX = elementDragged[1];
+    let clientY = elementDragged[2];
+    let elem = document.getElementById(elementDragged[0]);
+    if (elem) {
+        elem.style.top = (elem.offsetTop - (clientY - ev.clientY)) + 'px';
+        elem.style.left = (elem.offsetLeft - (clientX - ev.clientX)) + 'px';
     }
-  
-    function elementDrag(e) {
-      e = e || window.event;
-      e.preventDefault();
-      // calculate the new cursor position:
-      pos1 = pos3 - e.clientX;
-      pos2 = pos4 - e.clientY;
-      pos3 = e.clientX;
-      pos4 = e.clientY;
-      // set the element's new position:
-      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+};
+let drop = targetMapElem => ev => {
+    ev.preventDefault();
+    let targetMap = targetMapElem.kartta;
+    if (targetMap != elementDragged[3].kartta) {
+        elementDragged[3].kartta.getLayers().getArray()
+                        .filter(layer => !targetMap.getLayers().getArray().find(l => l.get('title') == layer.get('title')))
+                        .forEach(layer => {
+            elementDragged[3].kartta.removeLayer(layer);
+            targetMap.addLayer(layer);
+        });
+        elementDragged[3].parentElement.parentElement.removeChild(elementDragged[3].parentElement);
+        elementDragged[3].parentElement.remove();
+        targetMapElem.parentElement.getElementsByClassName('title')[0].innerText = '...';
+        targetMapElem.parentElement.getElementsByClassName('header')[0].getElementsByTagName('a').forEach(e => { e.innerHTML = ''; });
     }
-  
-    function closeDragElement() {
-      // stop moving when mouse button is released:
-      document.onmouseup = null;
-      document.onmousemove = null;
-    }
+}
+let dragElement = elem => {
+    elem.setAttribute("draggable", "true");
+    elem.ondragstart = dragstart;
+    elem.ondragend = dragend;
 };
 
 let withoutProp = (obj, unwantedProp) => {
