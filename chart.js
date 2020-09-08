@@ -58,8 +58,15 @@ window.aikataulupaikkaChanged = (val1, val2) => {
         let data = ev.target.data;
         let lpJaOsat = data.liikennepaikat.flatMap(x => aikataulupaikatDS.data[x] ? [x] : data.liikennepaikanOsat.filter(y => liikennepaikanOsatDS.data[y].liikennepaikka == x)
                                                                                                                     .map(y => liikennepaikanOsatDS.data[y].tunniste));
-        let aikataulupaikat   = lpJaOsat.slice(1).flatMap( (_,index) => {
+        let aikataulupaikat   = lpJaOsat.flatMap( (_,index) => {
             let edellinen     = lpJaOsat[index];
+            if (index == 0) {
+                return [edellinen];
+            }
+            if (index == lpJaOsat.length - 1) {
+                return [];
+            }
+
             let seuraava      = lpJaOsat[index+1];
             let edelRkm       = aikataulupaikatDS.data[edellinen].ratakmSijainnit;
             let seurRkm       = aikataulupaikatDS.data[seuraava].ratakmSijainnit;
@@ -72,7 +79,7 @@ window.aikataulupaikkaChanged = (val1, val2) => {
             if (ratakmsijaintiComparator(edelRkm[0], seurRkm[0]) > 0) {
                 seLv = seLv.reverse();
             }
-            return [edellinen].concat(seLv).concat([seuraava]);
+            return seLv.concat([seuraava]);
         });
 
         let ketju = [uusiVali[0]].concat(aikataulupaikat).concat([uusiVali[1]])
@@ -705,6 +712,7 @@ window.onload = () => {
 
         on(junatSeries.events, "shown", () => {
             junatSeries.dataSource.url = junasijainnitUrl;
+            //initDS(junatSeries.dataSource);
             junatSeries.dataSource.load();
         });
 

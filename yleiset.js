@@ -11,7 +11,7 @@ let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
                navigator.userAgent.indexOf('FxiOS') == -1;
 
 let geometryFactory = new jsts.geom.GeometryFactory();
-let geojsonReader = new jsts.io.GeoJSONReader();
+let geojsonReader = new jsts.io.GeoJSONReader(geometryFactory);
 
 // safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
 let infraAPIUrl = 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.6/';
@@ -60,13 +60,14 @@ let esUrlRatanumero = etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27
 let vsUrlRatanumero = etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa' + etj2Aikavali;
 let loUrlRatanumero = etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika' + etj2Aikavali;
 
-let eiUrlAikataulupaikka = etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27hyväksytty%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetLiikennepaikat,liikennevaikutusalue.laskennallisetLiikennepaikkavalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali;
-let esUrlAikataulupaikka = etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetLiikennepaikat,tyonosat.tekopaikka.laskennallisetLiikennepaikkavalit,tunniste,voimassa' + etj2Aikavali;
-let vsUrlAikataulupaikka = etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetLiikennepaikat,kohde.laskennallisetLiikennepaikkavalit,voimassa' + etj2Aikavali;
+let eiUrlAikataulupaikka = etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27hyväksytty%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali;
+let esUrlAikataulupaikka = etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa' + etj2Aikavali;
+let vsUrlAikataulupaikka = etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa' + etj2Aikavali;
 let loUrlAikataulupaikka = etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika' + etj2Aikavali;
 
 let junasijainnitUrl = 'https://rata.digitraffic.fi/api/v1/train-locations/latest/';
 let ratakmMuunnosUrl = infraAPIUrl + 'koordinaatit/{coord}.json?propertyName=ratakmsijainnit&srsName=crs:84';
+let koordinaattiMuunnosUrl = infraAPIUrl + 'radat/{ratanumero}/{ratakm}+{etaisyys}.geojson?propertyName=geometria&srsName=crs:84';
 
 let rtUrl = 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?state=ACTIVE' + rumaAikavali;
 let lrUrl = 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?state=SENT' + rumaAikavali;
@@ -125,6 +126,7 @@ let monitor = (ds, type) => {
 let luoDatasource = (type, url, f) => {
     let ds = new am4core.DataSource();
     ds.url = url;
+    initDS(ds);
     monitor(ds, type);
     on(ds.events, "parseended", ev => {
         log("Parsitaan " + type);
@@ -155,16 +157,75 @@ let dragend = ev => {
 let dragElement = (elem, onDrop) => {
     elem.setAttribute("draggable", "true");
     elem.ondragstart = dragstart;
-    elem.ondragenter = ev => ev.target.classList.add('over');
-    elem.ondragover = ev => ev.preventDefault();
-    elem.ondragleave = ev => ev.target.classList.remove('over');
     elem.ondragend = dragend;
-    elem.ondrop = ev => {
-        ev.target.classList.remove('over');
-        ev.preventDefault();
-        onDrop(document.getElementById(elementDragged[0]), elem);
-    };
+    if (onDrop) {
+        let header = elem.getElementsByClassName('header')[0];
+        header.ondragenter = ev => ev.target.ondrop ? ev.target.classList.add('over') : '';
+        header.ondragover  = ev => ev.target.ondrop ? ev.preventDefault() : '';
+        header.ondragleave = ev => ev.target.ondrop ? ev.target.classList.remove('over') : '';
+        header.ondrop = ev => {
+            ev.target.classList.remove('over');
+            ev.preventDefault();
+            onDrop(document.getElementById(elementDragged[0]), elem);
+        };
+    }
 };
+
+let luoIkkuna = title => {
+    let container = document.createElement("div");
+    document.body.appendChild(container);
+
+    let elemPopup = document.createElement("div");
+    elemPopup.setAttribute("class", "popup");
+    container.appendChild(elemPopup);
+
+    let elemHeader = document.createElement("div");
+    elemHeader.setAttribute("class", "header");
+    container.appendChild(elemHeader);
+
+    let elemTitle = document.createElement("div");
+    elemTitle.setAttribute("class", "title");
+    elemTitle.innerText = title;
+    elemHeader.appendChild(elemTitle);
+
+    let close = document.createElement("div");
+    close.setAttribute("class", "close");
+    close.innerText = "x";
+    close.onclick = () => {
+        container.parentElement.removeChild(container);
+        container.remove();
+    };
+    elemHeader.appendChild(close);
+
+    return [container, elemHeader];
+};
+
+let luoInfoPopup = title => {
+    let ret = luoIkkuna(title);
+    let container = ret[0];
+    container.setAttribute("class", "popupContainer infoPopup");
+
+    let content = document.createElement("div");
+    content.setAttribute("class", "info");
+    container.appendChild(content);
+
+    dragElement(container);
+
+    return content;
+}
+
+let avaaInfo = tunniste => {
+    let onkoRatakm = tunniste.match(/\(([^)]+)\)\s*(\d+)[+](\d+)/);
+    let root = tunniste.startsWith('1.2.246.586.1.') || onkoRatakm ? infraAPIUrl :
+               tunniste.startsWith('1.2.246.586.2.') ? etj2APIUrl : undefined;
+    if (root) {
+        if (onkoRatakm) {
+            luoInfoPopup(tunniste).innerHTML = '<iframe src="' + root + 'radat/' + onkoRatakm[1] + '/' + onkoRatakm[2] + '+' + onkoRatakm[3] + '.html"></iframe>';
+        } else {
+            luoInfoPopup(tunniste).innerHTML = '<iframe src="' + root + tunniste + '.html"></iframe>';
+        }
+    }
+}
 
 let withoutProp = (obj, unwantedProp) => {
     var ret = {};

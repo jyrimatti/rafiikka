@@ -70,112 +70,67 @@ let ennakkotiedonKohteet = ennakkotieto =>
      ennakkotieto.tyonosat.flatMap(y => y.tekopaikka)] // es:n tekopaikat
     .flat(); 
 
-let luoEnnakkotieto = (ennakkotieto, aikavali) => rkmvTaiAikataulupaikat => {
+let luoEnnakkotieto = (ennakkotieto, aikavali) => rkmv => {
+    let alkuRkm  = rkmv.alku.ratakm*1000  + rkmv.alku.etaisyys;
+    let loppuRkm = rkmv.loppu.ratakm*1000 + rkmv.loppu.etaisyys;
     let yhteiset = {
         tunniste:         ennakkotieto.tunniste,
         sisainenTunniste: ennakkotieto.sisainenTunniste,
         alkuX:            aikavali[0],
         loppuX:           aikavali[1],
-        voimassa:         muotoileAikavali(ennakkotieto.voimassa)
+        voimassa:         muotoileAikavali(ennakkotieto.voimassa),
+        zIndex:   -1 * (loppuRkm - alkuRkm) - 0.001*(aikavali[1].getTime() - aikavali[0].getTime())
     };
 
     if (valittunaRatanumero()) {
-        let alkuRkm  = rkmvTaiAikataulupaikat.alku.ratakm*1000  + rkmvTaiAikataulupaikat.alku.etaisyys;
-        let loppuRkm = rkmvTaiAikataulupaikat.loppu.ratakm*1000 + rkmvTaiAikataulupaikat.loppu.etaisyys;
+        if (rkmv.ratanumero != valittuDS.data) {
+            return [];
+        }
         yAxisMin = ratanumerotDS.data[valittuDS.data][0];
         yAxisMax = ratanumerotDS.data[valittuDS.data][1];
         let ratakmvalille = {
             alkuY:    Math.max(alkuRkm, yAxisMin),
             loppuY:   Math.min(loppuRkm, yAxisMax),
-            sijainti: muotoileRkmv(rkmvTaiAikataulupaikat),
-            zIndex:   -1 * (loppuRkm - alkuRkm) * (aikavali[1].getTime() - aikavali[0].getTime())
+            sijainti: muotoileRkmv(rkmv)
         };
-        return {...yhteiset, ...ratakmvalille};
+        return [{...yhteiset, ...ratakmvalille}];
     } else if (valittunaAikataulupaikka()) {
-        let lp  = ennakkotiedonKohteet(ennakkotieto).flatMap(x => x.laskennallisetLiikennepaikat);
-        let lpv = ennakkotiedonKohteet(ennakkotieto).flatMap(x => x.laskennallisetLiikennepaikkavalit);
+        //let lp  = ennakkotiedonKohteet(ennakkotieto).flatMap(x => x.laskennallisetLiikennepaikat);
+        //let lpv = ennakkotiedonKohteet(ennakkotieto).flatMap(x => x.laskennallisetLiikennepaikkavalit);
+        let vali = aikataulupaikkavali(rkmv)
+        if (vali.length == 0) {
+            return [];
+        }
         let aikataulupaikoille = {
-            alkuY:    rkmvTaiAikataulupaikat[0],
-            loppuY:   rkmvTaiAikataulupaikat[rkmvTaiAikataulupaikat.length-1],
-            sijainti: lp.map(y => !rautatieliikennepaikatDS.data[y] ? '?' : rautatieliikennepaikatDS.data[y].lyhenne).join(", ") + "\n" +
+            alkuY:    vali[0],
+            loppuY:   vali[1],
+            vaatiiTarkennusta: rkmv,
+            sijainti: /*lp.map(y => !rautatieliikennepaikatDS.data[y] ? '?' : rautatieliikennepaikatDS.data[y].lyhenne).join(", ") + "\n" +
                         lpv.map(y => !liikennepaikkavalitDS.data[y] ? '?' :
                                     rautatieliikennepaikatDS.data[liikennepaikkavalitDS.data[y].alkuliikennepaikka].lyhenne + "-" +
-                                    rautatieliikennepaikatDS.data[liikennepaikkavalitDS.data[y].loppuliikennepaikka].lyhenne).join(", "),
-            zIndex:   -1 * (aikavali[1].getTime() - aikavali[0].getTime())
+                                    rautatieliikennepaikatDS.data[liikennepaikkavalitDS.data[y].loppuliikennepaikka].lyhenne).join(", ") +*/
+                      muotoileRkmv(rkmv)
         };
-        return {...yhteiset, ...aikataulupaikoille};
+        return [{...yhteiset, ...aikataulupaikoille}];
     }
 };
 
 let parsiEI = ei => {
     let kohteet = ennakkotiedonKohteet(ei);
     return ei.ajankohdat.flatMap(ajankohtaAikavaleiksi)
-                        .flatMap(xs => {
-        if (valittunaRatanumero()) {
-            return kohteet.flatMap(x => x.laskennallisetRatakmvalit).filter(x => x.ratanumero == valittuDS.data)
-                                                                    .map(luoEnnakkotieto(ei, xs));
-        } else if (valittunaAikataulupaikka()) {
-            let lpv = kohteet.flatMap(x => x.laskennallisetLiikennepaikkavalit).flatMap(x => {
-                let vali = liikennepaikkavalitDS.data[x];
-                if (!vali) {
-                    log("Tuntematon liikennepaikkaväli EI:n", ei.sisainenTunniste, "liikennevaikutusalueessa");
-                    return [];
-                }
-                return [vali.alkuliikennepaikka, vali.loppuliikennepaikka];
-            });
-            let lp = kohteet.flatMap(x => x.laskennallisetLiikennepaikat);
-            
-            return aikataulupaikkaUlottumat(lp, lpv).map(luoEnnakkotieto(ei, xs));
-        };
-    });
+                        .flatMap(xs => kohteet.flatMap(x => x.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(ei, xs)));
 };
 
 let parsiLO = lo => {
     let xs = [lo.ensimmainenAktiivisuusaika, lo.viimeinenAktiivisuusaika].map(d => new Date(d).getTime());
-    // TODO: aikataulupaikka
-    return lo.kohde.laskennallisetRatakmvalit.filter(x => x.ratanumero == valittuDS.data)
-                                                .map(luoEnnakkotieto(lo, xs));
+    return lo.kohde.laskennallisetRatakmvalit.flatMap(luoEnnakkotieto(lo, xs));
 };
 
 let parsiES = es =>
     es.tyonosat.flatMap(to =>
         to.ajankohdat.flatMap(ajankohtaAikavaleiksi)
-                        .flatMap(xs => {
-            if (valittunaRatanumero()) {
-                return to.tekopaikka.laskennallisetRatakmvalit.filter(x => x.ratanumero == valittuDS.data)
-                                                                .map(luoEnnakkotieto(es, xs));
-            } else if (valittunaAikataulupaikka()) {
-                let lpv = to.tekopaikka.laskennallisetLiikennepaikkavalit.flatMap(x => {
-                    let vali = liikennepaikkavalitDS.data[x];
-                    if (!vali) {
-                        log("Tuntematon liikennepaikkaväli ES:n", es.sisainenTunniste, "liikennevaikutusalueessa");
-                        return [];
-                    }
-                    return [vali.alkuliikennepaikka, vali.loppuliikennepaikka];
-                });
-                let lp = to.tekopaikka.laskennallisetLiikennepaikat;
-                
-                return aikataulupaikkaUlottumat(lp, lpv).map(luoEnnakkotieto(es, xs));
-            }
-        }));
+                     .flatMap(xs => to.tekopaikka.laskennallisetRatakmvalit.flatMap(luoEnnakkotieto(es, xs))));
 
 let parsiVS = vs =>
     vs.ajankohdat.flatMap(ajankohtaAikavaleiksi)
-                    .flatMap(xs => {
-        if (valittunaRatanumero()) {
-            return vs.kohde.laskennallisetRatakmvalit.filter(x => x.ratanumero == valittuDS.data)
-                                                        .map(luoEnnakkotieto(vs, xs));
-        } else if (valittunaAikataulupaikka()) {
-            let lpv = vs.kohde.laskennallisetLiikennepaikkavalit.flatMap(x => {
-                let vali = liikennepaikkavalitDS.data[x];
-                if (!vali) {
-                    log("Tuntematon liikennepaikkaväli VS:n", vs.sisainenTunniste, "liikennevaikutusalueessa");
-                    return [];
-                }
-                return [vali.alkuliikennepaikka, vali.loppuliikennepaikka];
-            });
-            let lp = vs.kohde.laskennallisetLiikennepaikat;
-            
-            return aikataulupaikkaUlottumat(lp, lpv).map(luoEnnakkotieto(vs, xs));
-        }
-    });
+                 .flatMap(xs => vs.kohde.laskennallisetRatakmvalit.flatMap(luoEnnakkotieto(vs, xs)));
