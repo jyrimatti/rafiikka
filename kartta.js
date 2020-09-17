@@ -391,10 +391,186 @@ let hover = (overlay, layers) => {
             }
             overlay.setPosition(coordinate);
             hasFeature = true;
+
+            tarkennaEnnakkotieto(evt.target.getMap(), feature.getProperties().tunniste);
         });
         if (!hasFeature) {
             overlay.setPosition(undefined);
+
+            Object.values(evt.target.getMap().highlightLayers).forEach(function(layers) {
+                layers.forEach(function(l) { l.setVisible(false); });
+            });
         }
     });
     return hoverInteraction;
-}
+};
+
+let cropIfConstrained = (voimassa, data, f) => {
+    data.filter(pair => {
+        // valitaan ennakkotiedon koko kohteesta oikea osakohde
+        return pair.tunniste == f.getProperties().tunniste;
+      }).map(pair => {
+        let kmvali = pair.rajaus;
+        // jos oli rajaus, niin tehdään taiat. Muuten jätetään geometria kokonaiseksi.
+        if (kmvali) {
+            var valiTaiSijainti = kmvali.alku.ratakm == kmvali.loppu.ratakm && kmvali.alku.etaisyys == kmvali.loppu.etaisyys
+                    ? 'radat/' + kmvali.ratanumero + '/' + kmvali.alku.ratakm + '+' + kmvali.alku.etaisyys
+                    : 'radat/' + kmvali.ratanumero + '/' + kmvali.alku.ratakm + '+' + kmvali.alku.etaisyys + '-' + kmvali.loppu.ratakm + '+' + kmvali.loppu.etaisyys;
+            // haetaan rajausta vastaava geometria
+            fetch(infraAPIUrl + valiTaiSijainti + '.geojson?propertyName=geometria&time=' + voimassa, {
+                method: 'GET',
+                headers: {'Digitraffic-User': 'Rafiikka'}
+            }).then(response => response.json())
+              .then(response => {
+                let mask = format.readFeatures(response);
+                    
+                    var virheelliset = [];
+                    var unionMask;
+                    mask.forEach(function(feature) {
+                      var geom = feature.getGeometry();
+                      if (geom) {
+                          // paksunnetaan rajausgeometriaa hieman (puoli metriä lienee fine)
+                          var jstsGeom = olParser.read(geom)
+                          var buffered = jstsGeom.buffer(0.5, 8, 2 /* flat */);
+                          if (buffered.isEmpty()) {
+                            virheelliset.push(jstsGeom);
+                          } else if (!unionMask) {
+                            unionMask = buffered;
+                          } else {
+                            try {
+                                unionMask = unionMask.union(buffered);
+                            } catch (e) {
+                                virheelliset.push(jstsGeom);
+                            }
+                          }
+                      } else {
+                        log('Hmm, geometry was null for: ', JSON.stringify(pair));
+                      }
+                    });
+                    
+                    // Hoidetaan default-end-cap-stylellä loput geometriat
+                    virheelliset.forEach(function(jstsGeom) {
+                        var buffered = jstsGeom.buffer(0.5, 8, 1 /* round */);
+                        if (!unionMask) {
+                            unionMask = buffered;
+                        } else {
+                            unionMask = unionMask.union(buffered);
+                        }
+                    });
+                    
+                    if (unionMask) {
+                        var original = olParser.read(f.getGeometry());
+                        f.setStyle(null);
+                        f.setGeometry(olParser.write(unionMask.intersection(original)));
+                    } else if (console) {
+                        log('Hmm, could not resolve masking geometry for: ', JSON.stringify(pair));
+                    }
+                })
+              .catch(errorHandler);
+        }
+    });
+};
+
+let tarkennaEnnakkotieto = (map, tunniste) => {
+    if (!map.highlightLayers) {
+        map.highlightLayers = {};
+    }
+    if (tunniste && tunniste.indexOf('1.2.246.586.2') == 0) {
+        var prefix;
+        if (tunniste.indexOf('.81.') > 0) {
+            // Ennakkoilmoitus
+            prefix = 'liikennevaikutusalue';
+        } else if (tunniste.indexOf('.82.') > 0) {
+            // Ennnakkosuunnitelma
+            prefix = 'tyonosat.tekopaikka';
+        } else if (tunniste.indexOf('.83.') > 0) {
+            // Vuosisuunnitelma
+            prefix = 'kohde';
+        }
+        var props = 'voimassa,' + prefix + '.raiteet.tunniste.geometria,' + prefix + '.raiteet.tunniste.tunniste,' + prefix + '.raiteet,' + prefix + '.elementit.geometria,' + prefix + '.liikennepaikat.geometria,' + prefix + '.tilirataosat.geometria,' + prefix + '.toimialueet.geometria,' + prefix + '.tasoristeykset.geometria,' + prefix + '.liikennesuunnittelualueet.geometria,' + prefix + '.radat.tunniste.geometria,' + prefix + '.radat.tunniste.tunniste,' + prefix + '.radat,' + prefix + '.liikennepaikkavalit.tunniste.geometria,' + prefix + '.liikennepaikkavalit.tunniste.tunniste,' + prefix + '.liikennepaikkavalit,' + prefix + '.paikantamismerkkisijainnit.tunniste.geometria';
+        if (map.highlightLayers[tunniste] == undefined) {
+            map.highlightLayers[tunniste] = [];
+            var raiteet;
+            var radat;
+            var lpvalit;
+            var voimassa;
+            
+            var newLayer;
+            
+            var onchange = function() {
+                var geometries = [];
+                newLayer.getSource().getFeatures().forEach(function(f) {
+                    if (f._mbc) {
+                        // exclude mbc feature
+                        return;
+                    }
+                    
+                    // gather all geometries, also inside geometrycollections
+                    var geometryOrCollection = f.getGeometry();
+                    if (geometryOrCollection.getGeometries) {
+                        geometryOrCollection.getGeometries().forEach(function(g) {
+                            geometries = geometries.concat([olParser.read(g)]);
+                        });
+                    } else {
+                        geometries = geometries.concat([olParser.read(geometryOrCollection)]);
+                    }
+                });
+                // calculate mbc with jsts
+                mbcFeature.setGeometry(olParser.write(new jsts.algorithm.MinimumBoundingCircle(new jsts.geom.GeometryFactory().buildGeometry(javascript.util.Arrays.asList(geometries))).getCircle()));
+                
+                // re-calculate mbc whenever the hightlight layer contents change (like when a feature is cropped)
+                newLayer.getSource().once('change', onchange);
+            };
+            
+            newLayer = newVectorLayerNoTile(etj2APIUrl + tunniste + '.geojson', '-', 'Korostus', 'Highlight', undefined, props, f => {
+                var ps = f.getProperties();
+                if (!raiteet) {
+                    // yes, this assumes that the first feature is the "original" one containing all the data. Not the most elegant this way...
+                    raiteet = ps[prefix].raiteet;
+                    radat = ps[prefix].radat;
+                    lpvalit = ps[prefix].lpvalit;
+                    voimassa = limitInterval(ps.voimassa);
+                }
+                
+                var loadingIndicator = new ol.style.Style({
+                    stroke: new ol.style.Stroke({
+                        color: 'rgba(0, 0, 0, 0.1)',
+                        width: 1
+                    })
+                });
+                
+                // possibly constraint target kinds
+                if (ps._source) {
+                    if (ps._source.indexOf('.raiteet') > -1) {
+                        f.setStyle(loadingIndicator);
+                        cropIfConstrained(voimassa, raiteet, f);
+                    } else if (ps._source.indexOf('.radat') > -1) {
+                        f.setStyle(loadingIndicator);
+                        cropIfConstrained(voimassa, radat, f);
+                    } else if (ps._source.indexOf('.liikennepaikkavalit') > -1) {
+                        f.setStyle(loadingIndicator);
+                        cropIfConstrained(voimassa, lpvalit, f);
+                    }
+                }
+                
+                newLayer.getSource().once('change', onchange);
+            });
+            map.highlightLayers[tunniste] = map.highlightLayers[tunniste].concat([newLayer]);
+            newLayer.setMap(map);
+            newLayer.setVisible(true);
+            
+            // minimum bounding circle for the whole etj2 feature
+            var mbcFeature = new ol.Feature();
+            mbcFeature._mbc = true;
+            mbcFeature.setStyle(new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    width: 2,
+                    color: 'rgb(255, 0, 0)'
+                })
+            }));
+            newLayer.getSource().addFeature(mbcFeature);
+        } else {
+            map.highlightLayers[tunniste].forEach(function(l) { l.setVisible(true); });
+        }
+    }
+};

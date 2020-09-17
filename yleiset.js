@@ -13,6 +13,8 @@ let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
 
 let geometryFactory = new jsts.geom.GeometryFactory();
 let geojsonReader = new jsts.io.GeoJSONReader(geometryFactory);
+let olParser = new jsts.io.OL3Parser();
+olParser.inject(ol.geom.Point, ol.geom.LineString, ol.geom.LinearRing, ol.geom.Polygon, ol.geom.MultiPoint, ol.geom.MultiLineString, ol.geom.MultiPolygon, ol.geom.GeometryCollection);
 
 // safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
 let infraAPIUrl = 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.6/';
@@ -35,6 +37,7 @@ log("Parametri Aika", aikaParam());
 log("Parametri Kesto", kestoParam());
 
 let paivitaUrl = (sijainti, aika, kesto) => {
+    log("Päivitetään urlia");
     window.location.hash = 'sijainti=' + sijainti + '&aika=' + toISOStringNoMillis(aika) + '&kesto=' + dateFns.durationFns.toString(dateFns.durationFns.normalize(kesto));
 }
 
@@ -43,6 +46,19 @@ window.rajat  = () => [dateFns.dateFns.addDays(ikkuna()[0], -3), dateFns.dateFns
 
 let pyoristaAjanhetki = x => dateFns.dateFns.format(x, "yyy-MM-dd'T00:00:00Z'");
 let laajennaAikavali = x => [dateFns.dateFns.startOfMonth(x[1]), dateFns.dateFns.endOfMonth(x[1])];
+
+let limitInterval = intervalString => {
+    let begin = new Date('2010-01-01T00:00:00Z');
+    let end = new Date('2030-01-01T00:00:00Z');
+    let instants = intervalString.split('/');
+    if (new Date(instants[0]).getTime() < begin.getTime()) {
+        instants[0] = toISOStringNoMillis(begin);
+    }
+    if (new Date(instants[1]).getTime() > end.getTime()) {
+        instants[1] = toISOStringNoMillis(end);
+    }
+    return instants[0] + '/' + instants[1];
+};
 
 let infraAikavali = () => '&time=' + pyoristaAjanhetki(aikaParam()) + "/" + pyoristaAjanhetki(aikaParam());
 let etj2Aikavali = () => '&time=' + laajennaAikavali(rajat()).map(function(x) { return pyoristaAjanhetki(x); }).join("/");
