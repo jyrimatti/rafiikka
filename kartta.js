@@ -40,7 +40,7 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
     u1 = u1.indexOf('.geojson') < 0 ? u1.replace('?', '.geojson?') : u1; 
     var u2 = (!propertyName ? '' : '&propertyName=' + propertyName) +
              (projection.getCode() == '3067' ? '' : '&srsName=' + projection.getCode().toLowerCase()) +
-             (url.indexOf('time=') >= 0 ? '' : '&time=' + instant + '/' + instant) +
+             (url.indexOf('time=') >= 0 ? '' : infraAikavali()) +
              (!typeNames ? '' : '&typeNames=' + typeNames);
 
     var source = new ol.source.Vector({

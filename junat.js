@@ -21,8 +21,8 @@ let muunnaJunasijainti = data => {
 
 let paivitaJunienRatakmsijainnit = series => () => {
     if (!series.hidden) {
-        let paivitetty = series.dataSource.data.filter(x => x.sijainti <= 0).map(x => {
-            x.sijainti = koordinaatti2sijainti({type:'Point', coordinates: x.location}) || 0;
+        let paivitetty = series.dataSource.data.filter(x => x.sijainti === undefined).map(x => {
+            x.sijainti = koordinaatti2sijainti({type:'Point', coordinates: x.location});
             if (x.sijainti > 0) {
                 log("Päivitettiin koordinaatille", x.location, "sijainti", x.sijainti);
                 return true;
@@ -62,7 +62,7 @@ let onJunasijaintiArrived = series => message => {
         let tunnettuJuna = series.dataSource.data.find(x => x.trainNumber == data.trainNumber && x.departureDate == data.departureDate);
         if (tunnettuJuna) {
             tunnettuJuna.timestamp = data.timestamp;
-            tunnettuJuna.sijainti = data.sijainti == 0 ? tunnettuJuna.sijainti : data.sijainti;
+            tunnettuJuna.sijainti = data.sijainti === undefined ? tunnettuJuna.sijainti : data.sijainti;
             tunnettuJuna.speed = data.speed;
             tunnettuJuna.location = data.location;
         } else {

@@ -7,8 +7,8 @@ let ennakkotietoIntervalComparator = (ennakkotietoA,ennakkotietoB) => {
 let ajankohtaAikavaleiksi = ajankohta => {
     if (ajankohta.yhtajaksoinen) {
         let ret = ajankohta.yhtajaksoinen.split("/").map(x => new Date(x));
-        return ret[0] < rajat[1] && rajat[0] < ret[1]
-              ? [ret.map(function(x) { return x < rajat[0] ? rajat[0] : x > rajat[1] ? rajat[1] : x })]
+        return ret[0] < rajat()[1] && rajat()[0] < ret[1]
+              ? [ret.map(function(x) { return x < rajat()[0] ? rajat()[0] : x > rajat()[1] ? rajat()[1] : x })]
               : [];
     } else {
         let ensimmainenAloitusPaiva = new Date(ajankohta.toistuva.ensimmainenAloitusPaiva); // "2019-10-29"
@@ -49,7 +49,7 @@ let ajankohtaAikavaleiksi = ajankohta => {
         };
 
         let aloitusPaivat = dateFns.dateFns.eachDayOfInterval({ start: ensimmainenAloitusPaiva, end: viimeinenAloitusPaiva})
-                                           .filter(x => x >= rajat[0] && x <= rajat[1])
+                                           .filter(x => x >= rajat()[0] && x <= rajat()[1])
                                            .filter(kelpaaViikonPerusteella)
                                            .filter(kelpaaViikonpaivanPerusteella);
 

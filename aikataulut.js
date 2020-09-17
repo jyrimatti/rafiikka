@@ -79,7 +79,7 @@ let lataaAikatauluRest = (paiva, callback) => {
     let aikataulutDS = new am4core.DataSource();
     aikataulutDS.url = aikatauluAPIUrl + paiva;
     monitor(aikataulutDS, paiva);
-    //initDS(aikataulutDS);
+    initDS(aikataulutDS);
     on(aikataulutDS.events, "done", ev => {
         let ret = parsiAikataulu(paiva, ev.target.data);
         callback(ret);
