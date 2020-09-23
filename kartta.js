@@ -49,8 +49,8 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
         strategy: tiling ? ol.loadingstrategy.tile(tileGrid) : ol.loadingstrategy.all,
         loader: extent => {
             fetch((u1 + (tiling ? '&bbox=' + extent.join(',') : '') + (kaavio ? '&presentation=diagram' : '') + u2).replace('?&','?'), {
-                method: 'GET',
-                headers: {'Digitraffic-User': 'Rafiikka'}
+                method: 'GET'/*,
+                headers: {'Digitraffic-User': 'Rafiikka'}*/
             }).then(response => response.json())
               .then(response => {
                 var features = format.readFeatures(response);
@@ -418,8 +418,8 @@ let cropIfConstrained = (voimassa, data, f) => {
                     : 'radat/' + kmvali.ratanumero + '/' + kmvali.alku.ratakm + '+' + kmvali.alku.etaisyys + '-' + kmvali.loppu.ratakm + '+' + kmvali.loppu.etaisyys;
             // haetaan rajausta vastaava geometria
             fetch(infraAPIUrl + valiTaiSijainti + '.geojson?propertyName=geometria&time=' + voimassa, {
-                method: 'GET',
-                headers: {'Digitraffic-User': 'Rafiikka'}
+                method: 'GET'/*,
+                headers: {'Digitraffic-User': 'Rafiikka'}*/
             }).then(response => response.json())
               .then(response => {
                 let mask = format.readFeatures(response);

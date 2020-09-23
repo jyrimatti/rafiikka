@@ -93,10 +93,10 @@ let rtUrl = () => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.js
 let lrUrl = () => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?state=SENT' + rumaAikavali();
 
 let initDS = ds => {
-    ds.requestOptions.requestHeaders = [{
+    ds.requestOptions.requestHeaders = [/*{
         "key": "Digitraffic-User",
         "value": "Rafiikka"
-    }];
+    }*/];
 }
 
 if (params().has("seed")) {
