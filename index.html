@@ -143,14 +143,14 @@
         - columneille vastaava 2-portainen aktiivisuus kuin junille
         - urliin myös tasot
         - junanumero labeliksi viivan myötäisesti
+        - aikataulupaikat epätasaisille väleille (esim linnuntiesijainnin mukaan)
         - dateaxis custom formaatit
         - dateaxis päivälabel erikseen tuntitickien alle
         - lataus scrollatessa, eli kun scrollataan reunaan tai hypätään tyhjälle, niin siirretään xAxis min/max keskikohta vanhaan reunaan. Ja trigataan load ennakkotietodatalle
         - jump-to-date laatikko
         - aikataulupiste (erityisesti vaakasuora viiva) kertomaan "raide" eli siis kapasiteetinhallintayksikkö
 		- sijainti heijastumaan urliin
-        - ratatyöt
-        - ratatöihin punainen viiva alkuun jos alkanut, ja punainen viiva loppuun jos loppunut
+        - ratatöihin punainen viiva alkuun jos alkanut, ja punainen viiva loppuun jos loppunut. Ehkä vastaavaa muihinkin?
         - valitut objektit listaksi legendiin, tooltip mukaan
         - selectioniin valinnan alue tooltipiksi tms
         - ratanumero-akseli nyt olettaa ratakm=1000m. Miten korjata?
@@ -162,6 +162,7 @@
         - koita toteumille/aikatauluille Heat-korostusta
         - karttanäkymä. Jotenkin synccaan grafiikan kanssa.
         - tavarajunat sinisellä, henkilöjunat punaisella myös junasijaintiin
+        - junasta avautumaan käyrä aikataulun ja toteuman erosta
     -->
 
     <script src="https://www.amcharts.com/lib/version/4.9.19/core.js"></script>
@@ -179,6 +180,7 @@
     <script src="yleiset.js"></script>
     <script src="infra.js"></script>
     <script src="ennakkotiedot.js"></script>
+    <script src="ratatyot.js"></script>
     <script src="junat.js"></script>
     <script src="aikataulut.js"></script>
     <script src="chart.js"></script>

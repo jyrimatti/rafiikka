@@ -38,7 +38,7 @@ log("Parametri Kesto", kestoParam());
 
 let paivitaUrl = (sijainti, aika, kesto) => {
     log("Päivitetään urlia");
-    window.location.hash = 'sijainti=' + sijainti + '&aika=' + toISOStringNoMillis(aika) + '&kesto=' + dateFns.durationFns.toString(dateFns.durationFns.normalize(kesto));
+    window.location.hash = 'sijainti=' + (sijainti instanceof Array ? sijainti.join("-") : sijainti) + '&aika=' + toISOStringNoMillis(aika) + '&kesto=' + dateFns.durationFns.toString(dateFns.durationFns.normalize(kesto));
 }
 
 window.ikkuna = () => [dateFns.dateFns.sub(aikaParam(), kestoParam()), dateFns.dateFns.add(aikaParam(), kestoParam())];
@@ -67,13 +67,16 @@ let rumaAikavali = () => '&start=' + pyoristaAjanhetki(rajat()[0]) + "&end=" + p
 let junienEsitysaikavali = 1000*60*60*24*3;
 
 let ratanumerotUrl            = () => infraAPIUrl + "radat.json?propertyName=ratakilometrit,ratanumero" + infraAikavali();
-let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka" + infraAikavali();
+let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka,ratakmvalit" + infraAikavali();
 let reittiUrl                 = (alku, loppu) => infraAPIUrl + "reitit/kaikki/" + alku + "/" + loppu + ".json?propertyName=liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet" + infraAikavali();
 
 let rautatieliikennepaikatUrl = () => infraAPIUrl + "rautatieliikennepaikat.json?propertyName=lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti,virallinenSijainti&srsName=crs:84" + infraAikavali();
 let liikennepaikanOsatUrl     = () => infraAPIUrl + "liikennepaikanosat.json?propertyName=liikennepaikka,lyhenne,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti,virallinenSijainti&srsName=crs:84" + infraAikavali();
 let raideosuudetUrl           = () => infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27raideosuus%27&propertyName=geometria,tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tyyppi,uickoodi&srsName=crs:84" + infraAikavali();
 let laituritUrl               = () => infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27laituri%27&propertyName=geometria,tunniste.tunniste,tunniste.kuvaus,tunniste.laskennallisetRatakmvalit,tunniste.tunnus,tyyppi,uickoodi&srsName=crs:84" + infraAikavali();
+
+let elementitUrl              = () => infraAPIUrl + "elementit.json?propertyName=tunniste,nimi,ratakmsijainnit" + infraAikavali();
+let lorajatUrl                = () => infraAPIUrl + "liikenteenohjauksenrajat.json?propertyName=tunniste,leikkaukset.ratakmsijainnit" + infraAikavali();
 
 let eiUrlRatanumero = () => etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27hyväksytty%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali();
 let esUrlRatanumero = () => etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa' + etj2Aikavali();
@@ -157,6 +160,16 @@ let luoDatasource = (type, urlF, f) => {
         log("Parsittu ", type);
     });
     return ds;
+};
+
+let fixPoints = x => {
+    if (x.alkuX == x.loppuX) {
+        x.loppuX = x.loppuX + 1;
+    }
+    if (x.alkuY == x.loppuY) {
+        x.loppuY = x.loppuY + 1;
+    }
+    return x;
 };
 
 var elementDragged;

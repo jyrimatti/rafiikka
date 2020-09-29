@@ -11,14 +11,20 @@ let ajankohtaAikavaleiksi = ajankohta => {
               ? [ret.map(function(x) { return x < rajat()[0] ? rajat()[0] : x > rajat()[1] ? rajat()[1] : x })]
               : [];
     } else {
-        let ensimmainenAloitusPaiva = new Date(ajankohta.toistuva.ensimmainenAloitusPaiva); // "2019-10-29"
-        let viimeinenAloitusPaiva   = new Date(ajankohta.toistuva.viimeinenAloitusPaiva);   // "2020-05-29"
         let aloitusViikot           = ajankohta.toistuva.aloitusViikot;                     // viikottain|jokatoinen|jokaneljäs
         let aloitusViikonpaivat     = ajankohta.toistuva.aloitusViikonpaivat;               // [ma|ti|ke|to|pe|la|su]
         let timezone                = ajankohta.toistuva.timezone;                          // "Europe/Helsinki"
+        let ensimmainenAloitusPaiva = dateFns.dateFnsTz.toDate(ajankohta.toistuva.ensimmainenAloitusPaiva, { timeZone: timezone }); // "2019-10-29"
+        let viimeinenAloitusPaiva   = dateFns.dateFnsTz.toDate(ajankohta.toistuva.viimeinenAloitusPaiva, { timeZone: timezone });   // "2020-05-29"
         let aloitusaika             = ajankohta.toistuva.aloitusaika;                       // "06:00:00"
         let kesto                   = dateFns.durationFns.parse(ajankohta.toistuva.kesto);  // "PT43200S";
         
+        let viimeinenAlkuaika = dateFns.dateFnsTz.toDate(ajankohta.toistuva.viimeinenAloitusPaiva + 'T' + aloitusaika, { timeZone: timezone });
+        let ajankohdanRajat = { start: ensimmainenAloitusPaiva, end: dateFns.dateFns.add(viimeinenAlkuaika, kesto)};
+        if (!dateFns.dateFns.areIntervalsOverlapping(ajankohdanRajat, { start: rajat()[0], end: rajat()[1] })) {
+            return [];
+        }
+
         let kelpaaViikonPerusteella = paiva => {
             if (aloitusViikot == 'viikottain') {
                 return true;
@@ -48,8 +54,9 @@ let ajankohtaAikavaleiksi = ajankohta => {
                    su && dateFns.dateFns.isSunday(paiva);
         };
 
-        let aloitusPaivat = dateFns.dateFns.eachDayOfInterval({ start: ensimmainenAloitusPaiva, end: viimeinenAloitusPaiva})
-                                           .filter(x => x >= rajat()[0] && x <= rajat()[1])
+        let interval = { start: dateFns.dateFns.max([ensimmainenAloitusPaiva, dateFns.dateFns.addDays(rajat()[0], -1)]),
+                         end: dateFns.dateFns.min([viimeinenAloitusPaiva, dateFns.dateFns.addDays(rajat()[1], 1)])};
+        let aloitusPaivat = dateFns.dateFns.eachDayOfInterval(interval)
                                            .filter(kelpaaViikonPerusteella)
                                            .filter(kelpaaViikonpaivanPerusteella);
 
@@ -64,12 +71,6 @@ let muotoileAikavali = vali => vali.split("/")
                                    .map(d => dateFns.dateFns.format(new Date(d), "dd.MM.yyyy HH:mm:ss"))
                                    .join(" - ");
 
-let ennakkotiedonKohteet = ennakkotieto =>
-    [ennakkotieto.liikennevaikutusalue ||              // ei:n lva
-     ennakkotieto.kohde ||                             // vs:n kohde
-     ennakkotieto.tyonosat.flatMap(y => y.tekopaikka)] // es:n tekopaikat
-    .flat(); 
-
 let luoEnnakkotieto = (ennakkotieto, aikavali) => rkmv => {
     let alkuRkm  = rkmv.alku.ratakm*1000  + rkmv.alku.etaisyys;
     let loppuRkm = rkmv.loppu.ratakm*1000 + rkmv.loppu.etaisyys;
@@ -79,7 +80,7 @@ let luoEnnakkotieto = (ennakkotieto, aikavali) => rkmv => {
         alkuX:            aikavali[0],
         loppuX:           aikavali[1],
         voimassa:         muotoileAikavali(ennakkotieto.voimassa),
-        zIndex:   -1 * (loppuRkm - alkuRkm) - 0.001*(aikavali[1].getTime() - aikavali[0].getTime())
+        zIndex:           -1 * (loppuRkm - alkuRkm) - 0.001*(aikavali[1].getTime() - aikavali[0].getTime())
     };
 
     if (valittunaRatanumero()) {
@@ -116,21 +117,22 @@ let luoEnnakkotieto = (ennakkotieto, aikavali) => rkmv => {
 };
 
 let parsiEI = ei => {
-    let kohteet = ennakkotiedonKohteet(ei);
     return ei.ajankohdat.flatMap(ajankohtaAikavaleiksi)
-                        .flatMap(xs => kohteet.flatMap(x => x.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(ei, xs)));
+                        .flatMap(xs => joinRatakmvalit(ei.liikennevaikutusalue.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(ei, xs)))
+                        .map(fixPoints);
 };
 
 let parsiLO = lo => {
     let xs = [lo.ensimmainenAktiivisuusaika, lo.viimeinenAktiivisuusaika].map(d => new Date(d).getTime());
-    return lo.kohde.laskennallisetRatakmvalit.flatMap(luoEnnakkotieto(lo, xs));
+    return joinRatakmvalit(lo.kohde.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(lo, xs)).map(fixPoints);
 };
 
 let parsiES = es =>
     es.tyonosat.flatMap(to =>
         to.ajankohdat.flatMap(ajankohtaAikavaleiksi)
-                     .flatMap(xs => to.tekopaikka.laskennallisetRatakmvalit.flatMap(luoEnnakkotieto(es, xs))));
+                     .flatMap(xs => joinRatakmvalit(to.tekopaikka.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(es, xs)))).map(fixPoints);
 
 let parsiVS = vs =>
     vs.ajankohdat.flatMap(ajankohtaAikavaleiksi)
-                 .flatMap(xs => vs.kohde.laskennallisetRatakmvalit.flatMap(luoEnnakkotieto(vs, xs)));
+                 .flatMap(xs => joinRatakmvalit(vs.kohde.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(vs, xs)))
+                 .map(fixPoints);

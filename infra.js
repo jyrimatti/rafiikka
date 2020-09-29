@@ -12,6 +12,44 @@ let ratakmsijaintiComparator = (a,b) => {
 };
 let valissa = (ratakmsijainti,vali) => [vali[0],ratakmsijainti,vali[1]].sort(ratakmsijaintiComparator) == [vali[0],ratakmsijainti,vali[1]];
 
+let ratakmvaliComparator = (a,b) => {
+    if (a.ratanumero < b.ratanumero) {
+        return -1;
+    } else if (a.ratanumero > b.ratanumero) {
+        return 1;
+    } else if (a.alku.ratakm*10000+a.alku.etaisyys < b.alku.ratakm*10000+b.alku.etaisyys) {
+        return -1;
+    } else if (a.alku.ratakm*10000+a.alku.etaisyys > b.alku.ratakm*10000+b.alku.etaisyys) {
+        return 1;
+    } else if (a.loppu.ratakm*10000+a.loppu.etaisyys < b.loppu.ratakm*10000+b.loppu.etaisyys) {
+        return -1;
+    } else if (a.loppu.ratakm*10000+a.loppu.etaisyys > b.loppu.ratakm*10000+b.loppu.etaisyys) {
+        return 1;
+    }
+    return 0;
+};
+
+let joinRatakmvalit = rkmvs => rkmvs.sort(ratakmvaliComparator).reduce( (prev, cur) => {
+    if (prev.length == 0) {
+        return [cur];
+    }
+    let last = prev[prev.length-1];
+    if (last.ratanumero == cur.ratanumero && last.loppu.ratakm*10000+last.loppu.etaisyys >= cur.alku.ratakm*10000+cur.alku.etaisyys) {
+        return prev.slice(0, -1).concat([{
+            ratanumero: last.ratanumero,
+            alku: {
+                ratakm: last.alku.ratakm,
+                etaisyys: last.alku.etaisyys
+            },
+            loppu: {
+                ratakm: Math.max(last.loppu.ratakm, cur.loppu.ratakm),
+                etaisyys: last.loppu.ratakm*10000+last.loppu.etaisyys > cur.loppu.ratakm*10000+cur.loppu.etaisyys ? last.loppu.etaisyys : cur.loppu.etaisyys
+            }
+        }]);
+    }
+    return prev.concat([cur]);
+}, []);
+
 window.ratanumerotDS = luoDatasource("Ratanumerot", ratanumerotUrl, (ret, x) => {
     let kilometrit = x.ratakilometrit.flat();
     ret[x.ratanumero] = [Math.min.apply(Math, kilometrit)*1000,
@@ -22,7 +60,8 @@ window.ratanumerotDS.load();
 window.liikennepaikkavalitDS = luoDatasource("Liikennepaikkavalit", liikennepaikkavalitUrl, (ret, x) => {
     ret[x.tunniste] = {
         alkuliikennepaikka:  x.alkuliikennepaikka,
-        loppuliikennepaikka: x.loppuliikennepaikka
+        loppuliikennepaikka: x.loppuliikennepaikka,
+        ratakmvalit:         x.ratakmvalit
     };
 });
 window.liikennepaikkavalitDS.load();
@@ -99,6 +138,24 @@ window.laituritDS = luoDatasource("Laiturit", laituritUrl, (ret, x) => {
     };
 });
 
+window.elementitDS = luoDatasource("Elementit", elementitUrl, (ret, x) => {
+    ret[x.tunniste] = {
+        tunniste:        x.tunniste,
+        nimi:            x.nimi,
+        ratakmsijainnit: x.ratakmsijainnit
+    };
+});
+window.elementitDS.load();
+
+window.lorajatDS = luoDatasource("LiikenteenohjauksenRajat", lorajatUrl, (ret, x) => {
+    ret[x.tunniste] = {
+        tunniste:        x.tunniste,
+        nimi:            'Liikenteenohjauksen raja',
+        ratakmsijainnit: x.leikkaukset.flatMap(y => y.ratakmsijainnit)
+    };
+});
+window.lorajatDS.load();
+
 window.aikataulupaikatDS = new am4core.DataSource();
 aikataulupaikatDS.data = {};
 let apHandler = ev => {
@@ -118,6 +175,22 @@ rautatieliikennepaikatDS.load();
 liikennepaikanOsatDS.load();
 raideosuudetDS.load();
 laituritDS.load();
+
+
+window.ratatyoElementitDS = new am4core.DataSource();
+ratatyoElementitDS.data = {};
+let reHandler = ev => {
+    Object.values(ev.target.data).forEach(x => {
+        ratatyoElementitDS.data[x.tunniste] = x;
+    });
+    ratatyoElementitDS.dispatch("done", ratatyoElementitDS.data);
+};
+on(elementitDS.events, "done", reHandler);
+on(lorajatDS.events,   "done", reHandler);
+
+elementitDS.load();
+lorajatDS.load();
+
 
 let muotoileEtaisyys = x => (x < 10 ? "000" : x < 100 ? "00" : x < 1000 ? "0" : "") + x;
 let muotoileRkmv = x => '(' + x.ratanumero + ') ' + x.alku.ratakm  + '+' + muotoileEtaisyys(x.alku.etaisyys) + " - "

@@ -1,12 +1,14 @@
 window.valittuDS = new am4core.DataSource();
 on(aikataulupaikatDS.events, "done", ev => {
-    if (!valittuDS.data && sijaintiParam().split("-").length == 2) {
-        let paikat = sijaintiParam().split("-").map(x => Object.values(ev.target.data).find(y => y.lyhenne == x));
-        if (!paikat.includes(undefined)) {
-            valittuDS.data = paikat.map(x => x.uicKoodi);
-            log("Alustettu y-akseli:", valittuDS.data)
-            valittuDS.dispatch("done", {target: {data: valittuDS.data}});
+    if (!valittuDS.data && sijaintiParam().split("-").length >= 2) {
+        let paikat = sijaintiParam().split("-").map(x => Object.values(ev.target.data).find(y => y.lyhenne == x || y.uicKoodi == x));
+        if (paikat.includes(undefined)) {
+            // ehkei vielä latautunut...
+            return;
         }
+        valittuDS.data = paikat.map(x => x.uicKoodi);
+        log("Alustettu y-akseli:", valittuDS.data)
+        valittuDS.dispatch("done", {target: {data: valittuDS.data}});
     }
 });
 on(ratanumerotDS.events, "done", () => {
@@ -22,6 +24,8 @@ let valittunaAikataulupaikka = () => valittuDS.data instanceof Array;
 
 window.aktiivisetJunatDS = new am4core.DataSource();
 window.aktiivisetJunatDS.data = {};
+
+on(valittuDS.events, "done", _ => paivitaUrl(valittuDS.data, aikaParam(), kestoParam()));
 
 window.ratanumeroChanged = val => {
     if (!ratanumerotDS.data[val]) {
@@ -210,6 +214,7 @@ window.onload = () => {
         yAxis.snapTooltip   = false;
         yAxis.keepSelection = true;
         yAxis.extraMax      = 0.1;
+        yAxis.maxZoomFactor = 10000;
         yAxis.renderer.numberFormatter.numberFormat = "#";
 
         add(yAxis.renderer.labels.template.adapter, "paddingRight", () => valittunaAikataulupaikka() ? 0 : 40);
@@ -287,7 +292,8 @@ window.onload = () => {
             let aikataulupaikat1 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).sort( (a,b) => a.lyhenne < b.lyhenne ? -1 : a.lyhenne > b.lyhenne ? 1 : 0);
             let aikataulupaikat2 = [...aikataulupaikat1];
             let sijaintiParams = sijaintiParam().split("-");
-            let valittu1 = Object.values(ev.target.data).find(x => x.lyhenne == sijaintiParams[0]);
+            let valittu1 = Object.values(ev.target.data).find(x => x.lyhenne == sijaintiParams[0] || x.uicKoodi == sijaintiParams[0]);
+            let valittu2 = Object.values(ev.target.data).find(x => x.lyhenne == sijaintiParams[sijaintiParams.length-1] || x.uicKoodi == sijaintiParams[sijaintiParams.length-1]);
             if (valittu1) {
                 // järjestetään toinen lista ensimmäisestä valinnasta etäisyyden mukaan.
                 aikataulupaikat2.sort( (a,b) => {
@@ -295,13 +301,17 @@ window.onload = () => {
                     let db = valittu1.geometria.distance(b.geometria);
                     return da < db ? -1 : da > db ? 1 : 0;
                 });
-            }
-            let mkOption = (aikataulupaikat, lyhenne) => aikataulupaikat.map(x => "<option " + (lyhenne == x.lyhenne ? "selected='selected'" : "") + ">" + x.lyhenne + " (" + x.nimi + ")" + "</option>").join("");
-            aikataulupaikkaSelect.html = aikataulupaikkaSelect.html.replace("{1}", mkOption(aikataulupaikat1, sijaintiParams[0]))
-                                                                    .replace("{2}", mkOption(aikataulupaikat2, sijaintiParams[sijaintiParams.length-1]));
-            if (!aikataulupaikatAlustettu && valittunaAikataulupaikka()) {
-                if (aikataulupaikkaChanged(sijaintiParams[0], sijaintiParams[sijaintiParams.length-1])) {
-                    aikataulupaikatAlustettu = true;
+
+                if (valittu2) {
+                    // molemmat saatavilla:
+                    let mkOption = (aikataulupaikat, lyhenne) => aikataulupaikat.map(x => "<option " + (lyhenne == x.lyhenne ? "selected='selected'" : "") + ">" + x.lyhenne + " (" + x.nimi + ")" + "</option>").join("");
+                    aikataulupaikkaSelect.html = aikataulupaikkaSelect.html.replace("{1}", mkOption(aikataulupaikat1, valittu1.lyhenne))
+                                                                        .replace("{2}", mkOption(aikataulupaikat2, valittu2.lyhenne));
+                    if (!aikataulupaikatAlustettu && valittunaAikataulupaikka()) {
+                        if (aikataulupaikkaChanged(valittu1.lyhenne, valittu2.lyhenne)) {
+                            aikataulupaikatAlustettu = true;
+                        }
+                    }
                 }
             }
         });
@@ -551,6 +561,8 @@ window.onload = () => {
             series.columns.template.tooltipText           = "{sisainenTunniste} ({tunniste})\n{alkuX} - {loppuX} \n{sijainti}";
             series.columns.template.cloneTooltip          = false;
             series.columns.template.propertyFields.zIndex = "zIndex";
+            series.columns.template.minWidth              = 5;
+            series.columns.template.minHeight             = 5;
 
             let columnLabel         = series.columns.template.children.push(new am4core.Label());
             columnLabel.fill        = series.stroke;
@@ -659,16 +671,34 @@ window.onload = () => {
             ev.target.data = ev.target.data.flatMap(parsiVS).sort(ennakkotietoIntervalComparator);
             log("Parsittu VS:", ev.target.data.length);
         });
+
+        window.seriesRT = luoEnnakkotietoSeries("Ratatyöt", am4core.color('salmon'));
+        on(seriesRT.dataSource.events, "parseended", ev => {
+            log("Parsitaan RT done");
+            ev.target.data = ev.target.data.flatMap(parsiRT).sort(ennakkotietoIntervalComparator);
+            log("Parsittu RT:", ev.target.data.length);
+        });
+
+        window.seriesLR = luoEnnakkotietoSeries("Liikenteenrajoitteet", am4core.color('turquoise'));
+        on(seriesLR.dataSource.events, "parseended", ev => {
+            log("Parsitaan LR done");
+            ev.target.data = ev.target.data.flatMap(parsiLR).sort(ennakkotietoIntervalComparator);
+            log("Parsittu LR:", ev.target.data.length);
+        });
         
         seriesVS.zIndex = 10;
         seriesES.zIndex = 20;
         seriesEI.zIndex = 30;
-        seriesLO.zIndex = 40;
-        chart.series.pushAll([seriesLO, seriesEI, seriesES, seriesVS]);
+        seriesRT.zIndex = 40;
+        seriesLR.zIndex = 50;
+        seriesLO.zIndex = 60;
+        chart.series.pushAll([seriesLO, seriesLR, seriesRT, seriesEI, seriesES, seriesVS]);
 
-        [seriesVS, seriesES, seriesEI, seriesLO].forEach(lisaaScrollbareihin);
-        viimeisteleEnnakkotietoSeries(seriesEI, eiUrlRatanumero, eiUrlAikataulupaikka);
+        [seriesVS, seriesES, seriesEI, seriesRT, seriesLR, seriesLO].forEach(lisaaScrollbareihin);
         viimeisteleEnnakkotietoSeries(seriesLO, loUrlRatanumero, loUrlAikataulupaikka);
+        viimeisteleEnnakkotietoSeries(seriesLR, lrUrl, lrUrl);
+        viimeisteleEnnakkotietoSeries(seriesRT, rtUrl, rtUrl);
+        viimeisteleEnnakkotietoSeries(seriesEI, eiUrlRatanumero, eiUrlAikataulupaikka);
         viimeisteleEnnakkotietoSeries(seriesES, esUrlRatanumero, esUrlAikataulupaikka);
         viimeisteleEnnakkotietoSeries(seriesVS, vsUrlRatanumero, vsUrlAikataulupaikka);
 
