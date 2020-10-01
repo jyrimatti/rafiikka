@@ -18,6 +18,7 @@ proj4.defs("EPSG:3067", "+proj=utm +zone=35 +ellps=GRS80 +units=m +no_defs");
 ol.proj.proj4.register(proj4);
 
 let projection = ol.proj.get('EPSG:3067');
+let projectionWGS = ol.proj.get('urn:ogc:def:crs:EPSG::4326');
 
 let tileGrid = new ol.tilegrid.TileGrid({
     resolutions: resolutions,
@@ -25,27 +26,26 @@ let tileGrid = new ol.tilegrid.TileGrid({
     extent: dataExtent[projection.getCode()]
 });
 
-let newVectorLayer = (url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames) => {
-    return newVectorLayerImpl(true, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames);
+let newVectorLayer = (url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, projection) => {
+    return newVectorLayerImpl(true, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, projection);
 };
 
-let newVectorLayerNoTile = (url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames) => {
-    return newVectorLayerImpl(false, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames);
+let newVectorLayerNoTile = (url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, projection) => {
+    return newVectorLayerImpl(false, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, projection);
 };
 
 let kaavio = false;
 
-let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames) => {
+let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, proj) => {
     var u1 = url + (url.indexOf('?') < 0 ? '?' : '&');
     u1 = u1.indexOf('.geojson') < 0 ? u1.replace('?', '.geojson?') : u1; 
     var u2 = (!propertyName ? '' : '&propertyName=' + propertyName) +
-             (projection.getCode() == '3067' ? '' : '&srsName=' + projection.getCode().toLowerCase()) +
-             (url.indexOf('time=') >= 0 ? '' : infraAikavali()) +
+             (url.indexOf('time=') >= 0 || url.indexOf('start=') >= 0 ? '' : infraAikavali()) +
              (!typeNames ? '' : '&typeNames=' + typeNames);
 
     var source = new ol.source.Vector({
         format: format,
-        //projection: projection,
+        projection: projection,
         strategy: tiling ? ol.loadingstrategy.tile(tileGrid) : ol.loadingstrategy.all,
         loader: extent => {
             fetch((u1 + (tiling ? '&bbox=' + extent.join(',') : '') + (kaavio ? '&presentation=diagram' : '') + u2).replace('?&','?'), {
@@ -53,7 +53,7 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
                 headers: {'Digitraffic-User': 'Rafiikka'}*/
             }).then(response => response.json())
               .then(response => {
-                var features = format.readFeatures(response);
+                    var features = format.readFeatures(response);
                     if (styleOrHandler instanceof Function) {
                         if (styleOrHandler.length == 1) {
                             // on feature load
@@ -62,6 +62,26 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
                             // dynamic style
                             features.forEach(f => { f.setStyle(styleOrHandler); });
                         }
+                    }
+                    if (proj) {
+                        features.forEach(f => { f.setGeometry(f.getGeometry().transform(ol.proj.get('EPSG:4326'), projection)); });
+                        var grouped = {};
+                        features.forEach(f => {
+                            let props = f.getProperties();
+                            if (grouped[props.id || props.notificationId]) {
+                                grouped[props.id || props.notificationId].push(f);
+                            } else {
+                                grouped[props.id || props.notificationId] = [f];
+                            }
+                        });
+                        features = Object.values(grouped).map(x => {
+                            let main = x.find(y => y.getProperties().id);
+                            let parts = x.filter(y => !y.getProperties().id);
+                            if (parts.length > 0) {
+                                main.setGeometry(new ol.geom.GeometryCollection([main.getGeometry()].concat(parts.map(p => p.getGeometry()))));
+                            }
+                            return main;
+                        }); 
                     }
                     source.addFeatures(features);
                 })
@@ -215,7 +235,14 @@ let layers = [
                     newVectorLayer(etj2APIUrl + 'ennakkosuunnitelmat', 'es' , 'Ennakkosuunnitelmat', 'Preliminary plans'               , opacity, 'laskennallinenKarttapiste,tila,tunniste,voimassa', esStyle),
                     newVectorLayer(etj2APIUrl + 'ennakkoilmoitukset' , 'ei' , 'Ennakkoilmoitukset' , 'Route announcements'             , opacity, 'laskennallinenKarttapiste,tila,tunniste,voimassa', eiStyle),
                     newVectorLayer(etj2APIUrl + 'loilmoitukset'      , 'loi', 'LOilmoitukset'      , 'Traffic controller announcements', opacity, 'laskennallinenKarttapiste,tila,tunniste', loStyle)
-                )})
+            )}),
+
+            new ol.layer.Group({
+                title: mkLayerTitle('Ruma','Ruma'),
+                layers: [].concat(
+                    newVectorLayerNoTile(rtGeojsonUrl(), 'rt', 'Ratatyöt'            , 'Track works'         , opacity, undefined, rtStyle, undefined, projectionWGS),
+                    newVectorLayerNoTile(lrGeojsonUrl(), 'lr', 'Liikenteenrajoitteet', 'Traffic restrictions', opacity, undefined, lrStyle, undefined, projectionWGS)
+            )})
         ];
 
 let luoKarttaElementti = (tunniste, title) => {
@@ -271,7 +298,7 @@ let etsiJuna = tunniste => window.junatSeries.dataSource.data.find(j => j.depart
 
 let mkPoint = coordinates => new ol.geom.Point(coordinates).transform(ol.proj.get('EPSG:4326'), projection);
 
-let junaLayer = (map,tunniste) => {
+let junaLayer = (map, tunniste) => {
     let src = new ol.source.Vector({
         strategy: ol.loadingstrategy.all,
         loader: _ => {
@@ -314,7 +341,24 @@ let junaLayer = (map,tunniste) => {
     return layer;
 }
 
-let kartta = (tunniste, title, infraAPIPath) => {
+let rumaLayer = (tunniste, location) => {
+    let src = new ol.source.Vector({
+        strategy: ol.loadingstrategy.all,
+        loader: _ => {
+            src.addFeature(new ol.Feature({
+                geometry: mkPoint(location),
+                name: tunniste
+            }));
+        }
+    })
+    let layer = new ol.layer.Vector({
+        title: mkLayerTitle(tunniste, tunniste),
+        source: src
+    });
+    return layer;
+}
+
+let kartta = (tunniste, title, infraAPIPathOrRumaLocation) => {
     let elem = luoKarttaElementti(tunniste, title || tunniste);
     let overlay = new ol.Overlay({
         element: elem.parentElement.getElementsByClassName('popup')[0],
@@ -350,14 +394,18 @@ let kartta = (tunniste, title, infraAPIPath) => {
     map.addInteraction(hover(overlay, layers));
 
     let onkoJuna = tunniste.match(/[0-9]{4}-[0-9]{2}-[0-9]{2}\s*\([0-9]+\)/);
+    let onkoJeti = tunniste.startsWith('1.2.246.586.2')
+    let onkoRT = tunniste.startsWith('1.2.246.586.7.1');
+    let onkoLR = tunniste.startsWith('1.2.246.586.7.2');
     
     if (!onkoJuna) {
         avaaInfo(tunniste);
     }
 
-    let preselectLayer = onkoJuna
-        ? junaLayer(map,tunniste)
-        : newVectorLayerNoTile((tunniste.startsWith('1.2.246.586.2') ? etj2APIUrl : infraAPIUrl) + (infraAPIPath || tunniste), tunniste, tunniste, tunniste);
+    let preselectLayer =
+        onkoJuna         ? junaLayer(map, tunniste) :
+        onkoRT || onkoLR ? rumaLayer(tunniste, infraAPIPathOrRumaLocation) :
+        newVectorLayerNoTile((onkoJeti ? etj2APIUrl : infraAPIUrl) + (infraAPIPathOrRumaLocation || tunniste), tunniste, tunniste, tunniste);
     preselectLayer.setVisible(true);
     map.addLayer(preselectLayer);
     preselectLayer.once('change', () => {

@@ -13,6 +13,13 @@ let parsiRT = rt => rt.workParts.flatMap(wp => {
         tunniste:         rt.id,
         sisainenTunniste: rt.id,
         tila:             rt.state,
+        lisatiedot:       rt.state + " - " + rt.organization + "\n" +
+            [(rt.trafficSafetyPlan     ? "traffic safety" : undefined),
+             (rt.personInChargePlan    ? "person in charge" : undefined),
+             (rt.electricitySafetyPlan ? "electricity safety" : undefined),
+             (rt.speedLimitRemovalPlan ? "speed limit removal" : undefined),
+             (rt.speedLimitPlan        ? "speed limit" : undefined)].filter(x => x).join(", "),
+        location:         rt.location,
         alkuX:            aikavali[0],
         loppuX:           aikavali[1]
     };
@@ -25,6 +32,8 @@ let parsiLR = lr => {
         tunniste:         lr.id,
         sisainenTunniste: lr.id,
         tila:             lr.state,
+        lisatiedot:       lr.state + " - " + lr.organization + "\n" + lr.limitation,
+        location:         lr.location,
         alkuX:            aikavali[0],
         loppuX:           aikavali[1]
     };
@@ -32,7 +41,6 @@ let parsiLR = lr => {
 };
 
 let setZIndex = x => {
-    log(x);
     let z = {
         zIndex: -1 * (x.loppuY - x.alkuY) - 0.001*(x.loppuX.getTime() - x.alkuX.getTime())
     };
@@ -72,14 +80,25 @@ let parseLocation = yleiset => location => {
     let paikka = location.operatingPointId;
     let vali = location.sectionBetweenOperatingPointsId;
 
-    let paikkaText = paikka ? rautatieliikennepaikatDS.data[paikka].lyhenne : undefined;
-    let valiText = vali ? rautatieliikennepaikatDS.data[liikennepaikkavalitDS.data[vali].alkuliikennepaikka].lyhenne + " - " +
-                          rautatieliikennepaikatDS.data[liikennepaikkavalitDS.data[vali].loppuliikennepaikka].lyhenne : undefined;
+    let lpaikka = rautatieliikennepaikatDS.data[paikka];
+    if (paikka && !lpaikka) {
+        log("Liikennepaikkaa ei löydy:", paikka);
+        return [];
+    }
+
+    let lpvali = liikennepaikkavalitDS.data[vali];
+    if (vali && !lpvali) {
+        log("Liikennepaikkaväliä ei löydy:", vali);
+        return [];
+    }
+
+    let paikkaText = paikka ? lpaikka.lyhenne : undefined;
+    let valiText = vali ? rautatieliikennepaikatDS.data[lpvali.alkuliikennepaikka].lyhenne + " - " +
+                          rautatieliikennepaikatDS.data[lpvali.loppuliikennepaikka].lyhenne : undefined;
 
     if (location.identifierRanges.length == 0) {
         if (vali) {
             if (valittunaRatanumero()) {
-                let lpvali = liikennepaikkavalitDS.data[vali];
                 return lpvali.ratakmvalit.filter(x => x.ratanumero == valittuDS.data).map(rkmv => {
                     let sij = {
                         ratanumero: rkmv.ratanumero,
@@ -90,7 +109,7 @@ let parseLocation = yleiset => location => {
                     return {...yleiset, ...sij};
                 });
             } else if (valittunaAikataulupaikka()) {
-                return liikennepaikkavalitDS.data[vali].ratakmvalit.map(aikataulupaikkavali)
+                return lpvali.ratakmvalit.map(aikataulupaikkavali)
                                                                    .filter(x => x.length > 0)
                                                                    .map(apv => {
                     let sij = {
@@ -103,7 +122,7 @@ let parseLocation = yleiset => location => {
             }
         } else if (paikka) {
             if (valittunaRatanumero()) {
-                return rautatieliikennepaikatDS.data[paikka].ratakmvalit.filter(x => x.ratanumero == valittuDS.data)
+                return lpaikka.ratakmvalit.filter(x => x.ratanumero == valittuDS.data)
                                                                         .map(rkmv => {
                     let sij = {
                         ratanumero: rkmv.ratanumero,
@@ -114,7 +133,7 @@ let parseLocation = yleiset => location => {
                     return {...yleiset, ...sij};
                 });
             } else if (valittunaAikataulupaikka()) {
-                return rautatieliikennepaikatDS.data[paikka].ratakmvalit.map(aikataulupaikkavali)
+                return lpaikka.ratakmvalit.map(aikataulupaikkavali)
                                                                         .filter(x => x.length > 0)  
                                                                         .flatMap(apv => {
                     let sij = {

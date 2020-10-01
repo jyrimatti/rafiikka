@@ -558,7 +558,7 @@ window.onload = () => {
             series.fillOpacity           = 0.15;
 
             series.columns.template.tooltipPosition       = "pointer";
-            series.columns.template.tooltipText           = "{sisainenTunniste} ({tunniste})\n{alkuX} - {loppuX} \n{sijainti}";
+            series.columns.template.tooltipText           = "{sisainenTunniste} ({tunniste})\n{alkuX} - {loppuX} \n{sijainti}\n{lisatiedot}";
             series.columns.template.cloneTooltip          = false;
             series.columns.template.propertyFields.zIndex = "zIndex";
             series.columns.template.minWidth              = 5;
@@ -623,7 +623,7 @@ window.onload = () => {
                     aktiiviset.dataSource.data.splice(aktiiviset.dataSource.data.findIndex(x => x.name == nimi), 1);
                     aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
                 });
-                on(aktiiviset.itemContainers.template.events, "doublehit", ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.name));
+                on(aktiiviset.itemContainers.template.events, "doublehit", ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.name, ev.target.dataItem.dataContext.location));
                 on(series.columns.template.events, "hit", ev => {
                     let nimi = ev.target.dataItem.dataContext.sisainenTunniste;
                     let index = aktiiviset.dataSource.data.findIndex(x => x.name == nimi);
@@ -640,7 +640,7 @@ window.onload = () => {
                         x[1].forEach(y => y.isActive = isActive);
                     });
                 });
-                on(series.columns.template.events, 'doublehit', ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.sisainenTunniste));
+                on(series.columns.template.events, 'doublehit', ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.sisainenTunniste, ev.target.dataItem.dataContext.location));
             });
         };
 

@@ -62,7 +62,7 @@ let limitInterval = intervalString => {
 
 let infraAikavali = () => '&time=' + pyoristaAjanhetki(aikaParam()) + "/" + pyoristaAjanhetki(aikaParam());
 let etj2Aikavali = () => '&time=' + laajennaAikavali(rajat()).map(function(x) { return pyoristaAjanhetki(x); }).join("/");
-let rumaAikavali = () => '&start=' + pyoristaAjanhetki(rajat()[0]) + "&end=" + pyoristaAjanhetki(rajat()[1]);
+let rumaAikavali = () => '?start=' + pyoristaAjanhetki(rajat()[0]) + "&end=" + pyoristaAjanhetki(rajat()[1]);
 
 let junienEsitysaikavali = 1000*60*60*24*3;
 
@@ -92,8 +92,10 @@ let junasijainnitUrl       = () => 'https://rata.digitraffic.fi/api/v1/train-loc
 let ratakmMuunnosUrl       = coord => infraAPIUrl + 'koordinaatit/' + coord + '.json?propertyName=ratakmsijainnit&srsName=crs:84' + infraAikavali();
 let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.geojson?propertyName=geometria&srsName=crs:84' + infraAikavali();
 
-let rtUrl = () => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?state=ACTIVE' + rumaAikavali();
-let lrUrl = () => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?state=SENT' + rumaAikavali();
+let rtUrl = () => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json' + rumaAikavali();
+let lrUrl = () => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json' + rumaAikavali();
+let rtGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson' + rumaAikavali();
+let lrGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson' + rumaAikavali();
 
 let initDS = ds => {
     ds.requestOptions.requestHeaders = [/*{

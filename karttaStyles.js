@@ -215,3 +215,19 @@ let loStyle = styles.onLoad(feature => {
         feature.setStyle(styles.icon(etj2APIUrl + 'icons/loilmoitus.svg'));
     }
 });
+
+let rtStyle = styles.onLoad(feature => {
+    let propTila = feature.getProperties().state;
+    feature.setStyle(styles.circle(5.0, propTila == 'SENT'     ? 'rgba(250, 128, 114, 0.5)' : 
+                                        propTila == 'ACTIVE'   ? 'rgba(250, 128, 114, 1.0)' :
+                                        propTila == 'PASSIVE'  ? 'rgba(250, 128, 114, 0.75)' :
+                                        propTila == 'FINISHED' ? 'rgba(250, 128, 114, 0.25)' :
+                                                                 'rgb(0,0,0)'));
+});
+
+let lrStyle = styles.onLoad(feature => {
+    let propTila = feature.getProperties().state;
+    feature.setStyle(styles.circle(5.0, propTila == 'SENT'     ? 'rgba(64, 224, 208, 0.5)' : 
+                                        propTila == 'FINISHED' ? 'rgba(64, 224, 208, 1.0)' :
+                                                                 'rgb(0,0,0)'));
+});
