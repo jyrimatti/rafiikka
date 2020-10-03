@@ -251,11 +251,16 @@ let luoKarttaElementti = (tunniste, title) => {
 
     let open = document.createElement("div");
     open.setAttribute("class", "open");
+    let juna = onkoJuna(tunniste);
     if (tunniste.startsWith('1.2.246.586.1')) {
-        open.innerHTML = "<a href='https://rata.digitraffic.fi/infra-api/#" + tunniste + "' target='_blank'><img src='https://rata.digitraffic.fi/infra-api/r/favicon.ico' alt='Avaa Infra-API:ssa' /></a>";    
+        open.innerHTML = "<a href='' title='Avaa tietoja' style='font-size: 13px;line-height: 13px;' onclick='avaaInfo(\"" + tunniste + "\"); return false;' />ℹ️</a>" +
+                         "<a href='https://rata.digitraffic.fi/infra-api/#" + tunniste + "' target='_blank'><img src='https://rata.digitraffic.fi/infra-api/r/favicon.ico' alt='Avaa Infra-API:ssa' /></a>";
     } else if (tunniste.startsWith('1.2.246.586.2')) {
-        open.innerHTML = "<a href='https://rata.digitraffic.fi/infra-api/#" + tunniste + "' target='_blank'><img src='https://rata.digitraffic.fi/infra-api/r/favicon.ico' alt='Avaa Infra-API:ssa' /></a>" +
+        open.innerHTML = "<a href='' title='Avaa tietoja' style='font-size: 13px;line-height: 13px;' onclick='avaaInfo(\"" + tunniste + "\"); return false;' />ℹ️</a>" +
+                         "<a href='https://rata.digitraffic.fi/infra-api/#" + tunniste + "' target='_blank'><img src='https://rata.digitraffic.fi/infra-api/r/favicon.ico' alt='Avaa Infra-API:ssa' /></a>" +
                          "<a href='https://rata.digitraffic.fi/jeti-api/#"  + tunniste + "' target='_blank'><img src='https://rata.digitraffic.fi/jeti-api/r/favicon.ico' alt='Avaa Jeti-API:ssa' /></a>";    
+    } else if (juna) {
+        open.innerHTML = "<a href='' title='Avaa aikataulu' style='font-size: 13px;line-height: 13px;' onclick='luoJunaPopup(\"" + juna[1] + "\"," + juna[2] + "); return false;' />📅</a>";    
     }
     elemHeader.appendChild(open);
 
@@ -358,6 +363,11 @@ let rumaLayer = (tunniste, location) => {
     return layer;
 }
 
+let onkoJuna = tunniste => tunniste.match(/([0-9]{4}-[0-9]{2}-[0-9]{2})\s*\(([0-9]+)\)/);
+let onkoJeti = tunniste => tunniste.startsWith('1.2.246.586.2')
+let onkoRT = tunniste => tunniste.startsWith('1.2.246.586.7.1');
+let onkoLR = tunniste => tunniste.startsWith('1.2.246.586.7.2');
+
 let kartta = (tunniste, title, infraAPIPathOrRumaLocation) => {
     let elem = luoKarttaElementti(tunniste, title || tunniste);
     let overlay = new ol.Overlay({
@@ -393,19 +403,10 @@ let kartta = (tunniste, title, infraAPIPathOrRumaLocation) => {
     elem.kartta = map;
     map.addInteraction(hover(overlay, layers));
 
-    let onkoJuna = tunniste.match(/[0-9]{4}-[0-9]{2}-[0-9]{2}\s*\([0-9]+\)/);
-    let onkoJeti = tunniste.startsWith('1.2.246.586.2')
-    let onkoRT = tunniste.startsWith('1.2.246.586.7.1');
-    let onkoLR = tunniste.startsWith('1.2.246.586.7.2');
-    
-    if (!onkoJuna) {
-        avaaInfo(tunniste);
-    }
-
     let preselectLayer =
-        onkoJuna         ? junaLayer(map, tunniste) :
-        onkoRT || onkoLR ? rumaLayer(tunniste, infraAPIPathOrRumaLocation) :
-        newVectorLayerNoTile((onkoJeti ? etj2APIUrl : infraAPIUrl) + (infraAPIPathOrRumaLocation || tunniste), tunniste, tunniste, tunniste);
+        onkoJuna(tunniste)                   ? junaLayer(map, tunniste) :
+        onkoRT(tunniste) || onkoLR(tunniste) ? rumaLayer(tunniste, infraAPIPathOrRumaLocation) :
+        newVectorLayerNoTile((onkoJeti(tunniste) ? etj2APIUrl : infraAPIUrl) + (infraAPIPathOrRumaLocation || tunniste), tunniste, tunniste, tunniste);
     preselectLayer.setVisible(true);
     map.addLayer(preselectLayer);
     preselectLayer.once('change', () => {
