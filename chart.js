@@ -127,10 +127,10 @@ window.onload = () => {
             }
         });
 
-        let luoAktiivinenListaus = series => {
+        let luoAktiivinenListaus = (series, dataSource) => {
             let legend = chart.legend.itemContainers.values.find(x => x.dataItem.name == series.name);
             let aktiiviset             = new am4charts.Legend();
-            aktiiviset.dataSource      = new am4core.DataSource();
+            aktiiviset.dataSource      = dataSource || new am4core.DataSource();
             aktiiviset.dataSource.data = [];
             aktiiviset.fontSize        = 11;
             aktiiviset.position        = "left";
@@ -146,6 +146,13 @@ window.onload = () => {
             aktiiviset.markers.template.disabled             = true;
             aktiiviset.itemContainers.template.paddingTop    = 0;
             aktiiviset.itemContainers.template.paddingBottom = 0;
+
+            aktiiviset.itemContainers.template.draggable = true;
+            on(aktiiviset.itemContainers.template.events, "dragged", ev => {
+                let nimi = ev.target.dataItem.dataContext.name;
+                aktiiviset.dataSource.data.splice(aktiiviset.dataSource.data.findIndex(x => x.name == nimi), 1);
+                aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
+            });
 
             return aktiiviset;
         };
@@ -377,10 +384,64 @@ window.onload = () => {
             zoomButton.isActive = false;
         });
 
+
+        window.selectionSeries = new am4charts.ColumnSeries()
+        selectionSeries.name = 'Valinnat';
+        selectionSeries.dataSource = new am4core.DataSource();
+        selectionSeries.dataSource.data = [];
+        selectionSeries.fill                  = am4core.color("gray");
+        selectionSeries.stroke                = selectionSeries.fill.lighten(-0.75);
+        selectionSeries.baseAxis              = yAxis; // https://github.com/amcharts/amcharts4/issues/2379
+        selectionSeries.dataFields.openValueY = "alkuY";
+        selectionSeries.dataFields.valueY     = "loppuY";
+        selectionSeries.dataFields.openDateX  = "alkuX";
+        selectionSeries.dataFields.dateX      = "loppuX";
+        selectionSeries.cursorTooltipEnabled  = false;
+        selectionSeries.showOnInit            = false;
+        selectionSeries.simplifiedProcessing  = true;
+        selectionSeries.strokeWidth           = 1;
+        selectionSeries.hiddenState.transitionDuration  = 0;
+        selectionSeries.defaultState.transitionDuration = 0;
+        selectionSeries.tooltip.pointerOrientation             = 'down';
+        selectionSeries.columns.template.tooltipY              = am4core.percent(0); // objektin yläreunaan
+        selectionSeries.columns.template.tooltipText           = "{alkuX} -> {loppuX}\n{ratakmvali}";
+        selectionSeries.columns.template.cloneTooltip          = false;
+        selectionSeries.columns.template.zIndex                = 999;
+        selectionSeries.columns.template.minWidth              = 5;
+        selectionSeries.columns.template.minHeight             = 5;
+        selectionSeries.columns.template.align                 = 'center';
+        selectionSeries.columns.template.propertyFields.hidden = 'hidden';
+        chart.series.push(selectionSeries);
+
+        ["active", "hover"].forEach(stateName => {
+            let state = selectionSeries.columns.template.states.create(stateName);
+            state.properties.zIndex = 999;
+            state.properties.fill   = selectionSeries.fill.lighten(0.75);
+        });
+
+        let columnLabel         = selectionSeries.columns.template.children.push(new am4core.Label());
+        columnLabel.fill        = selectionSeries.stroke;
+        columnLabel.text        = "{name}";
+        columnLabel.fontSize    = 15;
+        columnLabel.strokeWidth = 0;
+
+        on(chart.events, "ready", () => {
+            let aktiiviset = luoAktiivinenListaus(selectionSeries, selectionSeries.dataSource);
+
+            on(aktiiviset.itemContainers.template.events, "hit", ev => {
+                let nimi = ev.target.dataItem.dataContext.name;
+                let akt = aktiiviset.dataSource.data.find(x => x.name == nimi);
+                akt.hidden = !akt.hidden;
+                aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
+            });
+        });
+
+
         selectButton = alustaMoodiNappi("select", "selectXY");
         on(chart.cursor.events, "selectended", ev => {
             chart.cursor.behavior = "panXY";
             ev.target.isActive = false;
+            selectButton.isActive = false;
         });
         on(chart.cursor.events, "selectended", ev => {
             let x = ev.target.xRange;
@@ -390,7 +451,27 @@ window.onload = () => {
                 let toX   = xAxis.positionToDate(xAxis.toAxisPosition(x.end));
                 let fromY = yAxis.positionToValue(yAxis.toAxisPosition(y.start));
                 let toY   = yAxis.positionToValue(yAxis.toAxisPosition(y.end));
-                log(fromX + "->" + toX, fromY + "->" + toY);
+                let ratakmvali = {
+                    ratanumero: valittunaRatanumero() ? valittuDS.data : 'TODO: ?',
+                    alku: {
+                        ratakm: Math.floor(fromY/1000),
+                        etaisyys: Math.floor(fromY % 1000)
+                    },
+                    loppu: {
+                        ratakm: Math.floor(toY/1000),
+                        etaisyys: Math.floor(toY % 1000)
+                    }
+                };
+                log("Selected:", fromX + "->" + toX, ratakmvali);
+                selectionSeries.dataSource.data.push({
+                    alkuX: fromX,
+                    loppuX: toX,
+                    alkuY: fromY,
+                    loppuY: toY,
+                    ratakmvali: muotoileRkmv(ratakmvali),
+                    name: selectionSeries.dataSource.data.length == 0 ? 1 : selectionSeries.dataSource.data[selectionSeries.dataSource.data.length-1].name + 1
+                });
+                selectionSeries.dataSource.dispatchImmediately("done", {data: selectionSeries.dataSource.data});
             }
         });
 
@@ -578,13 +659,7 @@ window.onload = () => {
 
             on(chart.events, "ready", () => {
                 let aktiiviset = luoAktiivinenListaus(series);
-                aktiiviset.itemContainers.template.draggable = true;
-                on(aktiiviset.itemContainers.template.events, "dragged", ev => {
-                    let nimi = ev.target.dataItem.dataContext.name;
-                    aktiiviset.dataSource.data.splice(aktiiviset.dataSource.data.findIndex(x => x.name == nimi), 1);
-                    aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
-                });
-                on(aktiiviset.itemContainers.template.events, "doublehit", ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.name, ev.target.dataItem.dataContext.location));
+
                 on(series.columns.template.events, "hit", ev => {
                     let nimi = ev.target.dataItem.dataContext.sisainenTunniste;
                     let index = aktiiviset.dataSource.data.findIndex(x => x.name == nimi);
@@ -595,6 +670,8 @@ window.onload = () => {
                     }
                     aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
                 });
+                on(aktiiviset.itemContainers.template.events, "doublehit", ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.name, ev.target.dataItem.dataContext.location));
+
                 on(aktiiviset.dataSource.events, "done", ev => {
                     Object.entries(objectCache).forEach(x => {
                         let isActive = ev.target.data.findIndex(y => y.name == x[0]) > -1;
@@ -857,7 +934,6 @@ window.onload = () => {
                 aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data});
             });
 
-            aktiiviset.itemContainers.template.draggable = true;
             on(aktiiviset.itemContainers.template.events, "dragged", ev => valitseJuna(ev.target.dataItem.dataContext));
             on(aktiiviset.itemContainers.template.events, "doublehit", ev => kartta(ev.target.dataItem.dataContext.departureDate + ' (' + ev.target.dataItem.dataContext.trainNumber + ')'));
         });
