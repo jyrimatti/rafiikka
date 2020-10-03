@@ -104,3 +104,9 @@ let lataaAikatauluGraphQL = (paiva, callback) => {
 let lataaAikataulu = lataaAikatauluRest;
 
 let kutsuJunalle = (data, f) => Object.values(data).flatMap(Object.values).forEach(f);
+
+let naytetaankoAikataulut = (min, max, seriesShown) => {
+    let start = min || ikkuna()[0].getTime();
+    let end = max || ikkuna()[1].getTime();
+    return end-start <= junienEsitysaikavali && seriesShown;
+};

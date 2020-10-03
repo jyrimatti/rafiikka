@@ -118,21 +118,30 @@ window.onload = () => {
         chart.legend.position         = "right";
         chart.legend.exportable       = false; 
         chart.legend.useDefaultMarker = true; // https://github.com/amcharts/amcharts4/issues/2444
+        chart.legend.itemContainers.template.paddingTop = 5;
+        chart.legend.itemContainers.template.paddingBottom = 5;
+
+        on(chart.legend.itemContainers.template.events, 'hit', e => {
+            if (e.target.isActive && loading.dataItem.categories.aktiiviset != "") {
+                throw "odotetaan dataa...";
+            }
+        });
 
         let luoAktiivinenListaus = series => {
             let legend = chart.legend.itemContainers.values.find(x => x.dataItem.name == series.name);
-            legend.paddingBottom     = 0;
-            
             let aktiiviset             = new am4charts.Legend();
             aktiiviset.dataSource      = new am4core.DataSource();
             aktiiviset.dataSource.data = [];
-            aktiiviset.paddingBottom   = 16;
-            aktiiviset.fontSize        = 12;
+            aktiiviset.fontSize        = 11;
             aktiiviset.position        = "left";
             aktiiviset.maxHeight       = 50;
             aktiiviset.scrollable      = true;
             aktiiviset.paddingLeft     = 16;
             aktiiviset.parent          = legend.parent;
+            aktiiviset.layout          = 'vertical';
+            aktiiviset.valign          = 'top';
+            aktiiviset.marginTop       = 0;
+            aktiiviset.marginBottom    = 0;
             aktiiviset.insertAfter(legend);
             aktiiviset.markers.template.disabled             = true;
             aktiiviset.itemContainers.template.paddingTop    = 0;
@@ -165,6 +174,9 @@ window.onload = () => {
         let lisaaScrollbariin = scrollbar => series => {
             scrollbar.series.push(series);
             scrollbar.series.push(series);
+
+            // ei tooltippejä scrollbareihin
+            scrollbar.scrollbarChart.series.values.forEach(x => x.tooltip = undefined);
 
             scrollbar.scrollbarChart.series.each(x => x.hidden = true); // muuten kääntää legendin päälle vaikka onkin piilossa...
 
@@ -203,7 +215,7 @@ window.onload = () => {
         xAxis.min              = rajat()[0].getTime();
         xAxis.max              = rajat()[1].getTime();
         
-        xAxis.renderer.labels.template.tooltip     = new am4core.Tooltip();
+        //xAxis.renderer.labels.template.tooltip     = new am4core.Tooltip();
         xAxis.renderer.labels.template.location    = 0.0001; // akselin labelit mielellään aina grid-viivojen kohdalle
         xAxis.renderer.labels.template.tooltipText = "{value.formatDate(dd.MM.yyyy HH:mm:ss)}";
         
@@ -461,8 +473,7 @@ window.onload = () => {
                         range.label.rotation         = 270;
                     }
 
-                    range.label.tooltip     = new am4core.Tooltip();
-                    range.label.tooltipText = x.tyyppi + ": " + x.nimi;
+                    range.label.tooltipText = x.tyyppi + "\n" + x.nimi;
                     range.label.adapter.add("text", () => x.lyhenne);
                     on(range.label.events, "doublehit", () => kartta(x.tunniste, x.tyyppi + ' ' + x.nimi + (x.lyhenne != x.nimi ? ' (' + x.lyhenne + ')' : '')));
 
@@ -501,8 +512,7 @@ window.onload = () => {
                 range.label.dx          = -30;
                 range.label.inside      = true;
                 range.label.fontSize    = 12;
-                range.label.tooltip     = new am4core.Tooltip();
-                range.label.tooltipText = x.tyyppi + ": " + x.nimi;
+                range.label.tooltipText = x.tyyppi + "\n" + x.nimi;
                 range.label.adapter.add("text", () => x.lyhenne);
                 on(range.label.events, "doublehit", () => kartta(x.tunniste, x.tyyppi + ' ' + x.nimi + (x.lyhenne != x.nimi ? ' (' + x.lyhenne + ')' : '')));
             });
@@ -528,7 +538,7 @@ window.onload = () => {
         });
 
 
-        let luoEnnakkotietoSeries = (nimi, vari) => {
+        let luoEnnakkotietoSeries = (nimi, vari, tilat) => {
             log("Alustetaan", nimi);
 
             let series = new am4charts.ColumnSeries()
@@ -548,71 +558,22 @@ window.onload = () => {
             series.hiddenState.transitionDuration  = 0;
             series.defaultState.transitionDuration = 0;
 
-            monitor(series.dataSource, nimi);
-            initDS(series.dataSource);
+            let ds = tilat.map(t => {
+                let d = new am4core.DataSource();
+                initDS(d);
+                monitor(d, nimi + "(" + t + ")");
 
-            return series;
-        };
-
-        let viimeisteleEnnakkotietoSeries = (series, urlRatanumero, urlAikataulupaikka) => {
-            series.fillOpacity           = 0.15;
-
-            series.columns.template.tooltipPosition       = "pointer";
-            series.columns.template.tooltipText           = "{sisainenTunniste} ({tunniste})\n{alkuX} - {loppuX} \n{sijainti}\n{lisatiedot}";
-            series.columns.template.cloneTooltip          = false;
-            series.columns.template.propertyFields.zIndex = "zIndex";
-            series.columns.template.minWidth              = 5;
-            series.columns.template.minHeight             = 5;
-
-            let columnLabel         = series.columns.template.children.push(new am4core.Label());
-            columnLabel.fill        = series.stroke;
-            columnLabel.text        = "{sisainenTunniste}";
-            columnLabel.fontSize    = 13;
-            columnLabel.strokeWidth = 0;
-
-            ["active", "hover"].forEach(stateName => {
-                let state = series.columns.template.states.create(stateName);
-                state.properties.zIndex      = 999;
-                state.properties.stroke      = series.fill.lighten(-0.8);
-                state.properties.fillOpacity = 1;
+                on(d.events, "done", () => {
+                    series.dataSource.data = ds.filter(x => x[1].isActive).flatMap(x => x[1].data || []);
+                    series.dataSource.dispatchImmediately("parseended", {data: series.dataSource.data});
+                    series.dataSource.dispatchImmediately("done", {data: series.dataSource.data});
+                });
+                return [t,d];
             });
-
-            let paivitaUrl = () => {
-                let uusiUrl = valittunaRatanumero() ? urlRatanumero() : valittunaAikataulupaikka() ? urlAikataulupaikka() : undefined;
-                if (series.isReady() && !series.isHidden && uusiUrl && series.dataSource.url != uusiUrl) {
-                    series.dataSource.url = uusiUrl;
-                    series.dataSource.load();
-                }
-            };
-            on(series.events, "shown", paivitaUrl);
-            on(valittuDS.events, "done", paivitaUrl);
 
             let objectCache = {}
             on(series.dataSource.events, "parseended", () => {
                 objectCache = {};
-            });
-            on(series.events, "validated", ev => {
-                log("Populoidaan", ev.target.name, "object cache");
-                ev.target.columns.each(x => {
-                    let sisainenTunniste = x.dataItem.dataContext.sisainenTunniste;
-                    let columns = objectCache[sisainenTunniste];
-                    if (!columns) {
-                        columns = [];
-                        objectCache[sisainenTunniste] = columns;
-                    }
-                    columns.push(x);
-                });
-                log(ev.target.name, "object cache populoitu");
-            });
-
-            let hoveroi = val => ev => objectCache[ev.target.dataItem.dataContext.sisainenTunniste].forEach(x => x.isHover = val);
-            on(series.columns.template.events, "over", hoveroi(true));
-            on(series.columns.template.events, "out" , hoveroi(false));
-
-            on(valittuDS.events, "done", () => {
-                if (!series.isHidden) {
-                    series.dataSource.load();
-                }
             });
 
             on(chart.events, "ready", () => {
@@ -642,44 +603,158 @@ window.onload = () => {
                 });
                 on(series.columns.template.events, 'doublehit', ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.sisainenTunniste, ev.target.dataItem.dataContext.location));
             });
+
+            on(series.events, "datavalidated", ev => {
+                log("Populoidaan", ev.target.name, "object cache");
+                ev.target.columns.each(x => {
+                    let sisainenTunniste = x.dataItem.dataContext.sisainenTunniste;
+                    let columns = objectCache[sisainenTunniste];
+                    if (!columns) {
+                        columns = [];
+                        objectCache[sisainenTunniste] = columns;
+                    }
+                    columns.push(x);
+                });
+                log(ev.target.name, "object cache populoitu");
+            });
+
+            let hoveroi = val => ev => objectCache[ev.target.dataItem.dataContext.sisainenTunniste].forEach(x => x.isHover = val);
+            on(series.columns.template.events, "over", hoveroi(true));
+            on(series.columns.template.events, "out" , hoveroi(false));
+
+            on(valittuDS.events, "done", () => {
+                if (!series.isHidden) {
+                    series.dataSource.load();
+                }
+            });
+
+            on(chart.events, "ready", () => {
+                let leg = new am4charts.Legend();
+                leg.dataSource = new am4core.DataSource();
+                let legend = chart.legend.itemContainers.values.find(x => x.dataItem.name == series.name);
+                leg.dataSource.data = tilat.map(x => { return {name: x}; });
+                leg.parent          = legend.parent;
+                leg.fontSize        = 10;
+                leg.position        = "left";
+                leg.maxHeight       = 12;
+                leg.layout          = 'horizontal';
+                leg.paddingLeft     = 26;
+                leg.dy              = -30;
+                leg.markers.template.disabled = true;
+                leg.itemContainers.template.paddingTop    = 0;
+                leg.itemContainers.template.paddingBottom = 0;
+                leg.itemContainers.template.marginLeft    = 0;
+                leg.itemContainers.template.marginRight   = 0;
+                leg.labels.template.ellipsis = '';
+                leg.labels.template.align    = 'center';
+                leg.itemContainers.template.width=160/tilat.length;
+                leg.itemContainers.template.tooltip = new am4core.Tooltip(); // muuten katoaa näkyvistä kun series päälle...
+                leg.itemContainers.template.tooltipText = 'Tila: {name}';
+                add(leg.labels.template.adapter, 'textOutput', x => x.toUpperCase());
+                leg.insertAfter(legend);
+
+                on(leg.itemContainers.template.events, "hit", ev => {
+                    let d = ds.find(x => x[0] == ev.target.dataItem.dataContext.name)[1];
+                    d.isActive = ev.target.isActive;
+                    if (ev.target.isActive) {
+                        if (series.isHidden) {
+                            series.show();
+                        }
+                        d.load();
+                    } else {
+                        d.dispatchImmediately("done", {data: d.data});
+                    }
+                });
+                leg.dataSource.dispatchImmediately("done", {data: leg.dataSource.data});
+                on(leg.itemContainers.template.events, "ready", ev => {
+                    if (ev.target.dataItem.dataContext.name == tilat[0]) {
+                        ds.find(x => x[0] == ev.target.dataItem.dataContext.name)[1].isActive = true;
+                    } else {
+                        ev.target.setState('active');
+                    }
+                });
+            });
+
+            series.dataSource.url = f => {
+                ds.forEach(x => x[1].url = f(x[0]));
+            };
+            series.dataSource.load = () => ds.filter(x => x[1].isActive).forEach(x => x[1].load());
+
+            return series;
         };
 
-        window.seriesEI = luoEnnakkotietoSeries("Ennakkoilmoitukset", am4core.color("orange"));
+        let viimeisteleEnnakkotietoSeries = (series, urlRatanumero, urlAikataulupaikka) => {
+            series.fillOpacity           = 0.15;
+
+            //series.columns.template.tooltipPosition       = "pointer";
+            series.tooltip.pointerOrientation             = 'down';
+            series.columns.template.tooltipY              = am4core.percent(0); // objektin yläreunaan
+            series.columns.template.tooltipText           = "{sisainenTunniste} ({tunniste})\n{alkuX} - {loppuX} \n{sijainti}\n{lisatiedot}";
+            series.columns.template.cloneTooltip          = false;
+            series.columns.template.propertyFields.zIndex = "zIndex";
+            series.columns.template.minWidth              = 5;
+            series.columns.template.minHeight             = 5;
+
+            let columnLabel         = series.columns.template.children.push(new am4core.Label());
+            columnLabel.fill        = series.stroke;
+            columnLabel.text        = "{sisainenTunniste}";
+            columnLabel.fontSize    = 13;
+            columnLabel.strokeWidth = 0;
+
+            ["active", "hover"].forEach(stateName => {
+                let state = series.columns.template.states.create(stateName);
+                state.properties.zIndex      = 999;
+                state.properties.stroke      = series.fill.lighten(-0.8);
+                state.properties.fillOpacity = 1;
+            });
+
+            let paivitaUrl = () => {
+                let uusiUrl = valittunaRatanumero() ? urlRatanumero() : valittunaAikataulupaikka() ? urlAikataulupaikka() : undefined;
+                if (series.isReady() && !series.isHidden && uusiUrl && series.dataSource.url != uusiUrl) {
+                    series.dataSource.url(uusiUrl);
+                    series.dataSource.load();
+                }
+            };
+            on(series.events, "shown", paivitaUrl);
+            on(valittuDS.events, "done", paivitaUrl);
+        };
+
+        window.seriesEI = luoEnnakkotietoSeries("Ennakkoilmoitukset", am4core.color("orange"), ['hyväksytty', 'luonnos', 'poistettu']);
         on(seriesEI.dataSource.events, "parseended", ev => {
             log("Parsitaan EI");
             ev.target.data = ev.target.data.flatMap(parsiEI).sort(ennakkotietoIntervalComparator);
             log("Parsittu EI:", ev.target.data.length);
         });
 
-        window.seriesLO = luoEnnakkotietoSeries("LOilmoitukset", am4core.color("purple"));
+        window.seriesLO = luoEnnakkotietoSeries("LOilmoitukset", am4core.color("purple"), ['aktiivinen', 'poistettu']);
         on(seriesLO.dataSource.events, "parseended", ev => {
             log("Parsitaan LO done");
             ev.target.data = ev.target.data.flatMap(parsiLO).sort(ennakkotietoIntervalComparator);
             log("Parsittu LO:", ev.target.data.length);
         });
 
-        window.seriesES = luoEnnakkotietoSeries("Ennakkosuunnitelmat", am4core.color("green"));
+        window.seriesES = luoEnnakkotietoSeries("Ennakkosuunnitelmat", am4core.color("green"), ['hyväksytty', 'lähetetty', 'lisätietopyyntö', 'luonnos', 'peruttu', 'poistettu']);
         on(seriesES.dataSource.events, "parseended", ev => {
             log("Parsitaan ES done");
             ev.target.data = ev.target.data.flatMap(parsiES).sort(ennakkotietoIntervalComparator);
             log("Parsittu ES:", ev.target.data.length);
         });
 
-        window.seriesVS = luoEnnakkotietoSeries("Vuosisuunnitelmat", am4core.color("violet"));
+        window.seriesVS = luoEnnakkotietoSeries("Vuosisuunnitelmat", am4core.color("violet"), ['tarve tunnistettu', 'vuosiohjelmissa', 'suunniteltu', 'käynnissä', 'tehty', 'poistettu']);
         on(seriesVS.dataSource.events, "parseended", ev => {
             log("Parsitaan VS done");
             ev.target.data = ev.target.data.flatMap(parsiVS).sort(ennakkotietoIntervalComparator);
             log("Parsittu VS:", ev.target.data.length);
         });
 
-        window.seriesRT = luoEnnakkotietoSeries("Ratatyöt", am4core.color('salmon'));
+        window.seriesRT = luoEnnakkotietoSeries("Ratatyöt", am4core.color('salmon'), ['ACTIVE', 'PASSIVE', 'SENT', 'FINISHED']);
         on(seriesRT.dataSource.events, "parseended", ev => {
             log("Parsitaan RT done");
             ev.target.data = ev.target.data.flatMap(parsiRT).sort(ennakkotietoIntervalComparator);
             log("Parsittu RT:", ev.target.data.length);
         });
 
-        window.seriesLR = luoEnnakkotietoSeries("Liikenteenrajoitteet", am4core.color('turquoise'));
+        window.seriesLR = luoEnnakkotietoSeries("Liikenteenrajoitteet", am4core.color('turquoise'), ['SENT', 'FINISHED']);
         on(seriesLR.dataSource.events, "parseended", ev => {
             log("Parsitaan LR done");
             ev.target.data = ev.target.data.flatMap(parsiLR).sort(ennakkotietoIntervalComparator);
@@ -830,10 +905,10 @@ window.onload = () => {
         };
 
         
-        let ladatutAikataulut = {};
-        let ladatutToteumat = {};
-        let kokonaanLadatutAikataulut = {};
-        let kokonaanLadatutToteumat = {};
+        window.ladatutAikataulut = {};
+        window.ladatutToteumat = {};
+        window.kokonaanLadatutAikataulut = {};
+        window.kokonaanLadatutToteumat = {};
 
         let luoAikatauluToteumaToggle = (nimi, vari, xField, ladatut) => {
             let toggle               = new am4charts.LineSeries();
@@ -1008,16 +1083,16 @@ window.onload = () => {
             }
         };
 
-        let haeAikataulujaTaiToteumia = (hae, toggleHidden) => {
-            let start = xAxis.minZoomed || ikkuna()[0].getTime();
-            let end = xAxis.maxZoomed || ikkuna()[1].getTime();
-            if (end-start <= junienEsitysaikavali && !toggleHidden) {
-                dateFns.dateFns.eachDayOfInterval({start: new Date(start), end: new Date(end)}).forEach(hae);
+        let haeAikataulujaTaiToteumia = (hae, series) => {
+            if (naytetaankoAikataulut(xAxis.minZoomed, xAxis.maxZoomed, !series.isHidden)) {
+                dateFns.dateFns.eachDayOfInterval({start: new Date(xAxis.minZoomed), end: new Date(xAxis.maxZoomed)}).forEach(hae);
+            } else {
+                series.hide();
             }
         };
 
-        let haeAikatauluja = () => haeAikataulujaTaiToteumia(hae(kokonaanLadatutAikataulut, luoAikataulut), aikataulutToggle.isHidden);
-        let haeToteumia = () => haeAikataulujaTaiToteumia(hae(kokonaanLadatutToteumat, luoToteumat), toteumatToggle.isHidden);
+        let haeAikatauluja = () => haeAikataulujaTaiToteumia(hae(kokonaanLadatutAikataulut, luoAikataulut), aikataulutToggle);
+        let haeToteumia = () => haeAikataulujaTaiToteumia(hae(kokonaanLadatutToteumat, luoToteumat), toteumatToggle);
 
         let poistaAikataulu = series => {
             let juna = series.dummyData;
@@ -1056,9 +1131,7 @@ window.onload = () => {
         });
 
         on(xAxis.events, "selectionextremeschanged", ev => {
-            let start = ev.target.minZoomed;
-            let end = ev.target.maxZoomed;
-            if (end-start > junienEsitysaikavali && (!aikataulutToggle.hidden || !toteumatToggle.hidden)) {
+            if (!naytetaankoAikataulut(ev.target.minZoomed, ev.target.maxZoomed, !aikataulutToggle.hidden || !toteumatToggle.hidden)) {
                 log("Piilotetaan junat");
                 aikataulutToggle.hide();
                 toteumatToggle.hide();

@@ -62,9 +62,9 @@ let limitInterval = intervalString => {
 
 let infraAikavali = () => '&time=' + pyoristaAjanhetki(aikaParam()) + "/" + pyoristaAjanhetki(aikaParam());
 let etj2Aikavali = () => '&time=' + laajennaAikavali(rajat()).map(function(x) { return pyoristaAjanhetki(x); }).join("/");
-let rumaAikavali = () => '?start=' + pyoristaAjanhetki(rajat()[0]) + "&end=" + pyoristaAjanhetki(rajat()[1]);
+let rumaAikavali = () => '&start=' + pyoristaAjanhetki(rajat()[0]) + "&end=" + pyoristaAjanhetki(rajat()[1]);
 
-let junienEsitysaikavali = 1000*60*60*24*3;
+let junienEsitysaikavali = 1000*60*60*24*5;
 
 let ratanumerotUrl            = () => infraAPIUrl + "radat.json?propertyName=ratakilometrit,ratanumero" + infraAikavali();
 let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka,ratakmvalit" + infraAikavali();
@@ -78,24 +78,24 @@ let laituritUrl               = () => infraAPIUrl + "aikataulupaikat.json?cql_fi
 let elementitUrl              = () => infraAPIUrl + "elementit.json?propertyName=tunniste,nimi,ratakmsijainnit" + infraAikavali();
 let lorajatUrl                = () => infraAPIUrl + "liikenteenohjauksenrajat.json?propertyName=tunniste,leikkaukset.ratakmsijainnit" + infraAikavali();
 
-let eiUrlRatanumero = () => etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27hyväksytty%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali();
-let esUrlRatanumero = () => etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa' + etj2Aikavali();
-let vsUrlRatanumero = () => etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa' + etj2Aikavali();
-let loUrlRatanumero = () => etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika' + etj2Aikavali();
+let eiUrlRatanumero = () => tila => etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27' + tila + '%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali();
+let esUrlRatanumero = () => tila => etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa' + etj2Aikavali();
+let vsUrlRatanumero = () => tila => etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa' + etj2Aikavali();
+let loUrlRatanumero = () => tila => etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika' + etj2Aikavali();
 
-let eiUrlAikataulupaikka = () => etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27hyväksytty%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali();
-let esUrlAikataulupaikka = () => etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa' + etj2Aikavali();
-let vsUrlAikataulupaikka = () => etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa' + etj2Aikavali();
-let loUrlAikataulupaikka = () => etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika' + etj2Aikavali();
+let eiUrlAikataulupaikka = () => tila => etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27' + tila + '%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa' + etj2Aikavali();
+let esUrlAikataulupaikka = () => tila => etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27hyväksytty%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa' + etj2Aikavali();
+let vsUrlAikataulupaikka = () => tila => etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila%3C%3E%27poistettu%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa' + etj2Aikavali();
+let loUrlAikataulupaikka = () => tila => etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27aktiivinen%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika' + etj2Aikavali();
 
 let junasijainnitUrl       = () => 'https://rata.digitraffic.fi/api/v1/train-locations/latest/';
 let ratakmMuunnosUrl       = coord => infraAPIUrl + 'koordinaatit/' + coord + '.json?propertyName=ratakmsijainnit&srsName=crs:84' + infraAikavali();
 let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.geojson?propertyName=geometria&srsName=crs:84' + infraAikavali();
 
-let rtUrl = () => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json' + rumaAikavali();
-let lrUrl = () => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json' + rumaAikavali();
-let rtGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson' + rumaAikavali();
-let lrGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson' + rumaAikavali();
+let rtUrl = () => tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?state=' + tila + rumaAikavali();
+let lrUrl = () => tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?state=' + tila + rumaAikavali();
+let rtGeojsonUrl = tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson?state=' + tila + rumaAikavali();
+let lrGeojsonUrl = tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson?state=' + tila + rumaAikavali();
 
 let initDS = ds => {
     ds.requestOptions.requestHeaders = [/*{
@@ -155,11 +155,11 @@ let luoDatasource = (type, urlF, f) => {
     initDS(ds);
     monitor(ds, type);
     on(ds.events, "parseended", ev => {
-        log("Parsitaan ", type);
+        log("Parsitaan", type);
         var ret = {};
         Object.values(ev.target.data).flat().forEach(x => f(ret, x));
         ev.target.data = ret;
-        log("Parsittu ", type);
+        log("Parsittu", type);
     });
     return ds;
 };

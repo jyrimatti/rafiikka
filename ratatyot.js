@@ -11,7 +11,7 @@ let parsiRT = rt => rt.workParts.flatMap(wp => {
     let aikavali = tyorakoAikavaliksi(wp.startDay, wp.plannedWorkingGap, wp.permissionMinimumDuration);
     let yleiset = {
         tunniste:         rt.id,
-        sisainenTunniste: rt.id,
+        sisainenTunniste: 'RT' + rt.id.replaceAll(/.*[.]/g,''),
         tila:             rt.state,
         lisatiedot:       rt.state + " - " + rt.organization + "\n" +
             [(rt.trafficSafetyPlan     ? "traffic safety" : undefined),
@@ -30,7 +30,7 @@ let parsiLR = lr => {
     let aikavali = [new Date(lr.startDate), new Date(lr.endDate ? lr.endDate : "2030-01-01T00:00:00Z")];
     let yleiset = {
         tunniste:         lr.id,
-        sisainenTunniste: lr.id,
+        sisainenTunniste: 'LR' + lr.id.replaceAll(/.*[.]/g,''),
         tila:             lr.state,
         lisatiedot:       lr.state + " - " + lr.organization + "\n" + lr.limitation,
         location:         lr.location,
