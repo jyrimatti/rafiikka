@@ -23,7 +23,7 @@ let parsiRT = rt => rt.workParts.flatMap(wp => {
         alkuX:            aikavali[0],
         loppuX:           aikavali[1]
     };
-    return joinByRatakmvalit(wp.locations.flatMap(parseLocation(yleiset))).map(setZIndex).map(fixPoints);
+    return joinByRatakmvalit(wp.locations.flatMap(parseLocation(yleiset))).map(setZIndex).map(fixPoints).map(joinSijainti);
 });
 
 let parsiLR = lr => {
@@ -37,7 +37,11 @@ let parsiLR = lr => {
         alkuX:            aikavali[0],
         loppuX:           aikavali[1]
     };
-    return joinByRatakmvalit(lr.locations.flatMap(parseLocation(yleiset))).map(setZIndex).map(fixPoints);
+    return joinByRatakmvalit(lr.locations.flatMap(parseLocation(yleiset))).map(setZIndex).map(fixPoints).map(joinSijainti);
+};
+
+let joinSijainti = x => {
+    return { ...x, sijainti: Object.keys(x.sijainti).map(k => x.sijainti[k].length == 0 ? k : k + ": " + x.sijainti[k].join(", ")).join("\n") }
 };
 
 let setZIndex = x => {
@@ -60,6 +64,21 @@ let yComparator = (a,b) => {
     return 0;
 };
 
+let mergeObjects = (o1, o2) => {
+    if (!o2) {
+        return o1;
+    }
+    let ret = {...o1};
+    Object.keys(o2).forEach(k => {
+        if (ret[k]) {
+            ret[k] = [...new Set(ret[k].concat(o2[k]))];
+        } else {
+            ret[k] = o2[k];
+        }
+    });
+    return ret;
+}
+
 let joinByRatakmvalit = xs => xs.sort(yComparator).reduce( (prev, cur) => {
     if (prev.length == 0) {
         return [cur];
@@ -69,11 +88,12 @@ let joinByRatakmvalit = xs => xs.sort(yComparator).reduce( (prev, cur) => {
         return prev.slice(0, -1).concat([{
             ...last,
             loppuY: Math.max(last.loppuY, cur.loppuY),
-            sijainti: [...new Set(last.sijainti == undefined ? cur.sijainti : last.sijainti.concat(cur.sijainti || []))],
+            sijainti: last.sijainti == undefined ? cur.sijainti : mergeObjects(last.sijainti, cur.sijainti),
             raiteet: [...new Set(last.raiteet == undefined ? cur.raiteet : last.raiteet.concat(cur.raiteet || []))]
         }]);
+    } else {
+        return prev.concat([cur]);
     }
-    return prev.concat([cur]);
 }, []);
 
 let parseLocation = yleiset => location => {
@@ -92,9 +112,9 @@ let parseLocation = yleiset => location => {
         return [];
     }
 
-    let paikkaText = paikka ? lpaikka.lyhenne : undefined;
+    let paikkaText = paikka ? lpaikka.lyhenne : '?';
     let valiText = vali ? rautatieliikennepaikatDS.data[lpvali.alkuliikennepaikka].lyhenne + " - " +
-                          rautatieliikennepaikatDS.data[lpvali.loppuliikennepaikka].lyhenne : undefined;
+                          rautatieliikennepaikatDS.data[lpvali.loppuliikennepaikka].lyhenne : '?';
 
     if (location.identifierRanges.length == 0) {
         if (vali) {
@@ -104,18 +124,22 @@ let parseLocation = yleiset => location => {
                         ratanumero: rkmv.ratanumero,
                         alkuY:    rkmv.alku.ratakm*1000+rkmv.alku.etaisyys,
                         loppuY:   rkmv.loppu.ratakm*1000+rkmv.loppu.etaisyys,
-                        sijainti: [valiText]
+                        paikka:   paikka,
+                        vali:     vali,
+                        sijainti: {[valiText]: []}
                     };
                     return {...yleiset, ...sij};
                 });
             } else if (valittunaAikataulupaikka()) {
                 return lpvali.ratakmvalit.map(aikataulupaikkavali)
-                                                                   .filter(x => x.length > 0)
-                                                                   .map(apv => {
+                                         .filter(x => x.length > 0)
+                                         .map(apv => {
                     let sij = {
                         alkuY:    apv[0],
                         loppuY:   apv[1],
-                        sijainti: [valiText]
+                        paikka:   paikka,
+                        vali:     vali,
+                        sijainti: {[valiText]: []}
                     };
                     return {...yleiset, ...sij};
                 });
@@ -123,23 +147,27 @@ let parseLocation = yleiset => location => {
         } else if (paikka) {
             if (valittunaRatanumero()) {
                 return lpaikka.ratakmvalit.filter(x => x.ratanumero == valittuDS.data)
-                                                                        .map(rkmv => {
+                                          .map(rkmv => {
                     let sij = {
                         ratanumero: rkmv.ratanumero,
                         alkuY:    rkmv.alku.ratakm*1000+rkmv.alku.etaisyys,
                         loppuY:   rkmv.loppu.ratakm*1000+rkmv.loppu.etaisyys,
-                        sijainti: [paikkaText]
+                        paikka:   paikka,
+                        vali:     vali,
+                        sijainti: {[paikkaText]: []}
                     };
                     return {...yleiset, ...sij};
                 });
             } else if (valittunaAikataulupaikka()) {
                 return lpaikka.ratakmvalit.map(aikataulupaikkavali)
-                                                                        .filter(x => x.length > 0)  
-                                                                        .flatMap(apv => {
+                                          .filter(x => x.length > 0)  
+                                          .flatMap(apv => {
                     let sij = {
                         alkuY:    apv[0],
                         loppuY:   apv[1],
-                        sijainti: [paikkaText]
+                        paikka:   paikka,
+                        vali:     vali,
+                        sijainti: {[paikkaText]: []}
                     };
                     return [{...yleiset, ...sij}];
                 });
@@ -173,8 +201,9 @@ let parseLocation = yleiset => location => {
                         return [];
                     }
 
-                    let sijaintiText = [e1.nimi + " - " + e2.nimi + (valiText   ? ' (' + valiText   + ')' :
-                                                                     paikkaText ? ' (' + paikkaText + ')' : '')];
+                    let alueText = (valiText   ? '(' + valiText   + ')' :
+                                    paikkaText ? '(' + paikkaText + ')' : '');
+                    let sijaintiText = e1.nimi + " - " + e2.nimi;
 
                     if (valittunaRatanumero()) {
                         return e1.ratakmsijainnit.filter(x => x.ratanumero == valittuDS.data)
@@ -186,7 +215,9 @@ let parseLocation = yleiset => location => {
                                     alkuY:    rkm1.ratakm*1000+rkm1.etaisyys,
                                     loppuY:   rkm2.ratakm*1000+rkm2.etaisyys,
                                     raiteet:  ev.raiteet,
-                                    sijainti: sijaintiText
+                                    paikka:   paikka,
+                        vali:     vali,
+                                    sijainti: {[alueText]: [sijaintiText]}
                                 };
                                 return {...yleiset, ...sij};
                             }));
@@ -214,7 +245,9 @@ let parseLocation = yleiset => location => {
                                 alkuY:    apv[0],
                                 loppuY:   apv[1],
                                 raiteet:  ev.raiteet,
-                                sijainti: sijaintiText
+                                paikka:   paikka,
+                                vali:     vali,
+                                sijainti: {[alueText]: [sijaintiText]}
                             };
                             return [{...yleiset, ...sij}];
                         });
@@ -227,8 +260,9 @@ let parseLocation = yleiset => location => {
                     return [];
                 }
 
-                let sijaintiText = [e1.nimi + (valiText   ? ' (' + valiText   + ')' :
-                                               paikkaText ? ' (' + paikkaText + ')' : '')];
+                let alueText = (valiText   ? '(' + valiText   + ')' :
+                                paikkaText ? '(' + paikkaText + ')' : '');
+                let sijaintiText = e1.nimi;
                                                
                 if (valittunaRatanumero()) {
                     return e1.ratakmsijainnit.filter(x => x.ratanumero == valittuDS.data).map(rkm => {
@@ -236,7 +270,9 @@ let parseLocation = yleiset => location => {
                             ratanumero: rkm.ratanumero,
                             alkuY:    rkm.ratakm*1000+rkm.etaisyys,
                             loppuY:   rkm.ratakm*1000+rkm.etaisyys,
-                            sijainti: sijaintiText
+                            paikka:   paikka,
+                            vali:     vali,
+                            sijainti: {[alueText]: [sijaintiText]}
                         };
                         return {...yleiset, ...sij};
                     });
@@ -248,7 +284,9 @@ let parseLocation = yleiset => location => {
                                                 let sij = {
                                                     alkuY:    Math.abs(apv[0]-0.01),
                                                     loppuY:   apv[1]+0.01,
-                                                    sijainti: sijaintiText
+                                                    paikka:   paikka,
+                                                    vali:     vali,
+                                                    sijainti: {[alueText]: [sijaintiText]}
                                                 };
                                                 return {...yleiset, ...sij};
                                              });

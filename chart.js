@@ -121,6 +121,9 @@ window.onload = () => {
         chart.legend.itemContainers.template.paddingTop = 5;
         chart.legend.itemContainers.template.paddingBottom = 5;
 
+        chart.tooltip.label.maxWidth = 400;
+        chart.tooltip.label.wrap = true;
+
         on(chart.legend.itemContainers.template.events, 'hit', e => {
             if (e.target.isActive && loading.dataItem.categories.aktiiviset != "") {
                 throw "odotetaan dataa...";
@@ -639,6 +642,9 @@ window.onload = () => {
             series.hiddenState.transitionDuration  = 0;
             series.defaultState.transitionDuration = 0;
 
+            series.tooltip.label.maxWidth = 400;
+            series.tooltip.label.wrap = true;
+
             let ds = tilat.map(t => {
                 let d = new am4core.DataSource();
                 initDS(d);
@@ -695,7 +701,12 @@ window.onload = () => {
                 log(ev.target.name, "object cache populoitu");
             });
 
-            let hoveroi = val => ev => objectCache[ev.target.dataItem.dataContext.sisainenTunniste].forEach(x => x.isHover = val);
+            let hoveroi = val => ev => objectCache[ev.target.dataItem.dataContext.sisainenTunniste].forEach(x => {
+                if (!x.isDisposed()) {
+                    // vain jos ei ole disposed. Jostain syystä lentää välillä amchartsista virhettä ilman tätä...
+                    x.isHover = val;
+                }
+            });
             on(series.columns.template.events, "over", hoveroi(true));
             on(series.columns.template.events, "out" , hoveroi(false));
 
