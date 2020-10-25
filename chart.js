@@ -19,13 +19,29 @@ on(ratanumerotDS.events, "done", () => {
     }
 });
 
-let valittunaRatanumero      = () => typeof valittuDS.data == "string";
-let valittunaAikataulupaikka = () => valittuDS.data instanceof Array;
+let valittunaRatanumero      = () => typeof valittuDS.data == "string" && valittuDS.data.length > 0;
+let valittunaAikataulupaikka = () => valittuDS.data instanceof Array && valittuDS.data.length > 0;
 
 window.aktiivisetJunatDS = new am4core.DataSource();
 window.aktiivisetJunatDS.data = {};
 
 on(valittuDS.events, "done", _ => paivitaUrl(valittuDS.data, aikaParam(), kestoParam()));
+
+on(valittuDS.events, "done", _ => valittunaRatanumero()      ? kartta('(' + valittuDS.data + ')') : 
+                                  valittunaAikataulupaikka() ? kartta(valittuDS.data.map(x => aikataulupaikatDS.data[x].tunniste).join('=>'),
+                                                                      valittuDS.data.map(x => aikataulupaikatDS.data[x].lyhenne).join(' => '))
+                                                             : undefined);
+
+window.addEventListener('hashchange', () => {
+    let uusiSijainti = sijaintiParam().split("-");
+    if (uusiSijainti.length == 1) {
+        uusiSijainti = uusiSijainti[0];
+    }
+    if (JSON.stringify(uusiSijainti) != JSON.stringify(valittuDS.data)) {
+        valittuDS.data = uusiSijainti;
+        valittuDS.dispatch("done", {target: {data: valittuDS.data}});
+    }
+});
 
 window.ratanumeroChanged = val => {
     if (!ratanumerotDS.data[val]) {
@@ -54,7 +70,7 @@ window.aikataulupaikkaChanged = (val1, val2) => {
     uusiVali = uusiVali.map(x => x.tunniste);
 
     let reittiDS = new am4core.DataSource();
-    reittiDS.url = reittiUrl(uusiVali[0], uusiVali[1]);
+    reittiDS.url = reittiUrl(uusiVali[0], uusiVali.slice(1, -1), uusiVali[uusiVali.length-1]);
     initDS(reittiDS);
     monitor(reittiDS, uusiVali.map(x => aikataulupaikatDS.data[x].lyhenne).join("-"));
     on(reittiDS.events, "done", ev => {
@@ -88,7 +104,7 @@ window.aikataulupaikkaChanged = (val1, val2) => {
         let ketju = [uusiVali[0]].concat(aikataulupaikat).concat([uusiVali[1]])
                                 .filter( (item, pos, ary) => !pos || item != ary[pos - 1])
                                 .map(x => aikataulupaikatDS.data[x].uicKoodi);
-        if (valittuDS.data != ketju) {
+        if (JSON.stringify(valittuDS.data) != JSON.stringify(ketju)) {
             log("Valittiin aikataulupaikkaketju:", ketju);
             valittuDS.data = ketju;
             valittuDS.dispatch("done", {target: {data: valittuDS.data}});
@@ -229,7 +245,11 @@ window.onload = () => {
         xAxis.renderer.labels.template.location    = 0.0001; // akselin labelit mielellään aina grid-viivojen kohdalle
         xAxis.renderer.labels.template.tooltipText = "{value.formatDate(dd.MM.yyyy HH:mm:ss)}";
         
-        on(chart.events, "ready", () => xAxis.zoomToDates(ikkuna()[0], ikkuna()[1], false, true));
+        let setXAxis = () => xAxis.zoomToDates(ikkuna()[0], ikkuna()[1], false, true);
+        on(chart.events, "ready", setXAxis);
+        window.addEventListener('hashchange', () => {
+            setXAxis();
+        });
 
         let yAxis = chart.yAxes.push(new am4charts.ValueAxis());
         yAxis.showOnInit    = false;
@@ -241,13 +261,20 @@ window.onload = () => {
 
         add(yAxis.renderer.labels.template.adapter, "paddingRight", () => valittunaAikataulupaikka() ? 0 : 40);
         let renderLabel = text => {
-            let n = parseInt(text);
-            return valittunaAikataulupaikka() ? "" : Math.floor(n/1000) + "+" + (n%1000);
+            if (text) {
+                let n = parseInt(text);
+                return valittunaAikataulupaikka() ? "" : Math.floor(n/1000) + "+" + (n%1000);
+            } else {
+                return text;
+            }
         };
         add(yAxis.renderer.labels.template.adapter, "text",           renderLabel);
         on(yAxis.renderer.labels.template.events, "doublehit", ev => {
-            if (valittunaRatanumero() && ev.target.currentText.match(/[0-9]+[+][0-9]+/)) {
-                kartta('(' + valittuDS.data + ') ' + ev.target.currentText, null, 'radat/' + valittuDS.data + '/' + ev.target.currentText);
+            if (valittunaRatanumero() && ev.target.currentText) {
+                let rkmsijainti = '(' + valittuDS.data + ') ' + ev.target.currentText;
+                if (onkoRatakmSijainti(rkmsijainti)) {
+                    kartta(rkmsijainti);
+                }
             }
         });
         add(yAxis.adapter,                          "getTooltipText", renderLabel);
@@ -261,7 +288,7 @@ window.onload = () => {
         on(valittuDS.events, "done", ev => {
             if (valittunaRatanumero()) {
                 yAxis.title.text = "(" + ev.target.data + ")";
-                on(yAxis.title.events, 'doublehit', () => kartta(yAxis.title.text, null, "radat.geojson?&cql_filter=ratanumero='" + ev.target.data + "'"));
+                on(yAxis.title.events, 'doublehit', () => kartta(yAxis.title.text));
                 yAxis.min = ratanumerotDS.data[ev.target.data][0];
                 yAxis.max = ratanumerotDS.data[ev.target.data][1];
             } else if (valittunaAikataulupaikka()) {
@@ -281,33 +308,27 @@ window.onload = () => {
 
         let ratanumeroContainer = yAkseliValintaContainer.createChild(am4core.Container);
         let radioButton1 = ratanumeroContainer.createChild(am4core.Label);
-        on(chart.events, "ready", () => {
+        let paivitaRatanumerovalinta = () => {
             radioButton1.html = "<input type='radio' id='ratanumeroRadio' name='yAkseliValinta' " + (valittunaAikataulupaikka() ? "" : "checked='checked'") + " onclick='window.ratanumeroChanged(document.getElementById(\"ratanumero\").value)' />";
-        });
+        };
+        on(chart.events, "ready", paivitaRatanumerovalinta);
+
         let ratanumeroSelect = ratanumeroContainer.createChild(am4core.Label);
         ratanumeroSelect.paddingLeft = 25;
-        ratanumeroSelect.html = "<label for='ratanumeroRadio'><select id='ratanumero' onchange='window.ratanumeroChanged(this.value)'>{}</select></label>";
-        let ratanumerotAlustettu = false;
         on(ratanumerotDS.events, "done", ev => {
-            if (!ratanumerotAlustettu) {
-                let ratanumerot = Object.keys(ev.target.data).sort();
-                ratanumeroSelect.html = ratanumeroSelect.html.replace("{}", ratanumerot.map(x => "<option " + (sijaintiParam() == x ? "selected='selected'" : "") + ">" + x + "</option>").join(""));
-                if (valittunaRatanumero()) {
-                    if (ratanumeroChanged(sijaintiParam())) {
-                        ratanumerotAlustettu = true;
-                    }
-                }
-            }
+            let ratanumerot = Object.keys(ev.target.data).sort();
+            ratanumeroSelect.html = "<label for='ratanumeroRadio'><select id='ratanumero' onchange='window.ratanumeroChanged(this.value)'>{}</select></label>";
+            ratanumeroSelect.html = ratanumeroSelect.html.replace("{}", ratanumerot.map(x => "<option " + (sijaintiParam() == x ? "selected='selected'" : "") + ">" + x + "</option>").join(""));
         });
 
         let aikataulupaikkaContainer = yAkseliValintaContainer.createChild(am4core.Container);
         let radioButton2 = aikataulupaikkaContainer.createChild(am4core.Label);
-        on(chart.events, "ready", () => {
+        let paivitaAikataulupaikkavalinta = () => {
             radioButton2.html = "<input type='radio' id='aikataulupaikkaRadio' name='yAkseliValinta' " + (valittunaAikataulupaikka() ? "checked='checked'" : "") + "onclick='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value,document.getElementById(\"aikataulupaikka2\").value)' />";
-        });
+        };
+        on(chart.events, "ready", paivitaAikataulupaikkavalinta);
         let aikataulupaikkaSelect = aikataulupaikkaContainer.createChild(am4core.Label);
         aikataulupaikkaSelect.paddingLeft = 25;
-        let aikataulupaikatAlustettu = false;
         on(aikataulupaikatDS.events, "done", ev => {
             aikataulupaikkaSelect.html = "<label for='aikataulupaikkaRadio'><select id='aikataulupaikka1' onchange='window.aikataulupaikkaChanged(this.value, document.getElementById(\"aikataulupaikka2\").value)'><option></option>{1}</select> - " +
                                                                             "<select id='aikataulupaikka2' onchange='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value, this.value)'><option></option>{2}</select></label>";
@@ -324,25 +345,30 @@ window.onload = () => {
                     return da < db ? -1 : da > db ? 1 : 0;
                 });
 
-                if (valittu2) {
+                if (valittu2 && valittu1 != valittu2) {
                     // molemmat saatavilla:
                     let mkOption = (aikataulupaikat, lyhenne) => aikataulupaikat.map(x => "<option " + (lyhenne == x.lyhenne ? "selected='selected'" : "") + ">" + x.lyhenne + " (" + x.nimi + ")" + "</option>").join("");
                     aikataulupaikkaSelect.html = aikataulupaikkaSelect.html.replace("{1}", mkOption(aikataulupaikat1, valittu1.lyhenne))
                                                                         .replace("{2}", mkOption(aikataulupaikat2, valittu2.lyhenne));
-                    if (!aikataulupaikatAlustettu && valittunaAikataulupaikka()) {
-                        if (aikataulupaikkaChanged(valittu1.lyhenne, valittu2.lyhenne)) {
-                            aikataulupaikatAlustettu = true;
-                        }
-                    }
+                    return;
                 }
             }
+            let mkOption = aikataulupaikat => aikataulupaikat.map(x => "<option>" + x.lyhenne + " (" + x.nimi + ")" + "</option>").join("");
+            aikataulupaikkaSelect.html = aikataulupaikkaSelect.html.replace("{1}", mkOption(aikataulupaikat1))
+                                                                   .replace("{2}", mkOption(aikataulupaikat2));
         });
 
-        on(valittuDS.events, "done", () => {
+        on(valittuDS.events, "done", ev => {
+            if (ev.target.data.length > 0) {
+                paivitaRatanumerovalinta();
+                paivitaAikataulupaikkavalinta();
+                ratanumerotDS.dispatch("done", {target: {data: ratanumerotDS.data}});
+                aikataulupaikatDS.dispatch("done", {target: {data: aikataulupaikatDS.data}});
+            }
             if (valittunaRatanumero()) {
                 ratanumeroSelect.show();
                 aikataulupaikkaSelect.hide();
-            } else if (valittunaAikataulupaikka()) {
+            } else {
                 ratanumeroSelect.hide();
                 aikataulupaikkaSelect.show();
             }
@@ -442,14 +468,13 @@ window.onload = () => {
 
         selectButton = alustaMoodiNappi("select", "selectXY");
         on(chart.cursor.events, "selectended", ev => {
-            chart.cursor.behavior = "panXY";
-            ev.target.isActive = false;
-            selectButton.isActive = false;
-        });
-        on(chart.cursor.events, "selectended", ev => {
             let x = ev.target.xRange;
             let y = ev.target.yRange;
             if (x && y) {
+                chart.cursor.behavior = "panXY";
+                ev.target.isActive = false;
+                selectButton.isActive = false;
+
                 let fromX = xAxis.positionToDate(xAxis.toAxisPosition(x.start));
                 let toX   = xAxis.positionToDate(xAxis.toAxisPosition(x.end));
                 let fromY = yAxis.positionToValue(yAxis.toAxisPosition(y.start));
@@ -482,7 +507,7 @@ window.onload = () => {
             let button = buttonContainer.createChild(am4core.Button);
             button.label.text = label;
             on(button.events, "hit", () => {
-                let diff = xAxis.maxZoomed - xAxis.minZoomed;
+                let diff = Math.abs(xAxis.maxZoomed - xAxis.minZoomed);
                 xAxis.zoomToDates(new Date(xAxis.minZoomed + deltaMin(diff)),
                                     new Date(xAxis.maxZoomed + deltaMax(diff)));
             });
@@ -807,28 +832,28 @@ window.onload = () => {
             on(valittuDS.events, "done", paivitaUrl);
         };
 
-        window.seriesEI = luoEnnakkotietoSeries("Ennakkoilmoitukset", am4core.color("orange"), ['hyväksytty', 'luonnos', 'poistettu']);
+        window.seriesEI = luoEnnakkotietoSeries("Ennakkoilmoitukset", am4core.color("orange"), eiTilat);
         on(seriesEI.dataSource.events, "parseended", ev => {
             log("Parsitaan EI");
             ev.target.data = ev.target.data.flatMap(parsiEI).sort(ennakkotietoIntervalComparator);
             log("Parsittu EI:", ev.target.data.length);
         });
 
-        window.seriesLO = luoEnnakkotietoSeries("LOilmoitukset", am4core.color("purple"), ['aktiivinen', 'poistettu']);
+        window.seriesLO = luoEnnakkotietoSeries("LOilmoitukset", am4core.color("purple"), loTilat);
         on(seriesLO.dataSource.events, "parseended", ev => {
             log("Parsitaan LO done");
             ev.target.data = ev.target.data.flatMap(parsiLO).sort(ennakkotietoIntervalComparator);
             log("Parsittu LO:", ev.target.data.length);
         });
 
-        window.seriesES = luoEnnakkotietoSeries("Ennakkosuunnitelmat", am4core.color("green"), ['hyväksytty', 'lähetetty', 'lisätietopyyntö', 'luonnos', 'peruttu', 'poistettu']);
+        window.seriesES = luoEnnakkotietoSeries("Ennakkosuunnitelmat", am4core.color("green"), esTilat);
         on(seriesES.dataSource.events, "parseended", ev => {
             log("Parsitaan ES done");
             ev.target.data = ev.target.data.flatMap(parsiES).sort(ennakkotietoIntervalComparator);
             log("Parsittu ES:", ev.target.data.length);
         });
 
-        window.seriesVS = luoEnnakkotietoSeries("Vuosisuunnitelmat", am4core.color("violet"), ['tarve tunnistettu', 'vuosiohjelmissa', 'suunniteltu', 'käynnissä', 'tehty', 'poistettu']);
+        window.seriesVS = luoEnnakkotietoSeries("Vuosisuunnitelmat", am4core.color("violet"), vsTilat);
         on(seriesVS.dataSource.events, "parseended", ev => {
             log("Parsitaan VS done");
             ev.target.data = ev.target.data.flatMap(parsiVS).sort(ennakkotietoIntervalComparator);
@@ -1171,8 +1196,10 @@ window.onload = () => {
         };
 
         let haeAikataulujaTaiToteumia = (hae, series) => {
-            if (naytetaankoAikataulut(xAxis.minZoomed, xAxis.maxZoomed, !series.isHidden)) {
-                dateFns.dateFns.eachDayOfInterval({start: new Date(xAxis.minZoomed), end: new Date(xAxis.maxZoomed)}).forEach(hae);
+            let min = Math.min(xAxis.minZoomed, xAxis.maxZoomed);
+            let max = Math.max(xAxis.minZoomed, xAxis.maxZoomed);
+            if (naytetaankoAikataulut(min, max, !series.isHidden)) {
+                dateFns.dateFns.eachDayOfInterval({start: new Date(min), end: new Date(max)}).forEach(hae);
             } else {
                 series.hide();
             }
@@ -1212,9 +1239,11 @@ window.onload = () => {
         on(xAxis.events, "selectionextremeschanged", () => {
             let start = xAxis.minZoomed || ikkuna()[0].getTime();
             let end = xAxis.maxZoomed || ikkuna()[1].getTime();
-            let kesto = { seconds:  Math.floor((end-start)/2 / 1000) };
-            let aika = new Date(start + kesto.seconds * 1000);
-            paivitaUrl(sijaintiParam(), aika, kesto);
+            // amcharts palauttaa joskus minZoomed > maxZoomed :shrug:
+            let millis = Math.abs(end-start);
+            let kesto = { seconds: Math.floor(millis/1000) };
+            let aika = new Date(start + millis / 2);
+            paivitaUrl(sijaintiParam(), aika, dateFns.durationFns.normalize(kesto));
         });
 
         on(xAxis.events, "selectionextremeschanged", ev => {

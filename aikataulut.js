@@ -1,6 +1,7 @@
-let aikataulutGraphQL = departureDate => `{ "query": "{
+let aikataulutGraphQL = departureDate => `{
+  "query": "{
     viewer {
-      getTrainsByDepartureDateUsingGET(departure_date: \\"{{departureDate}}\\") {
+      getTrainsByDepartureDateUsingGET(departure_date: \\"${departureDate}\\") {
         departureDate
         trainNumber
         trainCategory
@@ -12,8 +13,7 @@ let aikataulutGraphQL = departureDate => `{ "query": "{
         }
       }
     }
-  }" }`.replace('{{departureDate}}', departureDate)
-       .replace(/\r?\n|\r/g,' ');
+  }" }`.replace(/\r?\n|\r/g,' ');
 
 let parsiAikataulu = (paiva, data) => {
     log("Parsitaan aikataulut päivälle", paiva);
@@ -22,9 +22,9 @@ let parsiAikataulu = (paiva, data) => {
             let data = {
                 trainData: {
                     departureDate: train.departureDate,
-                    trainNumber: train.trainNumber,
-                    lahtenyt: false,
-                    vari: train.trainCategory == 'Cargo' ? 'blue' : 'red'
+                    trainNumber:   train.trainNumber,
+                    lahtenyt:      false,
+                    vari:          train.trainCategory == 'Cargo' ? 'blue' : 'red'
                 },
                 rows: train.timeTableRows.map(row => {
                     let sijainti = null;
@@ -47,11 +47,11 @@ let parsiAikataulu = (paiva, data) => {
 
                     return {
                         scheduledTime: new Date(row.scheduledTime),
-                        actualTime: row.actualTime ? new Date(row.actualTime) : null,
-                        sijainti: sijainti,
-                        uicKoodi: row.stationUICCode,
-                        paikka: paikka ? paikka.lyhenne : null,
-                        paaty: 0
+                        actualTime:    row.actualTime ? new Date(row.actualTime) : null,
+                        sijainti:      sijainti,
+                        uicKoodi:      row.stationUICCode,
+                        paikka:        paikka ? paikka.lyhenne : null,
+                        paaty:         0
                     };
                 })
             };
@@ -66,11 +66,7 @@ let parsiAikataulu = (paiva, data) => {
         });
 
     log("Parsittiin", ret.length, "aikataulua päivälle", paiva);
-    if (valittunaRatanumero()) {
-        ret = ret.filter(x => x.rows.filter(y => y.sijainti != null).length > 1);
-    } else if (valittunaAikataulupaikka()) {
-        ret = ret.filter(x => x.rows.filter(y => y.sijainti != null).length > 1);
-    }
+    ret = ret.filter(x => x.rows.filter(y => y.sijainti != null).length > 1);
     log("Jätettiin", ret.length, "aikataulua päivälle", paiva);
     return ret;
 }
@@ -81,8 +77,7 @@ let lataaAikatauluRest = (paiva, callback) => {
     monitor(aikataulutDS, paiva);
     initDS(aikataulutDS);
     on(aikataulutDS.events, "done", ev => {
-        let ret = parsiAikataulu(paiva, ev.target.data);
-        callback(ret);
+        callback(parsiAikataulu(paiva, ev.target.data));
         setTimeout(() => ev.target.dispose(), 1000);
     });
     aikataulutDS.load();
@@ -102,19 +97,20 @@ let lataaAikatauluGraphQL = (paiva, callback) => {
 };
 
 let lataaAikataulu = lataaAikatauluRest;
+//let lataaAikataulu = lataaAikatauluGraphQL;
 
 let kutsuJunalle = (data, f) => Object.values(data).flatMap(Object.values).forEach(f);
 
 let naytetaankoAikataulut = (min, max, seriesShown) => {
     let start = min || ikkuna()[0].getTime();
-    let end = max || ikkuna()[1].getTime();
+    let end   = max || ikkuna()[1].getTime();
     return end-start <= junienEsitysaikavali && seriesShown;
 };
 
 let luoJunaPopup = (lahtopaiva, junanumero) => {
-    let ret = luoIkkuna(lahtopaiva + '(' + junanumero + ')');
+    let ret = luoIkkuna(lahtopaiva + ' (' + junanumero + ')');
     let container = ret[0];
-    container.setAttribute("class", "popupContainer infoPopup");
+    container.setAttribute("class", "popupContainer infoPopup aikatauluPopup");
 
     let content = document.createElement("div");
     let id = lahtopaiva + '(' + junanumero + ')';
@@ -144,27 +140,34 @@ let luoJunaPopup = (lahtopaiva, junanumero) => {
     xAxis.dataFields.category = 'categoryX';
     xAxis.renderer.minGridDistance = 40;
     xAxis.renderer.labels.template.tooltipText = "{paikka.tyyppi} {stationShortCode} ({stationUICCode}) {paikka.nimi}";
-    on(xAxis.renderer.labels.template.events, "doublehit", ev => kartta(ev.target.dataItem.dataContext.paikka.tunniste, ev.target.dataItem.dataContext.paikka.tyyppi + ' ' + ev.target.dataItem.dataContext.paikka.nimi));
+    on(xAxis.renderer.labels.template.events, "doublehit", ev => {
+        let dc = ev.target.dataItem.dataContext;
+        kartta(dc.paikka.tunniste, dc.paikka.tyyppi + ' ' + dc.paikka.nimi);
+    });
 
     yAxis.tooltip.dx = 110;
     yAxis.renderer.labels.template.tooltipText = "{value.formatDate(dd.MM.yyyy HH:mm:ss)}";
 
-    let ds = new am4core.DataSource();
-    junapopup.dataSource = ds;
-    initDS(ds);
-    monitor(ds, lahtopaiva + '(' + junanumero + ')');
-    ds.data = [];
-    on(ds.events, "parseended", ev => {
-        ev.target.data = ev.target.data[0].timeTableRows;
-        ev.target.data.forEach((x,i) => {
-            let aika = x.actualTime ? new Date(x.actualTime) : x.liveEstimateTime ? new Date(x.liveEstimateTime) : undefined;
-            let viive = !aika ? aika : dateFns.durationFns.toSeconds({ milliseconds: Math.abs(aika.getTime() - (new Date(x.scheduledTime)).getTime()) });
-            x.scheduledTime = new Date(x.scheduledTime);
-            x.valueY        = aika; // || ev.target.data[0].scheduledTime;
-            x.categoryX     = x.stationShortCode + '(' + i + ')';
-            x.paikka        = aikataulupaikatDS.data['' + x.stationUICCode];
-            x.viive         = !viive ? '' : (new Date(x.scheduledTime) < new Date(x.actualTime || x.liveEstimateTime) ? 'myöhässä ' : 'etuajassa ') + (viive < 60 ? viive + ' sekuntia' : viive < 120 ? '1 minuutti ' + (viive-60) + ' sekuntia' : 'n.' + Math.floor(viive/60) + ' minuuttia');
-        });
+    junapopup.dataSource = new am4core.DataSource();
+    junapopup.dataSource.data = [];
+    initDS(junapopup.dataSource);
+    monitor(junapopup.dataSource, lahtopaiva + '(' + junanumero + ')');
+
+    on(junapopup.dataSource.events, "parseended", ev => {
+        if (ev.target.data.length == 0) {
+            log('Ei dataa junalle', lahtopaiva, junanumero);
+        } else {
+            ev.target.data = ev.target.data[0].timeTableRows;
+            ev.target.data.forEach((x,i) => {
+                let aika = x.actualTime ? new Date(x.actualTime) : x.liveEstimateTime ? new Date(x.liveEstimateTime) : undefined;
+                let viive = !aika ? aika : dateFns.durationFns.toSeconds({ milliseconds: Math.abs(aika.getTime() - (new Date(x.scheduledTime)).getTime()) });
+                x.scheduledTime = new Date(x.scheduledTime);
+                x.valueY        = aika; // || ev.target.data[0].scheduledTime;
+                x.categoryX     = x.stationShortCode + '(' + i + ')';
+                x.paikka        = aikataulupaikatDS.data['' + x.stationUICCode];
+                x.viive         = !viive ? '' : (new Date(x.scheduledTime) < new Date(x.actualTime || x.liveEstimateTime) ? 'myöhässä ' : 'etuajassa ') + (viive < 60 ? viive + ' sekuntia' : viive < 120 ? '1 minuutti ' + (viive-60) + ' sekuntia' : 'n.' + Math.floor(viive/60) + ' minuuttia');
+            });
+        }
     });
 
     xAxis.renderer.labels.template.adapter.add("textOutput", x => !x ? x : x.replace(/\(.*/, ""));
@@ -175,23 +178,21 @@ let luoJunaPopup = (lahtopaiva, junanumero) => {
     bullet.states.create("hover").properties.scale = 1.5;
 
     window.aikatauluPopup = new am4charts.LineSeries();
-    aikatauluPopup.fill = "blue";
+    aikatauluPopup.fill                 = "blue";
+    aikatauluPopup.name                 = "Aikataulu";
     aikatauluPopup.dataFields.categoryX = 'categoryX';
-    aikatauluPopup.dataFields.dateY  = 'scheduledTime';
-    //aikatauluPopup.dataSource = ds;
-    aikatauluPopup.name = "Aikataulu";
+    aikatauluPopup.dataFields.dateY     = 'scheduledTime';
     aikatauluPopup.bullets.push(bullet);
     
     window.toteumaPopup = new am4charts.LineSeries();
-    toteumaPopup.fill = "red";
+    toteumaPopup.fill                 = "red";
+    toteumaPopup.name                 = "Toteuma";
     toteumaPopup.dataFields.categoryX = 'categoryX';
-    toteumaPopup.dataFields.dateY  = 'valueY';
-    //toteumaPopup.dataSource = ds;
-    toteumaPopup.name = "Toteuma";
+    toteumaPopup.dataFields.dateY     = 'valueY';
     toteumaPopup.bullets.push(bullet);
 
     junapopup.series.pushAll([aikatauluPopup,toteumaPopup]);
 
-    ds.url = aikatauluAPIUrl + lahtopaiva + '/' + junanumero;
-    ds.load();
+    junapopup.dataSource.url = aikatauluAPIUrl + lahtopaiva + '/' + junanumero;
+    junapopup.dataSource.load();
 }

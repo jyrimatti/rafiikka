@@ -231,3 +231,17 @@ let lrStyle = styles.onLoad(feature => {
                                         propTila == 'FINISHED' ? 'rgba(64, 224, 208, 1.0)' :
                                                                  'rgb(0,0,0)'));
 });
+
+let loadingIndicatorStyle = new ol.style.Style({
+    stroke: new ol.style.Stroke({
+        color: 'rgba(0, 0, 0, 0.1)',
+        width: 1
+    })
+});
+
+let mbcStyle = new ol.style.Style({
+    stroke: new ol.style.Stroke({
+        width: 2,
+        color: 'rgb(255, 0, 0)'
+    })
+});

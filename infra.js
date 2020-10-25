@@ -29,176 +29,35 @@ let ratakmvaliComparator = (a,b) => {
     return 0;
 };
 
-let joinRatakmvalit = rkmvs => rkmvs.sort(ratakmvaliComparator).reduce( (prev, cur) => {
+let joinRatakmvalit = rkmvs => rkmvs.sort(ratakmvaliComparator)
+                                    .reduce( (prev, cur) => {
     if (prev.length == 0) {
         return [cur];
     }
     let last = prev[prev.length-1];
-    if (last.ratanumero == cur.ratanumero && last.loppu.ratakm*10000+last.loppu.etaisyys >= cur.alku.ratakm*10000+cur.alku.etaisyys) {
+    if (last.ratanumero == cur.ratanumero && ratakmsijaintiComparator(last.loppu, cur.alku) >= 0) {
         return prev.slice(0, -1).concat([{
             ratanumero: last.ratanumero,
             alku: {
-                ratakm: last.alku.ratakm,
+                ratakm:   last.alku.ratakm,
                 etaisyys: last.alku.etaisyys
             },
             loppu: {
-                ratakm: Math.max(last.loppu.ratakm, cur.loppu.ratakm),
-                etaisyys: last.loppu.ratakm*10000+last.loppu.etaisyys > cur.loppu.ratakm*10000+cur.loppu.etaisyys ? last.loppu.etaisyys : cur.loppu.etaisyys
+                ratakm:   Math.max(last.loppu.ratakm, cur.loppu.ratakm),
+                etaisyys: ratakmsijaintiComparator(last.loppu, cur.loppu) > 0 ? last.loppu.etaisyys : cur.loppu.etaisyys
             }
         }]);
     }
     return prev.concat([cur]);
 }, []);
 
-window.ratanumerotDS = luoDatasource("Ratanumerot", ratanumerotUrl, (ret, x) => {
-    let kilometrit = x.ratakilometrit.flat();
-    ret[x.ratanumero] = [Math.min.apply(Math, kilometrit)*1000,
-                         Math.max.apply(Math, kilometrit)*1000+1000];
-});
-window.ratanumerotDS.load();
-
-window.liikennepaikkavalitDS = luoDatasource("Liikennepaikkavalit", liikennepaikkavalitUrl, (ret, x) => {
-    ret[x.tunniste] = {
-        alkuliikennepaikka:  x.alkuliikennepaikka,
-        loppuliikennepaikka: x.loppuliikennepaikka,
-        ratakmvalit:         x.ratakmvalit
-    };
-});
-window.liikennepaikkavalitDS.load();
-
-window.rautatieliikennepaikatDS = luoDatasource("Rautatieliikennepaikat", rautatieliikennepaikatUrl, (ret, x) => {
-    ret[x.tunniste] = {
-        tunniste:        x.tunniste,
-        ratakmSijainnit: x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti != null ? [x.virallinenRatakmsijainti] : []),
-        lyhenne:         x.lyhenne,
-        nimi:            x.nimi,
-        tyyppi:          x.tyyppi,
-        uicKoodi:        x.uicKoodi,
-        geometria:       geometryFactory.buildGeometry(javascript.util.Arrays.asList([geojsonReader.read({
-                            type: "Point",
-                            coordinates: x.virallinenSijainti
-                         })])),
-        ratakmvalit:     x.ratakmvalit
-    };
-});
-
-window.liikennepaikanOsatDS = luoDatasource("LiikennepaikanOsat", liikennepaikanOsatUrl, (ret, x) => {
-    ret[x.tunniste] = {
-        tunniste:        x.tunniste,
-        ratakmSijainnit: x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti != null ? [x.virallinenRatakmsijainti] : []),
-        lyhenne:         x.lyhenne,
-        liikennepaikka:  x.liikennepaikka,
-        nimi:            x.nimi,
-        tyyppi:          "liikennepaikanosa",
-        uicKoodi:        x.uicKoodi,
-        geometria:       geometryFactory.buildGeometry(javascript.util.Arrays.asList([geojsonReader.read({
-                            type: "Point",
-                            coordinates: x.virallinenSijainti
-                         })])),
-        ratakmvalit:     x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti != null ? [x.virallinenRatakmsijainti] : [])
-                                              .map(r => {
-            return {
-                ratanumero: r.ratanumero,
-                alku:       {ratakm: r.ratakm, etaisyys: r.etaisyys},
-                loppu:      {ratakm: r.ratakm, etaisyys: r.etaisyys}
-            };
-        })
-    };
-});
-
-window.raideosuudetDS = luoDatasource("Raideosuudet", raideosuudetUrl, (ret, x) => {
-    ret[x.tunniste[0].tunniste] = {
-        tunniste:        x.tunniste,
-        ratakmSijainnit: [],
-        lyhenne:         x.tunniste[0].turvalaiteNimi,
-        nimi:            x.tunniste[0].turvalaiteNimi,
-        tyyppi:          x.tyyppi,
-        uicKoodi:        x.uickoodi,
-        geometria:       geometryFactory.buildGeometry(javascript.util.Arrays.asList([geojsonReader.read({
-                            type: "MultiLineString",
-                            coordinates: x.geometria
-                         })])),
-        ratakmvalit:     x.tunniste[0].ratakmvalit
-    };
-});
-
-window.laituritDS = luoDatasource("Laiturit", laituritUrl, (ret, x) => {
-    ret[x.tunniste[0].tunniste] = {
-        tunniste:        x.tunniste,
-        ratakmSijainnit: [],
-        lyhenne:         x.tunniste[0].tunnus,
-        nimi:            x.tunniste[0].kuvaus,
-        tyyppi:          x.tyyppi,
-        uicKoodi:        x.uickoodi,
-        geometria:       geometryFactory.buildGeometry(javascript.util.Arrays.asList([geojsonReader.read({
-                            type: "MultiLineString",
-                            coordinates: x.geometria
-                         })])),
-        ratakmvalit:     x.tunniste[0].laskennallisetRatakmvalit
-    };
-});
-
-window.elementitDS = luoDatasource("Elementit", elementitUrl, (ret, x) => {
-    ret[x.tunniste] = {
-        tunniste:        x.tunniste,
-        nimi:            x.nimi,
-        ratakmsijainnit: x.ratakmsijainnit
-    };
-});
-window.elementitDS.load();
-
-window.lorajatDS = luoDatasource("LiikenteenohjauksenRajat", lorajatUrl, (ret, x) => {
-    ret[x.tunniste] = {
-        tunniste:        x.tunniste,
-        nimi:            'Liikenteenohjauksen raja',
-        ratakmsijainnit: x.leikkaukset.flatMap(y => y.ratakmsijainnit)
-    };
-});
-window.lorajatDS.load();
-
-window.aikataulupaikatDS = new am4core.DataSource();
-aikataulupaikatDS.data = {};
-let apHandler = ev => {
-    Object.values(ev.target.data).filter(x => x.uicKoodi)
-                                 .forEach(x => {
-        aikataulupaikatDS.data[x.uicKoodi] = x;
-        aikataulupaikatDS.data[x.tunniste] = x;
-    });
-    aikataulupaikatDS.dispatch("done", aikataulupaikatDS.data);
-};
-on(rautatieliikennepaikatDS.events, "done", apHandler);
-on(liikennepaikanOsatDS.events,     "done", apHandler);
-on(raideosuudetDS.events,           "done", apHandler);
-on(laituritDS.events,               "done", apHandler);
-
-rautatieliikennepaikatDS.load();
-liikennepaikanOsatDS.load();
-raideosuudetDS.load();
-laituritDS.load();
-
-
-window.ratatyoElementitDS = new am4core.DataSource();
-ratatyoElementitDS.data = {};
-let reHandler = ev => {
-    Object.values(ev.target.data).forEach(x => {
-        ratatyoElementitDS.data[x.tunniste] = x;
-    });
-    ratatyoElementitDS.dispatch("done", ratatyoElementitDS.data);
-};
-on(elementitDS.events, "done", reHandler);
-on(lorajatDS.events,   "done", reHandler);
-
-elementitDS.load();
-lorajatDS.load();
-
-
 let muotoileEtaisyys = x => (x < 10 ? "000" : x < 100 ? "00" : x < 1000 ? "0" : "") + x;
 let muotoileRkmv = x => '(' + x.ratanumero + ') ' + x.alku.ratakm  + '+' + muotoileEtaisyys(x.alku.etaisyys) + " - "
                                                   + x.loppu.ratakm + "+" + muotoileEtaisyys(x.loppu.etaisyys);
 
 let leikkaa = a => b => a.ratanumero == b.ratanumero &&
-                        a.alku.ratakm*10000+a.alku.etaisyys <= b.loppu.ratakm*10000+b.loppu.etaisyys &&
-                        b.alku.ratakm*10000+b.alku.etaisyys <= a.loppu.ratakm*10000+a.loppu.etaisyys;;
+                        ratakmsijaintiComparator(a.alku, b.loppu) <= 0 &&
+                        ratakmsijaintiComparator(b.alku, a.loppu) <= 0;
 
 let aikataulupaikkavali = rkmv => {
     let valitutAikataulupaikat = valittuDS.data.map(uic => aikataulupaikatDS.data[uic]);
@@ -221,9 +80,9 @@ let aikataulupaikkavali = rkmv => {
             let ap1v = ap1.ratakmSijainnit.find(x => x.ratanumero == ratanumero);
             let ap2v = ap2.ratakmSijainnit.find(x => x.ratanumero == ratanumero);
             if (ap1v.ratakm < ap2v.ratakm || ap1v.ratakm == ap2v.ratakm && ap1v.etaisyys < ap2v.etaisyys) {
-                return {ratanumero: ratanumero, alku: ap1v, loppu: ap2v};
+                return { ratanumero: ratanumero, alku: ap1v, loppu: ap2v };
             } else {
-                return {ratanumero: ratanumero, alku: ap2v, loppu: ap1v};
+                return { ratanumero: ratanumero, alku: ap2v, loppu: ap1v };
             }
         });
     };
@@ -232,10 +91,12 @@ let aikataulupaikkavali = rkmv => {
         let ret = suhteellinenSijaintiValilla_(rkm)(rkmv);
         return ret < 0 ? 0 : ret > 1 ? 1 : ret;
     };
-    let suhteellinenSijaintiValilla_ = rkm => rkmv => ( (rkm.ratakm*10000+rkm.etaisyys) - (rkmv.alku.ratakm*10000+rkmv.alku.etaisyys)) /
-                                                     ( (rkmv.loppu.ratakm*10000+rkmv.loppu.etaisyys) - (rkmv.alku.ratakm*10000+rkmv.alku.etaisyys));
+    let suhteellinenSijaintiValilla_ = rkm => rkmv =>
+        ( (rkm.ratakm*10000+rkm.etaisyys) - (rkmv.alku.ratakm*10000+rkmv.alku.etaisyys)) /
+        ( (rkmv.loppu.ratakm*10000+rkmv.loppu.etaisyys) - (rkmv.alku.ratakm*10000+rkmv.alku.etaisyys));
 
-    let aikataulupaikkojenValit = valitutAikataulupaikat.map( (_,i) => i == valitutAikataulupaikat.length-1 ? [] : valit(valitutAikataulupaikat[i], valitutAikataulupaikat[i+1]) );
+    let aikataulupaikkojenValit = valitutAikataulupaikat
+        .map( (_,i) => i == valitutAikataulupaikat.length-1 ? [] : valit(valitutAikataulupaikat[i], valitutAikataulupaikat[i+1]) );
     let leikkaavatAikataulupaikkavalienRatakmvalit = aikataulupaikkojenValit.map(x => x.filter(leikkaa(rkmv)));
     let leikkaavatAikataulupaikkavalienIndeksit = leikkaavatAikataulupaikkavalienRatakmvalit
         .flatMap( (x,index) => {
@@ -250,8 +111,6 @@ let aikataulupaikkavali = rkmv => {
             return [index + Math.min(a,b), index + Math.max(a,b)];
         })
         .filter(x => x != undefined);
-
-    
 
     let indeksit = leikkaavatAikataulupaikkojenIndeksit.concat(leikkaavatAikataulupaikkavalienIndeksit).sort();
     if (indeksit.length == 0) {
@@ -300,7 +159,7 @@ let lataaSijainti = coord => {
 
 let koordinaatti2sijainti = koordinaatti => {
     if (valittunaAikataulupaikka()) {
-        let coord = geometryFactory.buildGeometry(javascript.util.Arrays.asList([geojsonReader.read(koordinaatti)]));
+        let coord = buildGeometry(koordinaatti);
 
         let sisaltyva = valittuDS.data.flatMap( (x,index) => {
             let paikka = aikataulupaikatDS.data[x];
@@ -341,3 +200,54 @@ let koordinaatti2sijainti = koordinaatti => {
     }
     return undefined;
 };
+
+let resolveMask = (kmvali, voimassa, callback) => {
+    // haetaan rajausta vastaava geometria
+    var valiTaiSijainti = kmvali.alku.ratakm == kmvali.loppu.ratakm && kmvali.alku.etaisyys == kmvali.loppu.etaisyys
+            ? 'radat/' + kmvali.ratanumero + '/' + kmvali.alku.ratakm + '+' + kmvali.alku.etaisyys
+            : 'radat/' + kmvali.ratanumero + '/' + kmvali.alku.ratakm + '+' + kmvali.alku.etaisyys + '-' + kmvali.loppu.ratakm + '+' + kmvali.loppu.etaisyys;
+    let url = infraAPIUrl + valiTaiSijainti + '.geojson?propertyName=geometria&time=' + voimassa;
+    fetch(url, {
+        method: 'GET'/*,
+        headers: {'Digitraffic-User': 'Rafiikka'}*/
+    }).then(response => response.json())
+      .then(response => {
+        let mask = format.readFeatures(response);
+        var virheelliset = [];
+        var unionMask;
+        mask.forEach(feature => {
+            var geom = feature.getGeometry();
+            if (geom) {
+                // paksunnetaan rajausgeometriaa hieman (puoli metriä lienee fine)
+                var jstsGeom = olParser.read(geom)
+                var buffered = jstsGeom.buffer(0.5, 8, 2 /* flat */);
+                if (buffered.isEmpty()) {
+                    virheelliset.push(jstsGeom);
+                } else if (!unionMask) {
+                    unionMask = buffered;
+                } else {
+                    try {
+                        unionMask = unionMask.union(buffered);
+                    } catch (e) {
+                        virheelliset.push(jstsGeom);
+                    }
+                }
+            } else {
+                log('Hmm, geometry was null for:', url);
+            }
+        });
+        
+        // Hoidetaan default-end-cap-stylellä loput geometriat
+        virheelliset.forEach(jstsGeom => {
+            var buffered = jstsGeom.buffer(0.5, 8, 1 /* round */);
+            if (!unionMask) {
+                unionMask = buffered;
+            } else {
+                unionMask = unionMask.union(buffered);
+            }
+        });
+        
+        callback(unionMask);
+      })
+      .catch(errorHandler);
+}

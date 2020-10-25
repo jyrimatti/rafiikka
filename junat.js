@@ -6,6 +6,9 @@ let juna2sijainti = data => {
     return ret;
 }
 
+let etsiJunat = tunniste => window.junatSeries.dataSource.data.filter(j => j.departureDate + ' (' + j.trainNumber + ')' == tunniste ||  
+                                                                           j.departureDate == tunniste);
+
 let muunnaJunasijainti = data => {
     // TODO: muuta käyttämään suoraan DT:stä tulevaa ratakmsijaintia, kun sellainen tulee
     let pyoristettySijainti = data.location.coordinates.map(x => Number(Number(x).toFixed(3)));
@@ -21,7 +24,8 @@ let muunnaJunasijainti = data => {
 
 let paivitaJunienRatakmsijainnit = series => () => {
     if (!series.hidden) {
-        let paivitetty = series.dataSource.data.filter(x => x.sijainti === undefined).map(x => {
+        let paivitetty = series.dataSource.data.filter(x => x.sijainti === undefined)
+                                               .map(x => {
             x.sijainti = koordinaatti2sijainti({type:'Point', coordinates: x.location});
             if (x.sijainti > 0) {
                 log("Päivitettiin koordinaatille", x.location, "sijainti", x.sijainti);
@@ -62,9 +66,9 @@ let onJunasijaintiArrived = series => message => {
         let tunnettuJuna = series.dataSource.data.find(x => x.trainNumber == data.trainNumber && x.departureDate == data.departureDate);
         if (tunnettuJuna) {
             tunnettuJuna.timestamp = data.timestamp;
-            tunnettuJuna.sijainti = data.sijainti === undefined ? tunnettuJuna.sijainti : data.sijainti;
-            tunnettuJuna.speed = data.speed;
-            tunnettuJuna.location = data.location;
+            tunnettuJuna.sijainti  = data.sijainti || tunnettuJuna.sijainti;
+            tunnettuJuna.speed     = data.speed;
+            tunnettuJuna.location  = data.location;
         } else {
             series.dataSource.data.push(data);
             series.invalidateData();
@@ -74,8 +78,7 @@ let onJunasijaintiArrived = series => message => {
 };
 
 let valitseJuna = juna => {
-    let aktiivinen = aktiivisetJunatDS.data[juna.departureDate] && aktiivisetJunatDS.data[juna.departureDate][juna.trainNumber];
-    if (aktiivinen) {
+    if (onkoAktiivinen(juna)) {
         log("Valittiin pois juna", juna.departureDate, juna.trainNumber);
         delete aktiivisetJunatDS.data[juna.departureDate][juna.trainNumber];
     } else {
@@ -88,4 +91,5 @@ let valitseJuna = juna => {
     aktiivisetJunatDS.dispatchImmediately("done", {departureDate: juna.departureDate, trainNumber: juna.trainNumber});
 };
 
-let onkoAktiivinen = juna => aktiivisetJunatDS.data[juna.departureDate] && aktiivisetJunatDS.data[juna.departureDate][juna.trainNumber] ? true : false;
+let onkoAktiivinen = juna => aktiivisetJunatDS.data[juna.departureDate] &&
+                             aktiivisetJunatDS.data[juna.departureDate][juna.trainNumber];

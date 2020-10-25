@@ -1,21 +1,21 @@
-let ennakkotietoIntervalComparator = (ennakkotietoA,ennakkotietoB) => {
+let ennakkotietoIntervalComparator = (ennakkotietoA, ennakkotietoB) => {
     return ennakkotietoA.alkuX  < ennakkotietoB.alkuX  ? -1 : ennakkotietoA.alkuX  > ennakkotietoB.alkuX  ? 1 :
-            ennakkotietoA.loppuX < ennakkotietoB.loppuX ? -1 : ennakkotietoA.loppuX > ennakkotietoB.loppuX ? 1 :
-            0;
+           ennakkotietoA.loppuX < ennakkotietoB.loppuX ? -1 : ennakkotietoA.loppuX > ennakkotietoB.loppuX ? 1 :
+           0;
 };
 
 let ajankohtaAikavaleiksi = ajankohta => {
     if (ajankohta.yhtajaksoinen) {
         let ret = ajankohta.yhtajaksoinen.split("/").map(x => new Date(x));
         return ret[0] < rajat()[1] && rajat()[0] < ret[1]
-              ? [ret.map(function(x) { return x < rajat()[0] ? rajat()[0] : x > rajat()[1] ? rajat()[1] : x })]
+              ? [ret.map(x => x < rajat()[0] ? rajat()[0] : x > rajat()[1] ? rajat()[1] : x)]
               : [];
     } else {
         let aloitusViikot           = ajankohta.toistuva.aloitusViikot;                     // viikottain|jokatoinen|jokaneljäs
         let aloitusViikonpaivat     = ajankohta.toistuva.aloitusViikonpaivat;               // [ma|ti|ke|to|pe|la|su]
         let timezone                = ajankohta.toistuva.timezone;                          // "Europe/Helsinki"
         let ensimmainenAloitusPaiva = dateFns.dateFnsTz.toDate(ajankohta.toistuva.ensimmainenAloitusPaiva, { timeZone: timezone }); // "2019-10-29"
-        let viimeinenAloitusPaiva   = dateFns.dateFnsTz.toDate(ajankohta.toistuva.viimeinenAloitusPaiva, { timeZone: timezone });   // "2020-05-29"
+        let viimeinenAloitusPaiva   = dateFns.dateFnsTz.toDate(ajankohta.toistuva.viimeinenAloitusPaiva,   { timeZone: timezone }); // "2020-05-29"
         let aloitusaika             = ajankohta.toistuva.aloitusaika;                       // "06:00:00"
         let kesto                   = dateFns.durationFns.parse(ajankohta.toistuva.kesto);  // "PT43200S";
         
@@ -55,7 +55,7 @@ let ajankohtaAikavaleiksi = ajankohta => {
         };
 
         let interval = { start: dateFns.dateFns.max([ensimmainenAloitusPaiva, dateFns.dateFns.addDays(rajat()[0], -1)]),
-                         end: dateFns.dateFns.min([viimeinenAloitusPaiva, dateFns.dateFns.addDays(rajat()[1], 1)])};
+                         end:   dateFns.dateFns.min([viimeinenAloitusPaiva,   dateFns.dateFns.addDays(rajat()[1],  1)])};
         let aloitusPaivat = dateFns.dateFns.eachDayOfInterval(interval)
                                            .filter(kelpaaViikonPerusteella)
                                            .filter(kelpaaViikonpaivanPerusteella);
@@ -96,21 +96,15 @@ let luoEnnakkotieto = (ennakkotieto, aikavali) => rkmv => {
         };
         return [{...yhteiset, ...ratakmvalille}];
     } else if (valittunaAikataulupaikka()) {
-        //let lp  = ennakkotiedonKohteet(ennakkotieto).flatMap(x => x.laskennallisetLiikennepaikat);
-        //let lpv = ennakkotiedonKohteet(ennakkotieto).flatMap(x => x.laskennallisetLiikennepaikkavalit);
         let vali = aikataulupaikkavali(rkmv)
         if (vali.length == 0) {
             return [];
         }
         let aikataulupaikoille = {
-            alkuY:    vali[0],
-            loppuY:   vali[1],
+            alkuY:             vali[0],
+            loppuY:            vali[1],
             vaatiiTarkennusta: rkmv,
-            sijainti: /*lp.map(y => !rautatieliikennepaikatDS.data[y] ? '?' : rautatieliikennepaikatDS.data[y].lyhenne).join(", ") + "\n" +
-                        lpv.map(y => !liikennepaikkavalitDS.data[y] ? '?' :
-                                    rautatieliikennepaikatDS.data[liikennepaikkavalitDS.data[y].alkuliikennepaikka].lyhenne + "-" +
-                                    rautatieliikennepaikatDS.data[liikennepaikkavalitDS.data[y].loppuliikennepaikka].lyhenne).join(", ") +*/
-                      muotoileRkmv(rkmv)
+            sijainti:          muotoileRkmv(rkmv)
         };
         return [{...yhteiset, ...aikataulupaikoille}];
     }
@@ -124,13 +118,14 @@ let parsiEI = ei => {
 
 let parsiLO = lo => {
     let xs = [lo.ensimmainenAktiivisuusaika, lo.viimeinenAktiivisuusaika].map(d => new Date(d).getTime());
-    return joinRatakmvalit(lo.kohde.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(lo, xs)).map(fixPoints);
+    return joinRatakmvalit(lo.kohde.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(lo, xs))
+                                                              .map(fixPoints);
 };
 
 let parsiES = es =>
-    es.tyonosat.flatMap(to =>
-        to.ajankohdat.flatMap(ajankohtaAikavaleiksi)
-                     .flatMap(xs => joinRatakmvalit(to.tekopaikka.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(es, xs)))).map(fixPoints);
+    es.tyonosat.flatMap(to => to.ajankohdat.flatMap(ajankohtaAikavaleiksi)
+                                           .flatMap(xs => joinRatakmvalit(to.tekopaikka.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(es, xs))))
+               .map(fixPoints);
 
 let parsiVS = vs =>
     vs.ajankohdat.flatMap(ajankohtaAikavaleiksi)
