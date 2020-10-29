@@ -27,10 +27,16 @@ window.aktiivisetJunatDS.data = {};
 
 on(valittuDS.events, "done", _ => paivitaUrl(valittuDS.data, aikaParam(), kestoParam()));
 
-on(valittuDS.events, "done", _ => valittunaRatanumero()      ? kartta('(' + valittuDS.data + ')') : 
-                                  valittunaAikataulupaikka() ? kartta(valittuDS.data.map(x => aikataulupaikatDS.data[x].tunniste).join('=>'),
-                                                                      valittuDS.data.map(x => aikataulupaikatDS.data[x].lyhenne).join(' => '))
-                                                             : undefined);
+on(valittuDS.events, "done", _ => {
+    if (valittunaRatanumero()) {
+        kartta('(' + valittuDS.data + ')');
+    } else if (valittunaAikataulupaikka()) {
+        let reittiTunniste = valittuDS.data.map(x => aikataulupaikatDS.data[x].tunniste);
+        let reittiOtsikko = valittuDS.data.map(x => aikataulupaikatDS.data[x].lyhenne);
+        kartta(reittiTunniste[0] + '=>' + (reittiTunniste.length > 2 ? reittiTunniste.slice(1,-1).join(',') + "=>" : '') + reittiTunniste[reittiTunniste.length-1],
+               reittiOtsikko[0]  + '=>' + (reittiOtsikko.length  > 2 ? reittiOtsikko .slice(1,-1).join(',') + "=>" : '') + reittiOtsikko[reittiOtsikko.length-1]);
+    }
+});
 
 window.addEventListener('hashchange', () => {
     let uusiSijainti = sijaintiParam().split("-");
@@ -55,14 +61,15 @@ window.ratanumeroChanged = val => {
     }
 };
 
-window.aikataulupaikkaChanged = (val1, val2) => {
-    if (val1 == val2) {
+window.aikataulupaikkaChanged = (val1, val2, etapit) => {
+    if (val1 == val2 && (!etapit || etapit.length == 0)) {
         valittuDS.data = [];
         valittuDS.dispatch("done", {target: {data: valittuDS.data}});
         return false;
     }
-    let uusiVali = [val1, val2].map(x => x.replace(/ .*/,''))
-                                .map(x => Object.values(aikataulupaikatDS.data).find(a => a.lyhenne == x.trim()));
+    let uusiVali = [val1].concat(etapit || []).concat([val2])
+                         .map(x => x.replace(/ \(.*?\)/,''))
+                         .map(x => Object.values(aikataulupaikatDS.data).find(a => a.lyhenne == x.trim() || a.tunniste == x.trim() || a.uicKoodi == x.trim()));
     if (uusiVali.includes(undefined)) {
         log("Ohitetaan, ehkä data ei ollut vielä latautunut...");
         return false;
@@ -72,7 +79,7 @@ window.aikataulupaikkaChanged = (val1, val2) => {
     let reittiDS = new am4core.DataSource();
     reittiDS.url = reittiUrl(uusiVali[0], uusiVali.slice(1, -1), uusiVali[uusiVali.length-1]);
     initDS(reittiDS);
-    monitor(reittiDS, uusiVali.map(x => aikataulupaikatDS.data[x].lyhenne).join("-"));
+    monitor(reittiDS, uusiVali.map(x => aikataulupaikatDS.data[x].lyhenne).join("=>"));
     on(reittiDS.events, "done", ev => {
         let data = ev.target.data;
         let lpJaOsat = data.liikennepaikat.flatMap(x => aikataulupaikatDS.data[x] ? [x] : data.liikennepaikanOsat.filter(y => liikennepaikanOsatDS.data[y].liikennepaikka == x)
@@ -101,7 +108,7 @@ window.aikataulupaikkaChanged = (val1, val2) => {
             return seLv.concat([seuraava]);
         });
 
-        let ketju = [uusiVali[0]].concat(aikataulupaikat).concat([uusiVali[1]])
+        let ketju = [uusiVali[0]].concat(aikataulupaikat).concat([uusiVali[uusiVali.length-1]])
                                 .filter( (item, pos, ary) => !pos || item != ary[pos - 1])
                                 .map(x => aikataulupaikatDS.data[x].uicKoodi);
         if (JSON.stringify(valittuDS.data) != JSON.stringify(ketju)) {

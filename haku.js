@@ -30,7 +30,19 @@ let initSearch = (elem, lisaaKartalle, poistaKartalta) => {
         optgroupLabelField: 'luokka',
         score: _ => item => item.score,
         render: {
-            option: (item, escape) => `
+            option: (item, escape) => {
+                let reitti = onkoReitti(item.tunniste);
+                if (reitti) {
+                    reitti = [reitti[1]].concat(reitti[2] ? reitti[2].split(',') : []).concat(reitti[3]);
+                    reitti = reitti.map(x => !x ? x : Object.values(aikataulupaikatDS.data)
+                                                                     .filter(y => x == y.tunniste || ''+x == y.uicKoodi || y.lyhenne && x.toLowerCase() == y.lyhenne.toLowerCase())
+                                                                     .map(x => x.tunniste)
+                                                                     .find(x => x))
+                    if (reitti.includes(undefined)) {
+                        reitti = undefined;
+                    }
+                }
+                return `
                 <div>
                     <span class="title">
                         <span class="group">${item.ryhma == 'Linkit' || item.ryhma == 'Muunnokset' || item.ryhma == 'Raideosuus' || item.ryhma == 'Rautatieliikennepaikka tai liikennepaikan osa' ? '' : escape(item.ryhma)}</span>
@@ -39,17 +51,19 @@ let initSearch = (elem, lisaaKartalle, poistaKartalta) => {
                     </span>
                     <ul>
                     ${ lisaaKartalle ? '' :
-                        (item.luokka != 'Junat' && item.luokka != 'Aikataulut'            ? luoInfoLinkki(escape(item.tunniste))     : '') +
-                        (item.luokka == 'Infra'                                           ? luoInfraAPILinkki(escape(item.tunniste)) : '') +
-                        (item.luokka == 'Jeti'                                            ? luoEtj2APILinkki(escape(item.tunniste))  : '') +
-                        (item.luokka == 'Ruma'                                            ? luoKarttaLinkki(escape(item.tunniste), escape(item.nimi), escape(item.data.location)) : '') +
-                        (item.luokka == 'Infra' || item.luokka == 'Jeti'                  ? luoKarttaLinkki(escape(item.tunniste), escape(item.nimi)) : '') +
-                        (item.luokka == 'Junat'                                           ? luoKarttaLinkki(escape(item.tunniste), escape(item.nimi)) : '') +
-                        (item.luokka == 'Aikataulut' && item.data && item.data.junanumero ? luoAikatauluLinkki(escape(item.data.lahtopaiva), escape(item.data.junanumero)) : '')
+                        (onkoRatanumero(item.tunniste)                                    ? luoGrafiikkaLinkkiRatanumerolle(onkoRatanumero(item.tunniste)[1])     : '') +
+                        (reitti                                                           ? luoGrafiikkaLinkkiReitille(reitti)     : '') +
+                        (item.luokka != 'Junat' && item.luokka != 'Aikataulut'            ? luoInfoLinkki(item.tunniste)     : '') +
+                        (item.luokka == 'Infra'                                           ? luoInfraAPILinkki(item.tunniste) : '') +
+                        (item.luokka == 'Jeti'                                            ? luoEtj2APILinkki(item.tunniste)  : '') +
+                        (item.luokka == 'Ruma'                                            ? luoKarttaLinkki(item.tunniste, escape(item.nimi), item.data.location) : '') +
+                        (item.luokka == 'Infra' || item.luokka == 'Jeti'                  ? luoKarttaLinkki(item.tunniste, escape(item.nimi)) : '') +
+                        (item.luokka == 'Junat'                                           ? luoKarttaLinkki(item.tunniste, escape(item.nimi)) : '') +
+                        (item.luokka == 'Aikataulut' && item.data && item.data.junanumero ? luoAikatauluLinkki(item.data.lahtopaiva, item.data.junanumero) : '')
                     }
                     </ul>
                 </div>
-            `
+            `}
         },
         load: (query, callback) => {
             let cb = x => callback(x.map(y => { return {...y, query: query}; }));
@@ -112,8 +126,10 @@ setTimeout(() => {
     window.search = initSearch(document.getElementById('search'));
     search.focus();
 
-    document.addEventListener('keydown', _ => {
-        search.focus();
+    document.addEventListener('keydown', ev => {
+        if (!ev.target.parentNode.classList.contains('selectize-input')) {
+            search.focus();
+        }
     });
 }, 500);
 
@@ -248,8 +264,8 @@ let hakuMuodosta = (str, callback) => {
                 luokka:     'Infra',
                 ryhma:      'Linkit',
                 tunniste:   str,
-                nimi:       'Kaikki reitit ' + m[1] + ' => ' + m[2] + ' => ' + m[3],
-                path:       reittiUrl(m[1], m[2].split(','), m[3]),
+                nimi:       'Kaikki reitit ' + m[1] + ' => ' + (m[2] ? m[2] + ' => ': '') + m[3],
+                path:       reittiUrl(m[1], (m[2] ? m[2].split(',') : []), m[3]),
                 score:      91000
             });
         }
@@ -390,10 +406,10 @@ let hakuDatasta = (str, callback) => {
         return {
             luokka:     'Infra',
             ryhma:      ryhma,
-            tunniste:   r[0].tunniste,
+            tunniste:   ryhma == 'Rata' ? '(' + r[0].ratanumero + ')' : r[0].tunniste,
             data:       r[0],
             nimi:       parsiInfraNimi(ryhma, r[0]),
-            score:      r[1]
+            score:      ryhma == 'Rata' ? r[1]+1000 : r[1] // nostetaan Ratojen pisteitä
         }
     }));
 
@@ -422,7 +438,7 @@ let hakuDatasta = (str, callback) => {
 }
 
 let osuuko = str => row => [row, osuuko_(splitString(str).map(x =>
-    new RegExp(x.match(/\d+/) ? '[^0-9]' + x + '[^0-9]|^' + x + '[^0-9]|[^0-9]' + x + '$|^' + x + '$' // numerot mätsätään kokonaisina lukuina
+    new RegExp(x.match(/\d+/) ? '[^0-9]' + escapeRegex(x) + '[^0-9]|^' + escapeRegex(x) + '[^0-9]|[^0-9]' + escapeRegex(x) + '$|^' + escapeRegex(x) + '$' // numerot mätsätään kokonaisina lukuina
                               : escapeRegex(x), 'i')))(row)];
 let osuuko_ = matchers => value => {
     let fieldName = value instanceof Array ? value[0] : undefined;
@@ -431,9 +447,13 @@ let osuuko_ = matchers => value => {
         return 0;
     } else if (row instanceof Array) {
         let scores = row.map(osuuko_(matchers));
-        return scores.length == 1 && scores[0] > 0 ? [scores[0] + 100] // tarkempi match
+        return scores.length == 1 && scores[0] > 0 ? scores[0] + 100 // tarkempi match
                                                    : scores.reduce((a,b) => a+b, 0);
     } else if (typeof row == "object") {
+        if (row.ratanumero !== undefined && (row.ratakm !== undefined && row.etaisyys !== undefined || row.alku !== undefined && row.loppu !== undefined)) {
+            // ei matchata ratakmsijainti/ratakmvali -objekteihin
+            return 0;
+        }
         return Object.entries(row).map(osuuko_(matchers)).reduce((a,b) => a+b, 0);
     } else {
         let r = typeof row == 'string' ? row : ''+row;
@@ -442,22 +462,21 @@ let osuuko_ = matchers => value => {
         return matchers.map(matcher => {
             let oid = onkoOID(r);
             if (bool && fieldName.match(matcher)) {
+                // boolean-arvoille matchataan kentän nimeen exact
                 let m = fieldName.match(matcher);
                 return m && m[0] == m.input ? 10 : 0;
-            } else if (fieldName == 'ratanumero') {
-                let m = (' (' + r + ')').match(matcher);
-                return m && m[0] == m.input ? 200 : 0;
-            } else if (fieldName == 'ratakm' || fieldName == 'etaisyys') {
-                return 0;
             } else if (numero) {
+                // numeroihin vaaditaan exact match
                 let m = r.match(matcher);
                 return m && m[0] == m.input ? 200 : 0;
             } else if (oid) {
+                // oid vaaditaan exact match
                 let m = oid[1].match(matcher);
                 return m && m[0] == m.input ? 200 : 0;
             } else {
+                // muussa tapauksessa säädetään osumatarkkuutta sen mukaan miten iso osa mätsäsi
                 let m = r.match(matcher);
-                return m ? (m[0] == m.input ? 50 : 10 + Math.floor((m[0].length / m.input.length) * 100))
+                return m ? (m[0] == m.input ? 200 : 10 + Math.floor((m[0].length / m.input.length) * 100))
                          : 0;
             }
         }).reduce((a,b) => a+b, 0);
@@ -466,7 +485,7 @@ let osuuko_ = matchers => value => {
 
 let parsiInfraNimi = (ryhma, row) => {
     let a = (row.tyyppi && row.tyyppi.toLowerCase() != ryhma.toLowerCase() ? row.tyyppi[0].toUpperCase() + row.tyyppi.slice(1) + ' ' : '');
-    let b = (row.lyhenne || row.numero || row.uicKoodi || row.siltakoodi);
+    let b = (row.lyhenne || row.numero || row.uicKoodi || row.siltakoodi || (row.ratanumero && row.ratakm ? '(' + row.ratanumero + ') ' + row.ratakm : row.ratanumero ? '(' + row.ratanumero + ')' : undefined) );
     let c = (row.tunnus || row.nimi || row.linjaraidetunnukset || row.turvalaiteNimi || (row.kaukoOhjausTunnisteet ? row.kaukoOhjausTunnisteet.map(x => x.kaukoOhjausPaikka + ' ' + x.kaukoOhjausNimi).join(', ') : undefined));
     let d = row.turvalaiteRaide ? '(' + row.turvalaiteRaide + ')' : undefined;
     let e = (b || c || d ? undefined : row.tunniste);

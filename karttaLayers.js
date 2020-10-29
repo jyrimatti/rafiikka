@@ -12,7 +12,7 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
     u1 = u1.indexOf('.json') >= 0 ? u1.replace('.json', '.geojson') : u1.indexOf('.geojson') < 0 ? u1.replace('?', '.geojson?') : u1; 
     var u2 = (!kaavio                                                 ? '' : '&presentation=diagram') +
              (!propertyName                                           ? '' : '&propertyName=' + propertyName) +
-             (url.indexOf('time=') >= 0 || url.indexOf('start=') >= 0 ? '' : infraAikavali()) +
+             (url.indexOf('time=') >= 0 || url.indexOf('start=') >= 0 ? '' : '&' + infraAikavali()) +
              (!typeNames                                              ? '' : '&typeNames=' + typeNames);
 
     let source = new ol.source.Vector({

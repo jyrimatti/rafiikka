@@ -28,11 +28,11 @@ let luoIkkuna = title => {
 };
 
 let avaaInfo = tunniste => {
-    let onkoRatakm = onkoRatakmSijainti(tunniste);
-    let root = onkoInfra(tunniste) || onkoTREX(tunniste) || onkoRatakm ? infraAPIUrl :
-               onkoJeti(tunniste)                                      ? etj2APIUrl  : undefined;
-               //TODO ruma ja aikataulut jotenkin
-    if (root) {
+    let url = onkoInfra(tunniste) || onkoTREX(tunniste) ? luoInfraAPIUrl(tunniste) :
+              onkoJeti(tunniste)                        ? luoEtj2APIUrl(tunniste) :
+              undefined;
+              //TODO ruma ja aikataulut jotenkin
+    if (url) {
         let container = luoIkkuna(tunniste)[0];
         container.setAttribute("class", "popupContainer infoPopup");
     
@@ -42,6 +42,7 @@ let avaaInfo = tunniste => {
     
         dragElement(container);
 
-        content.innerHTML = '<iframe src="' + root + (onkoRatakm ? 'radat/' + onkoRatakm[1] + '/' + onkoRatakm[2] + '+' + onkoRatakm[3] : tunniste) + '.html"></iframe>';
+        content.innerHTML = '<iframe src="' + (url.indexOf('.json') > -1 ? url.replace('.json', '.html')
+                                                                         : url + '.html') + '"></iframe>';
     }
 }

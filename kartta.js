@@ -7,11 +7,15 @@ let luoKarttaElementti = (tunniste, title) => {
     open.setAttribute("class", "open");
 
     let juna = onkoJuna(tunniste);
+    let reitti = onkoReitti(tunniste);
+    let ratanumero = onkoRatanumero(tunniste);
     open.innerHTML = `<ul>${
-        (onkoInfra(tunniste) || onkoJeti(tunniste) ? luoInfoLinkki(tunniste)              : '') +
-        (onkoInfra(tunniste)                       ? luoInfraAPILinkki(tunniste)          : '') +
-        (onkoJeti(tunniste)                        ? luoEtj2APILinkki(tunniste)           : '') +
-        (juna                                      ? luoAikatauluLinkki(juna[1], juna[2]) : '')
+        (ratanumero                                ? luoGrafiikkaLinkkiRatanumerolle(ratanumero[1])   : '') +
+        (reitti                                    ? luoGrafiikkaLinkkiReitille([reitti[1]].concat(reitti[2] ? reitti[2].split(',') : []).concat(reitti[3])) : '') +
+        (onkoInfra(tunniste) || onkoJeti(tunniste) || onkoRatanumero(tunniste) ? luoInfoLinkki(tunniste) : '') +
+        (onkoInfra(tunniste)                       ? luoInfraAPILinkki(tunniste)                 : '') +
+        (onkoJeti(tunniste)                        ? luoEtj2APILinkki(tunniste)                  : '') +
+        (juna                                      ? luoAikatauluLinkki(juna[1], juna[2])        : '')
     }</ul>`
     elemHeader.appendChild(open);
 
@@ -185,21 +189,12 @@ let poistaKartalta = map => tunniste => {
 }
 
 let lisaaKartalle = (map, overlay) => (tunniste, rumaLocation) => {
-    let rkmsijainti = onkoRatakmSijainti(tunniste);
-    let ratanumero = onkoRatanumero(tunniste);
-    let reitti = onkoReitti(tunniste);
-    if (reitti) {
-        reitti[2] = undefined; // FiXME: poista kun tukee etappeja
-    }
-    let url = onkoJeti(tunniste) ? etj2APIUrl + tunniste :
-        ratanumero  ? infraAPIUrl + "radat.geojson?&cql_filter=ratanumero='" + ratanumero[1] + "'" :
-        rkmsijainti ? infraAPIUrl + 'radat/' + rkmsijainti[1] + '/' + rkmsijainti[2] :
-        reitti      ? reittiUrlGeojson(reitti[1], reitti[2], reitti[3]) :
-                      infraAPIUrl + tunniste;
     let preselectLayer =
         onkoJuna(tunniste)                   ? junaLayer(map, tunniste) :
         onkoRT(tunniste) || onkoLR(tunniste) ? rumaLayer(tunniste, rumaLocation) :
-                                               newVectorLayerNoTile(url, tunniste, tunniste, tunniste);
+        onkoJeti(tunniste)                   ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste) :
+        onkoInfra(tunniste) || onkoTREX(tunniste) ? newVectorLayerNoTile(luoInfraAPIUrl(tunniste), tunniste, tunniste, tunniste) :
+        undefined;
     preselectLayer.setVisible(true);
     preselectLayer.once('change', fitToView(map));
 
