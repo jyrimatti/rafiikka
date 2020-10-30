@@ -51,15 +51,16 @@ let initSearch = (elem, lisaaKartalle, poistaKartalta) => {
                     </span>
                     <ul>
                     ${ lisaaKartalle ? '' :
-                        (onkoRatanumero(item.tunniste)                                    ? luoGrafiikkaLinkkiRatanumerolle(onkoRatanumero(item.tunniste)[1])     : '') +
-                        (reitti                                                           ? luoGrafiikkaLinkkiReitille(reitti)     : '') +
-                        (item.luokka != 'Junat' && item.luokka != 'Aikataulut'            ? luoInfoLinkki(item.tunniste)     : '') +
-                        (item.luokka == 'Infra'                                           ? luoInfraAPILinkki(item.tunniste) : '') +
-                        (item.luokka == 'Jeti'                                            ? luoEtj2APILinkki(item.tunniste)  : '') +
-                        (item.luokka == 'Ruma'                                            ? luoKarttaLinkki(item.tunniste, escape(item.nimi), item.data.location) : '') +
-                        (item.luokka == 'Infra' || item.luokka == 'Jeti'                  ? luoKarttaLinkki(item.tunniste, escape(item.nimi)) : '') +
-                        (item.luokka == 'Junat'                                           ? luoKarttaLinkki(item.tunniste, escape(item.nimi)) : '') +
-                        (item.luokka == 'Aikataulut' && item.data && item.data.junanumero ? luoAikatauluLinkki(item.data.lahtopaiva, item.data.junanumero) : '')
+                        (onkoRatanumero(item.tunniste)                                        ? luoGrafiikkaLinkkiRatanumerolle(onkoRatanumero(item.tunniste)[1]) : '') +
+                        (reitti                                                               ? luoGrafiikkaLinkkiReitille(reitti) : '') +
+                        (item.luokka == 'Junat' && item.data                                  ? luoGrafiikkaLinkkiJunalle(item.data.lahtopaiva, item.data.junanumero) : '') +
+                        (item.luokka != 'Junat' && item.luokka != 'Aikataulut'                ? luoInfoLinkki(item.tunniste) : '') +
+                        (item.luokka == 'Ruma'                                                ? luoKarttaLinkki(item.tunniste, escape(item.nimi), item.data.location) : '') +
+                        (item.luokka == 'Infra' || item.luokka == 'Jeti'                      ? luoKarttaLinkki(item.tunniste, escape(item.nimi)) : '') +
+                        (item.luokka == 'Junat' && item.data                                  ? luoKarttaLinkki(item.tunniste, escape(item.nimi)) : '') +
+                        ((item.luokka == 'Junat' || item.luokka == 'Aikataulut') && item.data ? luoAikatauluLinkki(item.data.lahtopaiva, item.data.junanumero) : '') +
+                        (item.luokka == 'Infra'                                               ? luoInfraAPILinkki(item.tunniste) : '') +
+                        (item.luokka == 'Jeti'                                                ? luoEtj2APILinkki(item.tunniste)  : '')
                     }
                     </ul>
                 </div>
@@ -324,18 +325,6 @@ let hakuMuodosta = (str, callback) => {
         }
 
         // aikataulut
-        m = str.match(/^(\d\d\d\d-\d\d-\d\d)\s+\(?(\d+)\)?$/);
-        if (m) {
-            ret.push({
-                luokka:   'Aikataulut',
-                ryhma:    'Linkit',
-                tunniste: str,
-                data:     {lahtopaiva: m[1], junanumero: m[2]},
-                nimi:     'Junan aikataulu ' + m[1] + ' (' + m[2] + ')',
-                path:     m[1] + '/' + m[2],
-                score:    99000
-            });
-        }
         m = str.match(/^(\d\d\d\d-\d\d-\d\d)$/);
         if (m) {
             ret.push({
@@ -355,6 +344,7 @@ let hakuMuodosta = (str, callback) => {
                 luokka:   'Junat',
                 ryhma:    'Linkit',
                 tunniste: str,
+                data:     {lahtopaiva: m[1], junanumero: m[2]},
                 nimi:     'Juna ' + m[1] + ' (' + m[2] + ')',
                 path:     m[1] + '/' + m[2],
                 score:    100000
@@ -367,6 +357,7 @@ let hakuMuodosta = (str, callback) => {
                 luokka:   'Junat',
                 ryhma:    'Linkit',
                 tunniste: date + ' (' + m[1] + ')',
+                data:     {lahtopaiva: date, junanumero: m[1]},
                 nimi:     'Juna ' + date + ' (' + m[1] + ')',
                 path:     date + '/' + m[1],
                 score:    100000

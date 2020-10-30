@@ -79,8 +79,8 @@ let lpValiStyle = styles.line(3.0, 'rgba(42,42,255,0.3)');
 
 let rataStyle = styles.line(1.0, 'rgb(255,42,42)');
 let kmStyle = styles.icon(infraAPIUrl + 'icons/kilometrimerkki.svg');
-let tasoristeysStyle = (feature, resolution) => styles.icon(infraAPIUrl + 'icons/tasoristeys.svg', undefined, feature.getProperties().rotaatio);
-let lorajaStyle      = (feature, resolution) => styles.icon(infraAPIUrl + 'icons/liikenteenohjauksenraja.svg', undefined, feature.getProperties().rotaatio);
+let tasoristeysStyle = feature => styles.icon(infraAPIUrl + 'icons/tasoristeys.svg', undefined, feature.getProperties().rotaatio);
+let lorajaStyle      = feature => styles.icon(infraAPIUrl + 'icons/liikenteenohjauksenraja.svg', undefined, feature.getProperties().rotaatio);
 let nraStyle = styles.line(1.0, 'rgb(89,161,183)');
 
 let eristysosuusStyle = styles.line(1.0, 'rgba(0, 0, 255, 0.5)');
@@ -230,6 +230,12 @@ let lrStyle = styles.onLoad(feature => {
     feature.setStyle(styles.circle(5.0, propTila == 'SENT'     ? 'rgba(64, 224, 208, 0.5)' : 
                                         propTila == 'FINISHED' ? 'rgba(64, 224, 208, 1.0)' :
                                                                  'rgb(0,0,0)'));
+});
+
+let trainStyle = styles.onLoad(feature => {
+    let speed = feature.getProperties().speed;
+    feature.setStyle([styles.circle(Math.max(1.0, speed/10), 'rgb(0,0,255)'),
+                      styles.line(2.0, 'rgba(0,0,255,0.5)')]);
 });
 
 let loadingIndicatorStyle = new ol.style.Style({

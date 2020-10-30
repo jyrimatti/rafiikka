@@ -148,7 +148,7 @@ window.onload = () => {
         chart.tooltip.label.wrap = true;
 
         on(chart.legend.itemContainers.template.events, 'hit', e => {
-            if (e.target.isActive && loading.dataItem.categories.aktiiviset != "") {
+            if (e.target.isActive && loading.dataItem.categories.aktiiviset != "" && !loading.dataItem.categories.aktiiviset.trim().split(" ").every(x => x.startsWith('Haku-'))) {
                 throw "odotetaan dataa...";
             }
         });
@@ -173,11 +173,24 @@ window.onload = () => {
             aktiiviset.itemContainers.template.paddingTop    = 0;
             aktiiviset.itemContainers.template.paddingBottom = 0;
 
-            aktiiviset.itemContainers.template.draggable = true;
-            on(aktiiviset.itemContainers.template.events, "dragged", ev => {
+            on(aktiiviset.itemContainers.template.events, "doublehit", ev => {
                 let nimi = ev.target.dataItem.dataContext.name;
                 aktiiviset.dataSource.data.splice(aktiiviset.dataSource.data.findIndex(x => x.name == nimi), 1);
                 aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
+            });
+            
+            aktiiviset.itemContainers.template.reverseOrder = true;
+            let labTemplate = aktiiviset.itemContainers.template.createChild(am4core.Label)
+            labTemplate.html = "{name}";
+            add(labTemplate.adapter, 'htmlOutput', tunniste => {
+                let onxJuna = onkoJuna(tunniste)
+                return '<ul class="ikonit">' +
+                        luoInfoLinkki(tunniste) +
+                        luoKarttaLinkki(tunniste) +
+                        (onxJuna ? luoAikatauluLinkki(onxJuna[1], onxJuna[2]) : '') +
+                        (onkoInfra(tunniste) ? luoInfraAPILinkki(tunniste) : '') +
+                        (onkoJeti(tunniste) ? luoEtj2APILinkki(tunniste) : '') +
+                    '</ul>';
             });
 
             return aktiiviset;
@@ -708,7 +721,6 @@ window.onload = () => {
                     }
                     aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
                 });
-                on(aktiiviset.itemContainers.template.events, "doublehit", ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.name, ev.target.dataItem.dataContext.location));
 
                 on(aktiiviset.dataSource.events, "done", ev => {
                     Object.entries(objectCache).forEach(x => {
@@ -969,16 +981,16 @@ window.onload = () => {
             let aktiiviset = luoAktiivinenListaus(junatSeries);
             on(aktiivisetJunatDS.events, "done", ev => {
                 aktiiviset.dataSource.data = Object.keys(ev.target.data).flatMap(departureDate => Object.keys(ev.target.data[departureDate]).map(trainNumber => [departureDate, trainNumber])).map(e => {
-                    return { name: e[0] + "(" + e[1] + ")",
+                    return { name: e[0] + " (" + e[1] + ")",
                                 departureDate: e[0],
                                 trainNumber: e[1]
                     };
                 });
                 aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data});
+                junatSeries.show();
             });
 
-            on(aktiiviset.itemContainers.template.events, "dragged", ev => valitseJuna(ev.target.dataItem.dataContext));
-            on(aktiiviset.itemContainers.template.events, "doublehit", ev => kartta(ev.target.dataItem.dataContext.departureDate + ' (' + ev.target.dataItem.dataContext.trainNumber + ')'));
+            on(aktiiviset.itemContainers.template.events, "doublehit", ev => valitseJuna(ev.target.dataItem.dataContext));
         });
         
         junasijainnit.onMessageArrived = onJunasijaintiArrived(junatSeries);

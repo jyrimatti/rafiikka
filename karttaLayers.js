@@ -12,9 +12,10 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
     u1 = u1.indexOf('.json') >= 0 ? u1.replace('.json', '.geojson') : u1.indexOf('.geojson') < 0 ? u1.replace('?', '.geojson?') : u1; 
     var u2 = (!kaavio                                                 ? '' : '&presentation=diagram') +
              (!propertyName                                           ? '' : '&propertyName=' + propertyName) +
-             (url.indexOf('time=') >= 0 || url.indexOf('start=') >= 0 ? '' : '&' + infraAikavali()) +
+             (url.indexOf('time=') >= 0 || url.indexOf('start=') >= 0 || url.indexOf('train-locations') >= 0 ? '' : '&' + infraAikavali()) +
              (!typeNames                                              ? '' : '&typeNames=' + typeNames);
 
+    var layer;
     let source = new ol.source.Vector({
         format:     format,
         projection: projection,
@@ -36,7 +37,7 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
                         }
                     }
                     if (prepareFeatures) {
-                        source.addFeatures(prepareFeatures(features));
+                        source.addFeatures(prepareFeatures(features, layer));
                     } else {
                         source.addFeatures(features);
                     }
@@ -44,7 +45,7 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
               .catch(errorHandler);
         }
     });
-    var layer = new ol.layer.Vector({
+    layer = new ol.layer.Vector({
         title:                  mkLayerTitle(title_fi, title_en),
         shortName:              shortName,
         source:                 source,
@@ -71,12 +72,19 @@ let tileLayer = (title, source, opacity) => new ol.layer.Tile({
     updateWhileAnimating:   true
 });
 
-let projectFeature = projection => f => f.setGeometry(f.getGeometry().transform(ol.proj.get('EPSG:4326'), projection));
+let projectFeature = sourceProjection => f => f.setGeometry(f.getGeometry().transform(sourceProjection, projection));
 
 let rumaPrepareFeatures = features => {
     features.forEach(projectFeature(projectionWGS));
     return groupRumaFeatures(features);
 }
+
+let junaPrepareFeatures = (features, layer) => {
+    features.forEach(projectFeature(projectionWGS));
+    setInterval(paivitaYksikot(layer), 1000);
+    return features;
+}
+
 let opacity = 1.0;
 
 let layers = [
@@ -201,6 +209,13 @@ let layers = [
         layers: [
             newVectorLayerNoTile(rtGeojsonUrl(), 'rt', 'Ratatyöt'            , 'Track works'         , opacity, undefined, rtStyle, undefined, rumaPrepareFeatures),
             newVectorLayerNoTile(lrGeojsonUrl(), 'lr', 'Liikenteenrajoitteet', 'Traffic restrictions', opacity, undefined, lrStyle, undefined, rumaPrepareFeatures)
+        ]
+    }),
+
+    new ol.layer.Group({
+        title: mkLayerTitle('Junat','Trains'),
+        layers: [
+            newVectorLayerNoTile(junasijainnitGeojsonUrl(), 'tr', 'Junat', 'Trains', opacity, undefined, trainStyle, undefined, junaPrepareFeatures),
         ]
     })
 ];

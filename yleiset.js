@@ -13,7 +13,7 @@ let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
 
 let params = () => new URLSearchParams(window.location.hash.replace('#', '?'));
 
-let sijaintiParam = () => params().get('sijainti') || '';
+let sijaintiParam = () => params().get('sijainti') || (window.location.hash ? '' : '009') ;
 let aikaParam     = () => new Date(params().get("aika") || new Date().toISOString());
 let kestoParam    = () => dateFns.durationFns.parse(params().get("kesto") || "P1D");
 
@@ -102,13 +102,13 @@ let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'ra
 
 let rtSingleUrl        = () => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications/';
 let rtSingleGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson/';
-let rtUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?state=' + tila + '&' + rumaAikavali();
-let rtGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson?state=' + tila + '&' + rumaAikavali();
+let rtUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
+let rtGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 
 let lrSingleUrl        = () => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications/';
 let lrSingleGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson/';
-let lrUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?state=' + tila + '&' + rumaAikavali();
-let lrGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson?state=' + tila + '&' + rumaAikavali();
+let lrUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
+let lrGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 
 let infraObjektityypitUrl = () => infraAPIUrl + "objektityypit.json";
 let hakuUrlitInfra = () => [ infraAPIUrl + "ratapihapalvelut.json?propertyName=kuvaus,nimi,ratakmsijainnit,sahkokeskus.sahkokeskustyyppi,tunniste,tyyppi"
@@ -226,9 +226,9 @@ let onkoJetiOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.
 let onkoRumaOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.7\.)(\d+)\.(.+)$/);
 let onkoTREXOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.578\.1\.)(\d+)\.(.+)$/);
 
-let onkoRatakmSijainti = str => str && str.match && str.match(/\(([^)]+)\)\s*(\d+)[+](\d+)$/);
-let onkoRatakmVali     = str => str && str.match && str.match(/\(([^)]+)\)\s*(\d+)[+](\d+)\s*-\s*(\d+)[+](\d+)$/);
-let onkoRatanumero     = str => str && str.match && str.match(/\(([^)]+)\)$/);
+let onkoRatakmSijainti = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)$/);
+let onkoRatakmVali     = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)\s*-\s*(\d+)[+](\d+)$/);
+let onkoRatanumero     = str => str && str.match && str.match(/^\(([^)]+)\)$/);
 let onkoReitti         = str => str && str.match && str.match(/^(.*?)\s*(?:=>)\s*(?:(.*)(?:=>))?\s*(.*?)$/);
 
 let onkoInfra = str => onkoInfraOID(str) ||
@@ -241,7 +241,7 @@ let onkoJeti  = str => onkoJetiOID(str) || str && str.match && str.match(/^(?:EI
 let onkoRuma  = str => onkoRumaOID(str) || str && str.match && str.match(/^(?:RT|LR)(.+)$/);
 let onkoTREX  = onkoTREXOID
 
-let onkoJuna  = str => str && str.match && str.match(/([0-9]{4}-[0-9]{2}-[0-9]{2})\s*\(?(\d+)\)?$/);
+let onkoJuna  = str => str && str.match && str.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})\s*\(?(\d+)\)?$/);
 
 let onkoLOI   = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.80\.|LOI)(.+)$/);
 let onkoEI    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.81\.|EI)(.+)$/);
@@ -281,7 +281,7 @@ let luoInfraAPIUrl = str => {
 let luoEtj2APIUrl = str => {
     let m = onkoJeti(str);
     if (m) {
-        return etj2APIUrl + m[0] + '.json' + etj2Aikavali();
+        return etj2APIUrl + m[0] + '.json?' + etj2Aikavali();
     }
 }
 
@@ -452,3 +452,14 @@ let luoGrafiikkaLinkkiReitille = reitti => {
     </li>
 `
 }
+
+let luoGrafiikkaLinkkiJunalle = (lahtopaiva, junanumero) => `
+    <li>
+        <a href=''
+           title='Avaa työrakografiikalla'
+           class='infoikoni'
+           onclick='valitseJuna({departureDate: "${lahtopaiva}", trainNumber: ${junanumero}}); return false;' />
+           📈
+        </a>
+    </li>
+`

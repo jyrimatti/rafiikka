@@ -1,6 +1,6 @@
 #chartdiv {
     width: 100%;
-    height: 500px;
+    height: 600px;
 }
 h1 {
     font-weight: 100;
@@ -14,6 +14,14 @@ select {
 }
 a {
     text-decoration: none;
+}
+ul.ikonit  {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+}
+ul.ikonit  li {
+    display: inline;
 }
 .popupContainer ul, .selectize-control ul {
     margin: 0;

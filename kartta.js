@@ -61,21 +61,33 @@ let onDrop = lisaa => (source, target) => {
 let paivitaYksikot = (layer, map) => () => {
     if (layer.getVisible()) {
         layer.getSource().getFeatures().forEach(f => {
-            let juna = f.departureDate + ' (' + f.trainNumber + ')';
+            let juna = f.getProperties().departureDate + ' (' + f.getProperties().trainNumber + ')';
             let junat = etsiJunat(juna);
             junat.forEach(juna => {
                 layer.setVisible(true);
                 let loc = mkPoint(juna.location);
                 let geom = f.getGeometry();
-                if (geom.getCoordinates()[0] != loc.getCoordinates()[0] || geom.getCoordinates()[1] != loc.getCoordinates()[1]) {
-                    log("Siirretään junaa", tunniste, geom.getCoordinates(), "->", loc.getCoordinates());
-                    geom.translate(loc.getCoordinates()[0] - geom.getCoordinates()[0], loc.getCoordinates()[1] - geom.getCoordinates()[1]);
-                    if (junat.length == 1) {
+                if (!geom.getGeometries) {
+                    let history = new ol.geom.LineString([geom.getCoordinates()]);
+                    geom = new ol.geom.GeometryCollection([geom, history]);
+                    f.setGeometry(geom);
+                }
+                let currentGeom = geom.getGeometriesArray()[0];
+                if (currentGeom.getCoordinates()[0] != loc.getCoordinates()[0] || currentGeom.getCoordinates()[1] != loc.getCoordinates()[1]) {
+                    log("Siirretään junaa", juna, currentGeom.getCoordinates(), "->", loc.getCoordinates());
+                    currentGeom.translate(loc.getCoordinates()[0] - currentGeom.getCoordinates()[0], loc.getCoordinates()[1] - currentGeom.getCoordinates()[1]);
+                    log('Appending', currentGeom, 'to history', geom.getGeometriesArray()[1].getCoordinates());
+                    geom.getGeometriesArray()[1].appendCoordinate(currentGeom.getCoordinates());
+                    if (junat.length == 1 && map) {
                         map.getView().setCenter(loc.getCoordinates());
                     }
                 }
             });
         });
+        if (layer.getSource().getFeatures().length == 0) {
+            log("Layerillä ei featureita, ladataan source uudestaan");
+            layer.getSource().refresh();
+        }
     }
 };
 
@@ -100,6 +112,7 @@ let junaLayer = (map, tunniste) => {
     });
 
     setInterval(paivitaYksikot(layer, map), 1000);
+    junasijainnitPaalle();
     return layer;
 }
 

@@ -18,7 +18,7 @@ proj4.defs("EPSG:3067", "+proj=utm +zone=35 +ellps=GRS80 +units=m +no_defs");
 ol.proj.proj4.register(proj4);
 
 let projection = ol.proj.get('EPSG:3067');
-let projectionWGS = ol.proj.get('urn:ogc:def:crs:EPSG::4326');
+let projectionWGS = ol.proj.get('EPSG:4326');
 
 let tileGrid = new ol.tilegrid.TileGrid({
     resolutions: resolutions,
