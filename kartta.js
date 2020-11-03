@@ -6,17 +6,7 @@ let luoKarttaElementti = (tunniste, title) => {
     let open = document.createElement("div");
     open.setAttribute("class", "open");
 
-    let juna = onkoJuna(tunniste);
-    let reitti = onkoReitti(tunniste);
-    let ratanumero = onkoRatanumero(tunniste);
-    open.innerHTML = `<ul>${
-        (ratanumero                                ? luoGrafiikkaLinkkiRatanumerolle(ratanumero[1])   : '') +
-        (reitti                                    ? luoGrafiikkaLinkkiReitille([reitti[1]].concat(reitti[2] ? reitti[2].split(',') : []).concat(reitti[3])) : '') +
-        (onkoInfra(tunniste) || onkoJeti(tunniste) || onkoRatanumero(tunniste) ? luoInfoLinkki(tunniste) : '') +
-        (onkoInfra(tunniste)                       ? luoInfraAPILinkki(tunniste)                 : '') +
-        (onkoJeti(tunniste)                        ? luoEtj2APILinkki(tunniste)                  : '') +
-        (juna                                      ? luoAikatauluLinkki(juna[1], juna[2])        : '')
-    }</ul>`
+    open.innerHTML = luoLinkit(tunniste);
     elemHeader.appendChild(open);
 
     let haku = document.createElement('input');
@@ -64,6 +54,7 @@ let paivitaYksikot = (layer, map) => () => {
             let juna = f.getProperties().departureDate + ' (' + f.getProperties().trainNumber + ')';
             let junat = etsiJunat(juna);
             junat.forEach(juna => {
+                f.setProperties({speed: juna.speed});
                 layer.setVisible(true);
                 let loc = mkPoint(juna.location);
                 let geom = f.getGeometry();
@@ -92,21 +83,25 @@ let paivitaYksikot = (layer, map) => () => {
 };
 
 let junaLayer = (map, tunniste) => {
+    var layer;
     let src = new ol.source.Vector({
         strategy: ol.loadingstrategy.all,
         loader: _ => {
             etsiJunat(tunniste).forEach(juna => {
-                src.addFeature(new ol.Feature({
+                let f = applyStyle(trainStyle)(new ol.Feature({
                     geometry:      mkPoint(juna.location),
                     departureDate: juna.departureDate,
                     trainNumber:   juna.trainNumber,
-                    name:          juna.departureDate + ' (' + juna.trainNumber + ')'
+                    name:          juna.departureDate + ' (' + juna.trainNumber + ')',
+                    speed:         juna.speed
                 }));
+                src.addFeature(f);
+                setInterval(paivitaYksikot(layer), 1000);
             });
         }
     });
 
-    let layer = new ol.layer.Vector({
+    layer = new ol.layer.Vector({
         title: mkLayerTitle(tunniste, tunniste),
         source: src
     });
@@ -117,36 +112,33 @@ let junaLayer = (map, tunniste) => {
 }
 
 let fitToView = map => ev => {
-    map.getView().fit(ev.target.getSource().getExtent(), {
-        maxZoom: 10,
-        padding: [50,50,50,50],
-        duration: 1000
-    });
+    let extent = ev.target.getSource().getExtent();
+    if (extent && !ol.extent.isEmpty(extent)) {
+        map.getView().fit(extent, {
+            maxZoom: 10,
+            padding: [50,50,50,50],
+            duration: 1000
+        });
+    }
 }
 
-let rumaLayer = (tunniste, location) => {
+let wktLayer = (tunniste, nimi) => {
     let src = new ol.source.Vector({
-        strategy: ol.loadingstrategy.all,
-        loader: _ => {
-            src.addFeature(new ol.Feature({
-                geometry: mkPoint(location),
-                name: tunniste
-            }));
-        }
-    })
+        features: [new ol.format.WKT().readFeature(tunniste)]
+    });
     return new ol.layer.Vector({
-        title: mkLayerTitle(tunniste, tunniste),
+        title: mkLayerTitle(nimi, nimi),
         source: src
     });
 }
 
-let kartta = (tunniste, title, rumaLocation) => {
-    let [container, elem,haku] = luoKarttaElementti(tunniste, title || tunniste);
+let kartta = (tunniste, title) => {
+    let [container, elem, haku] = luoKarttaElementti(tunniste, title || tunniste);
     let overlay = new ol.Overlay({
         element: elem.parentElement.getElementsByClassName('popup')[0],
         offset: [5, 5]
     });
-    let map = new ol.Map({
+    window.map = new ol.Map({
         target: elem,
         overlays: [overlay],
         layers: layers.concat([
@@ -178,7 +170,7 @@ let kartta = (tunniste, title, rumaLocation) => {
 
     let lisaa = lisaaKartalle(map, overlay);
     let search = initSearch(haku, lisaa, poistaKartalta(map));
-    search.settings.create = true;
+    search.settings.create = x => ({tunniste: x, nimi: title || x});
     search.disable();
     search.createItem(tunniste);
     search.enable();
@@ -201,12 +193,18 @@ let poistaKartalta = map => tunniste => {
     map.removeLayer(map.getLayers().getArray().find(l => l.get('shortName') == tunniste));
 }
 
-let lisaaKartalle = (map, overlay) => (tunniste, rumaLocation) => {
+let lisaaKartalle = (map, overlay) => tunniste => {
+    let wkt = onkoWKT(tunniste);
     let preselectLayer =
         onkoJuna(tunniste)                   ? junaLayer(map, tunniste) :
-        onkoRT(tunniste) || onkoLR(tunniste) ? rumaLayer(tunniste, rumaLocation) :
-        onkoJeti(tunniste)                   ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste) :
+        onkoRT(tunniste)                     ? newVectorLayerNoTile(rtGeojsonUrl()         , tunniste, tunniste, tunniste, undefined, undefined, rtStyle, undefined, rumaPrepareFeature(tunniste)) :
+        onkoLR(tunniste)                     ? newVectorLayerNoTile(lrGeojsonUrl()         , tunniste, tunniste, tunniste, undefined, undefined, lrStyle, undefined, rumaPrepareFeature(tunniste)) :
+        onkoLOI(tunniste)                    ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, loStyle) :
+        onkoEI(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, eiStyle) :
+        onkoES(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, esStyle) :
+        onkoVS(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, vsStyle) :
         onkoInfra(tunniste) || onkoTREX(tunniste) ? newVectorLayerNoTile(luoInfraAPIUrl(tunniste), tunniste, tunniste, tunniste) :
+        wkt ? wktLayer(tunniste, wkt[1]) :
         undefined;
     preselectLayer.setVisible(true);
     preselectLayer.once('change', fitToView(map));

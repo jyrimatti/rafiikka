@@ -182,16 +182,7 @@ window.onload = () => {
             aktiiviset.itemContainers.template.reverseOrder = true;
             let labTemplate = aktiiviset.itemContainers.template.createChild(am4core.Label)
             labTemplate.html = "{name}";
-            add(labTemplate.adapter, 'htmlOutput', tunniste => {
-                let onxJuna = onkoJuna(tunniste)
-                return '<ul class="ikonit">' +
-                        luoInfoLinkki(tunniste) +
-                        luoKarttaLinkki(tunniste) +
-                        (onxJuna ? luoAikatauluLinkki(onxJuna[1], onxJuna[2]) : '') +
-                        (onkoInfra(tunniste) ? luoInfraAPILinkki(tunniste) : '') +
-                        (onkoJeti(tunniste) ? luoEtj2APILinkki(tunniste) : '') +
-                    '</ul>';
-            });
+            add(labTemplate.adapter, 'htmlOutput', tunniste => luoLinkit(tunniste, tunniste));
 
             return aktiiviset;
         };
@@ -410,9 +401,10 @@ window.onload = () => {
         var zoomButton; 
         var selectButton;
 
-        let alustaMoodiNappi = (text, behavior) => {
+        let alustaMoodiNappi = (text, behavior, title) => {
             let button = buttonContainer.createChild(am4core.Button);
             button.label.text = text;
+            button.tooltipText = title;
             button.background.states.create("active").properties.fill = button.background.fill.lighten(-0.5);
             on(button.events, "hit", ev => {
                 if (ev.target.isActive) {
@@ -427,7 +419,7 @@ window.onload = () => {
             return button;
         }
 
-        zoomButton = alustaMoodiNappi("zoom", "zoomXY");
+        zoomButton = alustaMoodiNappi("zoom", "zoomXY", 'Zoomaa alueeseen');
         on(chart.cursor.events, "zoomended", () => {
             chart.cursor.behavior = "panXY";
             zoomButton.isActive = false;
@@ -486,7 +478,7 @@ window.onload = () => {
         });
 
 
-        selectButton = alustaMoodiNappi("select", "selectXY");
+        selectButton = alustaMoodiNappi("select", "selectXY", "Rajaa työrako");
         on(chart.cursor.events, "selectended", ev => {
             let x = ev.target.xRange;
             let y = ev.target.yRange;
@@ -523,9 +515,10 @@ window.onload = () => {
             }
         });
 
-        let luoAikavalinSiirtoButton = (label, deltaMin, deltaMax) => {
+        let luoAikavalinSiirtoButton = (label, deltaMin, deltaMax, title) => {
             let button = buttonContainer.createChild(am4core.Button);
             button.label.text = label;
+            button.tooltipText = title;
             on(button.events, "hit", () => {
                 let diff = Math.abs(xAxis.maxZoomed - xAxis.minZoomed);
                 xAxis.zoomToDates(new Date(xAxis.minZoomed + deltaMin(diff)),
@@ -534,19 +527,20 @@ window.onload = () => {
             return button;
         }
 
-        luoAikavalinSiirtoButton("<", (x => -0.5  * x), (x => -0.5  * x)).marginLeft = 10;
-        luoAikavalinSiirtoButton(">", (x =>  0.5  * x), (x =>  0.5  * x));
+        luoAikavalinSiirtoButton("<", (x => -0.5  * x), (x => -0.5  * x), 'Siirry ajassa taaksepäin').marginLeft = 10;
+        luoAikavalinSiirtoButton(">", (x =>  0.5  * x), (x =>  0.5  * x), 'Siirry ajassa eteenpäin');
 
         let nowButton = buttonContainer.createChild(am4core.Button);
         nowButton.label.text = "|";
+        nowButton.tooltipText = 'Siirry nykyhetkeen';
         on(nowButton.events, "hit", () => {
             let diff = xAxis.maxZoomed - xAxis.minZoomed;
             xAxis.zoomToDates(new Date(new Date().getTime() - diff),
                                 new Date(new Date().getTime() + diff));
         });
 
-        luoAikavalinSiirtoButton("-", (x => -0.25 * x), (x =>  0.25 * x)).marginLeft = 10;
-        luoAikavalinSiirtoButton("+", (x =>  0.2  * x), (x => -0.2  * x));
+        luoAikavalinSiirtoButton("-", (x => -0.25 * x), (x =>  0.25 * x), 'Kavenna aikajaksoa').marginLeft = 10;
+        luoAikavalinSiirtoButton("+", (x =>  0.2  * x), (x => -0.2  * x), 'Levennä aikajaksoa');
 
         
 
@@ -723,10 +717,12 @@ window.onload = () => {
                 });
 
                 on(aktiiviset.dataSource.events, "done", ev => {
-                    Object.entries(objectCache).forEach(x => {
-                        let isActive = ev.target.data.findIndex(y => y.name == x[0]) > -1;
-                        x[1].forEach(y => y.isActive = isActive);
-                    });
+                    Object.entries(objectCache)
+                        .forEach(x => {
+                            let isActive = ev.target.data.findIndex(y => y.name == x[0]) > -1;
+                            x[1].filter(x => !x.isDisposed()) // vain jos ei ole disposed. Jostain syystä lentää välillä amchartsista virhettä ilman tätä...
+                                .forEach(y => y.isActive = isActive);
+                        });
                 });
                 on(series.columns.template.events, 'doublehit', ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.sisainenTunniste, ev.target.dataItem.dataContext.location));
             });
@@ -745,12 +741,9 @@ window.onload = () => {
                 log(ev.target.name, "object cache populoitu");
             });
 
-            let hoveroi = val => ev => objectCache[ev.target.dataItem.dataContext.sisainenTunniste].forEach(x => {
-                if (!x.isDisposed()) {
-                    // vain jos ei ole disposed. Jostain syystä lentää välillä amchartsista virhettä ilman tätä...
-                    x.isHover = val;
-                }
-            });
+            let hoveroi = val => ev => objectCache[ev.target.dataItem.dataContext.sisainenTunniste]
+                .filter(x => !x.isDisposed()) // vain jos ei ole disposed. Jostain syystä lentää välillä amchartsista virhettä ilman tätä...
+                .forEach(x => x.isHover = val);
             on(series.columns.template.events, "over", hoveroi(true));
             on(series.columns.template.events, "out" , hoveroi(false));
 

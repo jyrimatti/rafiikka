@@ -72,6 +72,7 @@ let junienEsitysaikavali = 1000*60*60*24*5;
 let ratanumeroUrl             = ratanumero => infraAPIUrl + "radat.json?cql_filter=ratanumero='" + ratanumero + "'&" + infraAikavali();
 let ratanumerotUrl            = () => infraAPIUrl + "radat.json?propertyName=ratakilometrit,ratanumero&" + infraAikavali();
 let ratakmSijaintiUrl         = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.json?' + infraAikavali();
+let pmSijaintiUrl             = (numero, suunta, etaisyys) => infraAPIUrl + 'paikantamismerkit/' + numero + suunta + etaisyys + '.json?' + infraAikavali();
 let ratakmValiUrl             = (ratanumero, alkuratakm, alkuetaisyys, loppuratakm, loppuetaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + alkuratakm + '+' + alkuetaisyys + '-' + loppuratakm + '+' + loppuetaisyys + '.json?' + infraAikavali();
 let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka,ratakmvalit&" + infraAikavali();
 let reittiUrl                 = (alku, etapit, loppu) => infraAPIUrl + "reitit/kaikki/" + alku + "/" + (/*TODO*/ false && etapit && etapit.length > 0 ? etapit.join(',') + '/' : '') + loppu + ".json?propertyName=liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet&" + infraAikavali();
@@ -97,16 +98,13 @@ let loUrlAikataulupaikka = () => tila => etj2APIUrl + 'loilmoitukset.json?cql_fi
 let junasijainnitUrl        = () => 'https://rata.digitraffic.fi/api/v1/train-locations/latest/';
 let junasijainnitGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/train-locations.geojson/latest/';
 
+let koordinaattiUrl        = (coord,srsName) => infraAPIUrl + 'koordinaatit/' + coord + '.json?' + (srsName ? 'srsName=' + srsName + '&' : '') + infraAikavali();
 let ratakmMuunnosUrl       = coord => infraAPIUrl + 'koordinaatit/' + coord + '.json?propertyName=ratakmsijainnit&srsName=crs:84&' + infraAikavali();
 let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.geojson?propertyName=geometria&srsName=crs:84&' + infraAikavali();
 
-let rtSingleUrl        = () => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications/';
-let rtSingleGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson/';
 let rtUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 let rtGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 
-let lrSingleUrl        = () => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications/';
-let lrSingleGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson/';
 let lrUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 let lrGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 
@@ -226,7 +224,9 @@ let onkoJetiOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.
 let onkoRumaOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.7\.)(\d+)\.(.+)$/);
 let onkoTREXOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.578\.1\.)(\d+)\.(.+)$/);
 
+let onkoKoordinaatti   = str => str && str.match && str.match(/^(\d+)(?:\.\d+)?,[ ]?(\d+)(?:\.\d+)?$/);
 let onkoRatakmSijainti = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)$/);
+let onkoPmSijainti     = str => str && str.match && str.match(/^(\d+)([+-])(\d+)$/);
 let onkoRatakmVali     = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)\s*-\s*(\d+)[+](\d+)$/);
 let onkoRatanumero     = str => str && str.match && str.match(/^\(([^)]+)\)$/);
 let onkoReitti         = str => str && str.match && str.match(/^(.*?)\s*(?:=>)\s*(?:(.*)(?:=>))?\s*(.*?)$/);
@@ -235,10 +235,12 @@ let onkoInfra = str => onkoInfraOID(str) ||
                        onkoReitti(str) ||
                        onkoRatanumero(str) ||
                        onkoRatakmSijainti(str) ||
-                       onkoRatakmVali(str);
+                       onkoRatakmVali(str) ||
+                       onkoKoordinaatti(str) ||
+                       onkoPmSijainti(str);
 
-let onkoJeti  = str => onkoJetiOID(str) || str && str.match && str.match(/^(?:EI|ES|VS|LOI)(.+)$/);
-let onkoRuma  = str => onkoRumaOID(str) || str && str.match && str.match(/^(?:RT|LR)(.+)$/);
+let onkoJeti  = str => onkoJetiOID(str) || str && str.match && str.match(/^(EI|ES|VS|LOI)(.+)$/);
+let onkoRuma  = str => onkoRumaOID(str) || str && str.match && str.match(/^(RT|LR)(.+)$/);
 let onkoTREX  = onkoTREXOID
 
 let onkoJuna  = str => str && str.match && str.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})\s*\(?(\d+)\)?$/);
@@ -250,6 +252,8 @@ let onkoVS    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.83\
 
 let onkoRT    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.7\.1\.|RT)(.+)$/);
 let onkoLR    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.7\.2\.|LR)(.+)$/);
+
+let onkoWKT = str => str && str.match && str.match(/^(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)(.*)$/);
 
 let luoInfraAPIUrl = str => {
     let m = onkoInfraOID(str);
@@ -268,9 +272,28 @@ let luoInfraAPIUrl = str => {
     if (m) {
         return ratanumeroUrl(m[1]);
     }
+    m = onkoPmSijainti(str);
+    if (m) {
+        return pmSijaintiUrl(m[1],m[2],m[3]);
+    }
     m = onkoReitti(str);
     if (m) {
         return reittiUrlGeojson(m[1], m[2], m[3]);
+    }
+    m = onkoKoordinaatti(str);
+    if (m) {
+        var srs = undefined;
+        if (m[1] > 999 && m[2] > 999) {
+            // epsg:3067
+            srs = undefined;
+        } else if (m[1] < 50 && m[2] > 50) {
+            // epsg:4326
+            srs = 'srsName=epsg:4326';
+        } else if (m[1] > 50 && m[2] < 50) {
+            // crs:84
+            srs = 'srsName=crs:84';
+        }
+        return koordinaattiUrl(m[1] + ',' + m[2],  srs);
     }
     m = onkoTREXOID(str);
     if (m) {
@@ -368,30 +391,31 @@ let splitString = str => {
     return m ? m.map(x => x.replace(/^"|"$/g, '')) : [];
 }
 
-let luoInfoLinkki = tunniste => `
+let luoInfoLinkki = tunniste => onkoInfra(tunniste) || onkoJeti(tunniste) || onkoRatanumero(tunniste) ? `
     <li>
-        <a href=''
+        <a href=""
            title='Avaa tietoja'
            class='infoikoni'
            onclick='avaaInfo("${tunniste}"); return false;'>
             ℹ️
         </a>
-    </li>`;
+    </li>` : '';
 
-let luoInfraAPILinkki = tunniste => `
+let luoInfraAPILinkki = tunniste => onkoInfra(tunniste) ? `
     <li>
-        <a href='${luoInfraAPIUrl(tunniste).replace('.json', '.html')}'
+        <a href="${luoInfraAPIUrl(tunniste).replace('.json', '.html')}"
            title='Avaa Infra-API:ssa'
            class='infoikoni'
            onclick='window.open(this.getAttribute("href"),"_blank"); return false;'>
            <img src='${infraAPIUrl.replaceAll(/[/][^/]+[/]$/g, '/r/favicon.ico')}'
                 alt='Avaa Infra-API:ssa' />
         </a>
-    </li>`;
+    </li>
+` : '';
 
-let luoEtj2APILinkki = tunniste => `
+let luoEtj2APILinkki = tunniste => onkoJeti(tunniste) ? `
     <li>
-        <a href='${luoEtj2APIUrl(tunniste).replace('.json', '.html')}'
+        <a href="${luoEtj2APIUrl(tunniste).replace('.json', '.html')}"
            title='Avaa Jeti-API:ssa'
            class='infoikoni'
            onclick='window.open(this.getAttribute("href"),"_blank"); return false;'>
@@ -399,40 +423,57 @@ let luoEtj2APILinkki = tunniste => `
                  alt='Avaa Jeti-API:ssa' />
         </a>
     </li>
-`
+` : '';
 
 let luoKarttaLinkki = (tunniste, title, pathOrRumaLocation) => `
     <li>
-        <a href=''
+        <a href=""
            title='Avaa kartalla'
            class='infoikoni'
            onclick='kartta("${tunniste}", "${title}", ` + (pathOrRumaLocation ? '"' + pathOrRumaLocation + '"' : pathOrRumaLocation) + `); return false;' />
            🗺
         </a>
     </li>
-`
+`;
 
-let luoAikatauluLinkki = (lahtopaiva, junanumero) => `
+let luoAikatauluLinkki = (tunniste) => onkoJuna(tunniste) ? `
     <li>
-        <a href=''
+        <a href=""
            title='Avaa aikataulu'
            class='infoikoni'
-           onclick='luoJunaPopup("${lahtopaiva}", "${junanumero}"); return false;' />
+           onclick='luoJunaPopup("${onkoJuna(tunniste)[1]}", "${onkoJuna(tunniste)[2]}"); return false;' />
            📅
         </a>
     </li>
-`
+` : '';
+
+let luoGrafiikkaLinkki = tunniste => {
+    let m = onkoRatanumero(tunniste);
+    if (m) {
+        return luoGrafiikkaLinkkiRatanumerolle(m[1]);
+    }
+    m = onkoReitti(tunniste);
+    if (m) {
+        return luoGrafiikkaLinkkiReitille([m[1]].concat(m[2] ? m[2].split(',') : []).concat(m[3]));
+    }
+    m = onkoJuna(tunniste);
+    if (m) {
+        return luoGrafiikkaLinkkiJunalle(m[1], m[2]);
+    }
+    return '';
+}
 
 let luoGrafiikkaLinkkiRatanumerolle = ratanumero => `
     <li>
-        <a href=''
+        <a href=""
            title='Avaa työrakografiikalla'
            class='infoikoni'
            onclick='ratanumeroChanged("${ratanumero}"); return false;' />
            📈
         </a>
     </li>
-`
+`;
+
 let luoGrafiikkaLinkkiReitille = reitti => {
     var r;
     if (reitti instanceof Array) {
@@ -442,24 +483,34 @@ let luoGrafiikkaLinkkiReitille = reitti => {
         r = [rr[1]].concat(rr[2] ? rr[2].split(',') : []).concat(rr[3]);
     }
     return `
-    <li>
-        <a href=''
-           title='Avaa työrakografiikalla'
-           class='infoikoni'
-           onclick='aikataulupaikkaChanged("${r[0]}","${r[r.length-1]}",[${r.length > 2 ? r[1].split(',').map(x => '"' + x + '"').join(',') : ''}]); return false;' />
-           📈
-        </a>
-    </li>
-`
+        <li>
+            <a href=""
+            title='Avaa työrakografiikalla'
+            class='infoikoni'
+            onclick='aikataulupaikkaChanged("${r[0]}","${r[r.length-1]}",[${r.length > 2 ? r[1].split(',').map(x => '"' + x + '"').join(',') : ''}]); return false;' />
+            📈
+            </a>
+        </li>
+    `;
 }
 
 let luoGrafiikkaLinkkiJunalle = (lahtopaiva, junanumero) => `
     <li>
-        <a href=''
+        <a href=""
            title='Avaa työrakografiikalla'
            class='infoikoni'
            onclick='valitseJuna({departureDate: "${lahtopaiva}", trainNumber: ${junanumero}}); return false;' />
            📈
         </a>
     </li>
-`
+`;
+
+let luoLinkit = (tunniste, karttaTitle) => `
+<ul class="ikonit">${
+    luoGrafiikkaLinkki(tunniste) +
+    luoInfoLinkki(tunniste) +
+    (karttaTitle ? luoKarttaLinkki(tunniste, karttaTitle) : '') +
+    luoAikatauluLinkki(tunniste) +
+    luoInfraAPILinkki(tunniste) +
+    luoEtj2APILinkki(tunniste)
+}</ul>`

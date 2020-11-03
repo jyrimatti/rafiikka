@@ -33,8 +33,14 @@ let avaaInfo = tunniste => {
               undefined;
               //TODO ruma ja aikataulut jotenkin
     if (url) {
-        let container = luoIkkuna(tunniste)[0];
+        let [container, elemHeader] = luoIkkuna(tunniste);
         container.setAttribute("class", "popupContainer infoPopup");
+
+        let open = document.createElement("div");
+        open.setAttribute("class", "open");
+
+        open.innerHTML = luoLinkit(tunniste, tunniste);
+        elemHeader.appendChild(open);
     
         let content = document.createElement("div");
         content.setAttribute("class", "info");

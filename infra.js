@@ -52,6 +52,9 @@ let joinRatakmvalit = rkmvs => rkmvs.sort(ratakmvaliComparator)
 }, []);
 
 let muotoileEtaisyys = x => (x < 10 ? "000" : x < 100 ? "00" : x < 1000 ? "0" : "") + x;
+let muotoileRkm  = x => '(' + x.ratanumero + ') ' + x.ratakm  + '+' + muotoileEtaisyys(x.etaisyys);
+let muotoilePm   = x => x.numero + (x.suunta == 'nouseva' ? ' ↑ ' : ' ↓ ') + x.etaisyys;
+let muotoilePmv  = x => x.alku.numero + '+' + x.alku.etaisyys + (x.suunta == 'nouseva' ? ' ↑ ' : ' ↓ ') + x.loppu.numero + '+' + x.loppu.etaisyys;
 let muotoileRkmv = x => '(' + x.ratanumero + ') ' + x.alku.ratakm  + '+' + muotoileEtaisyys(x.alku.etaisyys) + " - "
                                                   + x.loppu.ratakm + "+" + muotoileEtaisyys(x.loppu.etaisyys);
 

@@ -7,6 +7,19 @@ let newVectorLayerNoTile =   (url, shortName, title_fi, title_en, opacity, prope
 // TODO:
 let kaavio = false;
 
+let applyStyle = styleOrHandler => feature => {
+    if (styleOrHandler instanceof Function) {
+        if (styleOrHandler.length == 1) {
+            // on feature load
+            styleOrHandler(feature);
+        } else {
+            // dynamic style
+            feature.setStyle(styleOrHandler);
+        }
+    }
+    return feature;
+}
+
 let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, prepareFeatures) => {
     var u1 = url + (url.indexOf('?') < 0 ? '?' : '&');
     u1 = u1.indexOf('.json') >= 0 ? u1.replace('.json', '.geojson') : u1.indexOf('.geojson') < 0 ? u1.replace('?', '.geojson?') : u1; 
@@ -27,15 +40,7 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
             }).then(response => response.json())
               .then(response => {
                     let features = format.readFeatures(response);
-                    if (styleOrHandler instanceof Function) {
-                        if (styleOrHandler.length == 1) {
-                            // on feature load
-                            features.forEach(styleOrHandler);
-                        } else {
-                            // dynamic style
-                            features.forEach(f => f.setStyle(styleOrHandler));
-                        }
-                    }
+                    features.forEach(applyStyle(styleOrHandler));
                     if (prepareFeatures) {
                         source.addFeatures(prepareFeatures(features, layer));
                     } else {
@@ -72,11 +77,22 @@ let tileLayer = (title, source, opacity) => new ol.layer.Tile({
     updateWhileAnimating:   true
 });
 
-let projectFeature = sourceProjection => f => f.setGeometry(f.getGeometry().transform(sourceProjection, projection));
+let projectFeature = sourceProjection => f => {
+    f.setGeometry(f.getGeometry().transform(sourceProjection, projection));
+    return f;
+}
 
 let rumaPrepareFeatures = features => {
     features.forEach(projectFeature(projectionWGS));
     return groupRumaFeatures(features);
+}
+
+let rumaPrepareFeature = tunniste => features => {
+    let id = onkoRuma(tunniste)[2];
+    let ret = projectFeature(projectionWGS)(groupRumaFeatures(features).find(x => {
+        return onkoRuma(x.getProperties().id)[2] == id
+    }));
+    return [ret];
 }
 
 let junaPrepareFeatures = (features, layer) => {

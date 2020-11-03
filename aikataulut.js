@@ -108,12 +108,20 @@ let naytetaankoAikataulut = (min, max, seriesShown) => {
 };
 
 let luoJunaPopup = (lahtopaiva, junanumero) => {
-    let ret = luoIkkuna(lahtopaiva + ' (' + junanumero + ')');
-    let container = ret[0];
+    let tunniste = lahtopaiva + ' (' + junanumero + ')';
+
+    let [container, elemHeader] = luoIkkuna(tunniste);
     container.setAttribute("class", "popupContainer infoPopup aikatauluPopup");
 
+    let open = document.createElement("div");
+    open.setAttribute("class", "open");
+
+    open.innerHTML = luoLinkit(tunniste, tunniste);
+    elemHeader.appendChild(open);
+
     let content = document.createElement("div");
-    let id = lahtopaiva + '(' + junanumero + ')';
+    
+    let id = ''+Math.random();
     content.setAttribute("id", id);
     content.setAttribute("class", "junaPopup");
     container.appendChild(content);

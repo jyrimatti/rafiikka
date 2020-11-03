@@ -46,23 +46,10 @@ let initSearch = (elem, lisaaKartalle, poistaKartalta) => {
                 <div>
                     <span class="title">
                         <span class="group">${item.ryhma == 'Linkit' || item.ryhma == 'Muunnokset' || item.ryhma == 'Raideosuus' || item.ryhma == 'Rautatieliikennepaikka tai liikennepaikan osa' ? '' : escape(item.ryhma)}</span>
-                        <span class="name">${escape(item.nimi)}</span>
+                        <span class="name">${item.nimi}</span>
                         <span class="score">${escape(item.score)}</span>
                     </span>
-                    <ul>
-                    ${ lisaaKartalle ? '' :
-                        (onkoRatanumero(item.tunniste)                                        ? luoGrafiikkaLinkkiRatanumerolle(onkoRatanumero(item.tunniste)[1]) : '') +
-                        (reitti                                                               ? luoGrafiikkaLinkkiReitille(reitti) : '') +
-                        (item.luokka == 'Junat' && item.data                                  ? luoGrafiikkaLinkkiJunalle(item.data.lahtopaiva, item.data.junanumero) : '') +
-                        (item.luokka != 'Junat' && item.luokka != 'Aikataulut'                ? luoInfoLinkki(item.tunniste) : '') +
-                        (item.luokka == 'Ruma'                                                ? luoKarttaLinkki(item.tunniste, escape(item.nimi), item.data.location) : '') +
-                        (item.luokka == 'Infra' || item.luokka == 'Jeti'                      ? luoKarttaLinkki(item.tunniste, escape(item.nimi)) : '') +
-                        (item.luokka == 'Junat' && item.data                                  ? luoKarttaLinkki(item.tunniste, escape(item.nimi)) : '') +
-                        ((item.luokka == 'Junat' || item.luokka == 'Aikataulut') && item.data ? luoAikatauluLinkki(item.data.lahtopaiva, item.data.junanumero) : '') +
-                        (item.luokka == 'Infra'                                               ? luoInfraAPILinkki(item.tunniste) : '') +
-                        (item.luokka == 'Jeti'                                                ? luoEtj2APILinkki(item.tunniste)  : '')
-                    }
-                    </ul>
+                    ${ lisaaKartalle ? '' : luoLinkit(item.tunniste, escape(item.nimi)) }
                 </div>
             `}
         },
@@ -215,35 +202,75 @@ let hakuMuodosta = (str, callback) => {
                 // crs:84
                 srs = 'srsName=crs:84';
             }
+
+            let id = ''+Math.random();
+            fetch(koordinaattiUrl(m[1] + ',' + m[2], srs), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'/*,
+                    'Digitraffic-User': 'Rafiikka'*/
+                }
+            }).then(response => response.json())
+              .then(data => {
+                  let rkm = data.flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
+                  let pm  = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
+                  document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '') + (pm ? ' <br />' + pm : '');
+              })
+              .catch(errorHandler);
+            
             ret.push({
                 luokka:     'Infra',
                 ryhma:      'Muunnokset',
                 tunniste:   str,
-                nimi:       'Koordinaatti ' + m[1] + ',' + m[2],
-                path:       'koordinaatit/' + m[1] + ',' + m[2],
-                query:      srs,
+                nimi:       'Koordinaatti ' + m[1] + ',' + m[2] + '<span class="muunnos" id="' + id + '"></span>',
                 score:      999999
             });
         }
         m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)$/);
         if (m) {
+            let id = Math.random();
+            fetch(ratakmSijaintiUrl(m[1], m[2], m[3]), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'/*,
+                    'Digitraffic-User': 'Rafiikka'*/
+                }
+            }).then(response => response.json())
+              .then(data => {
+                  let pm = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
+                  document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
+              })
+              .catch(errorHandler);
+            
             ret.push({
                 luokka:     'Infra',
                 ryhma:      'Muunnokset',
                 tunniste:   str,
-                nimi:       'Ratakilometrisijainti (' + m[1] + ') ' + m[2] + '+' + m[3],
-                path:       'radat/' + m[1] + '/' + m[2] + '+' + m[3],
+                nimi:       'Ratakilometrisijainti (' + m[1] + ') ' + m[2] + '+' + m[3] + '<span class="muunnos" id="' + id + '"></span>',
                 score:      999999
             });
         }
         m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)\s*(?:->|-|>|\/)\s*([^+]+)\+(\d+)$/);
         if (m) {
+            let id = Math.random();
+            fetch(ratakmValiUrl(m[1], m[2], m[3], m[4], m[5]), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'/*,
+                    'Digitraffic-User': 'Rafiikka'*/
+                }
+            }).then(response => response.json())
+              .then(data => {
+                  let pm = data.flatMap(x => x.paikantamismerkkivalit.map(muotoilePmv)).join('<br />');
+                  document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
+              })
+              .catch(errorHandler);
+
             ret.push({
                 luokka:     'Infra',
                 ryhma:      'Linkit',
                 tunniste:   str,
-                nimi:       'Ratakilometriväli (' + m[1] + ') ' + m[2] + '+' + m[3] + '-' + m[4] + '+' + m[5],
-                path:       'radat/' + m[1] + '/' + m[2] + '+' + m[3] + '-' + m[4] + '+' + m[5],
+                nimi:       'Ratakilometriväli (' + m[1] + ') ' + m[2] + '+' + m[3] + '-' + m[4] + '+' + m[5] + '<span class="muunnos" id="' + id + '"></span>',
                 score:      91000
             });
         }
@@ -254,8 +281,6 @@ let hakuMuodosta = (str, callback) => {
                 ryhma:      'Linkit',
                 tunniste:   str,
                 nimi:       'Ratanumero (' + m[1] + ')',
-                path:       'radat',
-                query:      "cql_filter=ratanumero='" + m[1] + "'",
                 score:      91000
             });
         }
@@ -266,18 +291,30 @@ let hakuMuodosta = (str, callback) => {
                 ryhma:      'Linkit',
                 tunniste:   str,
                 nimi:       'Kaikki reitit ' + m[1] + ' => ' + (m[2] ? m[2] + ' => ': '') + m[3],
-                path:       reittiUrl(m[1], (m[2] ? m[2].split(',') : []), m[3]),
                 score:      91000
             });
         }
         m = str.match(/^(\d+)([+-])(\d+)$/);
         if (m) {
+            let id = Math.random();
+            fetch(pmSijaintiUrl(m[1], m[2], m[3], m[4], m[5]), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'/*,
+                    'Digitraffic-User': 'Rafiikka'*/
+                }
+            }).then(response => response.json())
+              .then(data => {
+                  let rkm = data.flatMap(x => x.sijainnit).flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
+                  document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '');
+              })
+              .catch(errorHandler);
+
             ret.push({
                 luokka:     'Infra',
                 ryhma:      'Muunnokset',
                 tunniste:   str,
-                nimi:       'Paikantamismerkkisijainti ' + m[1] + '+' + m[3] + (m[2] == '+' ? ' nousevaan' : ' laskevaan') + ' suuntaan',
-                path:       'paikantamismerkit/' + m[1] + m[2] + m[3],
+                nimi:       'Paikantamismerkkisijainti ' + m[1] + '+' + m[3] + (m[2] == '+' ? ' nousevaan' : ' laskevaan') + ' suuntaan' + '<span class="muunnos" id="' + id + '"></span>',
                 score:      999999
             });
         }
@@ -332,7 +369,6 @@ let hakuMuodosta = (str, callback) => {
                 ryhma:    'Linkit',
                 tunniste: str,
                 nimi:     'Lähtöpäivän aikataulu ' + m[1],
-                path:     m[1],
                 score:    98000
             });
         }
@@ -344,9 +380,7 @@ let hakuMuodosta = (str, callback) => {
                 luokka:   'Junat',
                 ryhma:    'Linkit',
                 tunniste: str,
-                data:     {lahtopaiva: m[1], junanumero: m[2]},
                 nimi:     'Juna ' + m[1] + ' (' + m[2] + ')',
-                path:     m[1] + '/' + m[2],
                 score:    100000
             });
         }
@@ -357,9 +391,7 @@ let hakuMuodosta = (str, callback) => {
                 luokka:   'Junat',
                 ryhma:    'Linkit',
                 tunniste: date + ' (' + m[1] + ')',
-                data:     {lahtopaiva: date, junanumero: m[1]},
                 nimi:     'Juna ' + date + ' (' + m[1] + ')',
-                path:     date + '/' + m[1],
                 score:    100000
             });
         }
@@ -370,7 +402,16 @@ let hakuMuodosta = (str, callback) => {
                 ryhma:    'Linkit',
                 tunniste: str,
                 nimi:     'Lähtöpäivän junat ' + m[1],
-                path:     m[1],
+                score:    100000
+            });
+        }
+        m = onkoWKT(str);
+        if (m) {
+            ret.push({
+                luokka:   'Geometria',
+                ryhma:    'Geometria',
+                tunniste: m[0],
+                nimi:     m[1],
                 score:    100000
             });
         }
@@ -380,6 +421,10 @@ let hakuMuodosta = (str, callback) => {
 };
 
 let hakuDatasta = (str, callback) => {
+    if (onkoWKT(str)) {
+        return; // don't bother
+    }
+
     let suodata = f => ds => {
         let handler = () => ds.data.hakudata ? callback(ds.data.hakudata.map(osuuko(str))
                                                                         .filter(x => x[1] > 0)
