@@ -18,7 +18,8 @@ let muunnaJunasijainti = (data, ohitaMuunnos) => {
         timestamp:     new Date(data.timestamp),
         sijainti:      juna2sijainti(data) || koordinaatti2sijainti({type:'Point', coordinates: pyoristettySijainti}) || (onkoAktiivinen(data) || !ohitaMuunnos ? lataaSijainti(pyoristettySijainti) : undefined),
         location:      pyoristettySijainti,
-        speed:         data.speed
+        speed:         data.speed,
+        vari:          data.trainCategory == 'Cargo' ? 'blue' : 'red'
     };
 };
 
@@ -74,6 +75,7 @@ let onJunasijaintiArrived = series => message => {
         tunnettuJuna.sijainti  = data.sijainti || tunnettuJuna.sijainti;
         tunnettuJuna.speed     = data.speed;
         tunnettuJuna.location  = data.location;
+        tunnettuJuna.vari      = data.trainCategory == 'Cargo' ? 'blue' : 'red';
     } else {
         series.dataSource.data.push(data);
         series.invalidateData();

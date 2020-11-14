@@ -173,15 +173,17 @@ let ennakkotietoOpacity = voimassa => {
     }
 };
 
+let jetiAnchor = [0.5,1];
+
 let esStyle = styles.onLoad(feature => {
     let props = feature.getProperties();
     let propTila = props.tila;
     if (propTila == 'poistettu') {
-        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkosuunnitelma_poistettu.svg', null, null, null, null, ennakkotietoOpacity(props.voimassa)));
+        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkosuunnitelma_poistettu.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa)));
     } else if (propTila == 'hyväksytty') {
-        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkosuunnitelma.svg', null, null, null, null, ennakkotietoOpacity(props.voimassa)));
+        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkosuunnitelma.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa)));
     } else {
-        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkosuunnitelma_kesken.svg', null, null, null, null, ennakkotietoOpacity(props.voimassa)));
+        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkosuunnitelma_kesken.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa)));
     }
 });
 
@@ -189,11 +191,11 @@ let eiStyle = styles.onLoad(feature => {
     let props = feature.getProperties();
     let propTila = props.tila;
     if (propTila == 'poistettu') {
-        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkoilmoitus_poistettu.svg', null, null, null, null, ennakkotietoOpacity(props.voimassa)));
+        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkoilmoitus_poistettu.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa)));
     } else if (propTila == 'hyväksytty') {
-        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkoilmoitus.svg', null, null, null, null, ennakkotietoOpacity(props.voimassa)));
+        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkoilmoitus.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa)));
     } else {
-        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkoilmoitus_kesken.svg', null, null, null, null, ennakkotietoOpacity(props.voimassa)));
+        feature.setStyle(styles.icon(etj2APIUrl + 'icons/ennakkoilmoitus_kesken.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa)));
     }
 });
 
@@ -201,18 +203,18 @@ let vsStyle = styles.onLoad(feature => {
     let props = feature.getProperties();
     let propTila = props.tila;
     if (propTila == 'poistettu') {
-        feature.setStyle(styles.icon(etj2APIUrl + 'icons/vuosisuunnitelma_poistettu.svg', null, null, null, null, ennakkotietoOpacity(props.voimassa)));
+        feature.setStyle(styles.icon(etj2APIUrl + 'icons/vuosisuunnitelma_poistettu.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa)));
     } else {
-        feature.setStyle(styles.icon(etj2APIUrl + 'icons/vuosisuunnitelma.svg', null, null, null, null, ennakkotietoOpacity(props.voimassa)));
+        feature.setStyle(styles.icon(etj2APIUrl + 'icons/vuosisuunnitelma.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa)));
     }
 });
 
 let loStyle = styles.onLoad(feature => {
     let propTila = feature.getProperties().tila;
     if (propTila == 'poistettu') {
-        feature.setStyle(styles.icon(etj2APIUrl + 'icons/loilmoitus_poistettu.svg'));
+        feature.setStyle(styles.icon(etj2APIUrl + 'icons/loilmoitus_poistettu.svg', null, null, jetiAnchor));
     } else {
-        feature.setStyle(styles.icon(etj2APIUrl + 'icons/loilmoitus.svg'));
+        feature.setStyle(styles.icon(etj2APIUrl + 'icons/loilmoitus.svg', null, null, jetiAnchor));
     }
 });
 
@@ -233,9 +235,9 @@ let lrStyle = styles.onLoad(feature => {
 });
 
 let trainStyle = styles.onLoad(feature => {
-    let speed = feature.getProperties().speed;
-    feature.setStyle([styles.circle(Math.max(1.0, speed/10), 'rgb(0,0,255)'),
-                      styles.line(2.0, 'rgba(0,0,255,0.5)')]);
+    let props = feature.getProperties();
+    feature.setStyle([styles.circle(Math.max(1.0, props.speed/10), props.vari),
+                      styles.line(2.0, props.vari == 'blue' ? 'rgba(0,0,255,0.5)' : props.vari == 'red' ? 'rgba(255,0,0,0.5)' : 'rgba(0,0,0,0.5)')]);
 });
 
 let loadingIndicatorStyle = new ol.style.Style({

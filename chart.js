@@ -182,7 +182,7 @@ window.onload = () => {
             aktiiviset.itemContainers.template.reverseOrder = true;
             let labTemplate = aktiiviset.itemContainers.template.createChild(am4core.Label)
             labTemplate.html = "{name}";
-            add(labTemplate.adapter, 'htmlOutput', tunniste => luoLinkit(tunniste, tunniste));
+            add(labTemplate.adapter, 'htmlOutput', tunniste => luoLinkit('', tunniste, tunniste));
 
             return aktiiviset;
         };
@@ -535,8 +535,8 @@ window.onload = () => {
         nowButton.tooltipText = 'Siirry nykyhetkeen';
         on(nowButton.events, "hit", () => {
             let diff = xAxis.maxZoomed - xAxis.minZoomed;
-            xAxis.zoomToDates(new Date(new Date().getTime() - diff),
-                                new Date(new Date().getTime() + diff));
+            xAxis.zoomToDates(new Date(new Date().getTime() - diff/2),
+                                new Date(new Date().getTime() + diff/2));
         });
 
         luoAikavalinSiirtoButton("-", (x => -0.25 * x), (x =>  0.25 * x), 'Kavenna aikajaksoa').marginLeft = 10;

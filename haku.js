@@ -49,7 +49,7 @@ let initSearch = (elem, lisaaKartalle, poistaKartalta) => {
                         <span class="name">${item.nimi}</span>
                         <span class="score">${escape(item.score)}</span>
                     </span>
-                    ${ lisaaKartalle ? '' : luoLinkit(item.tunniste, escape(item.nimi)) }
+                    ${ lisaaKartalle ? '' : luoLinkit('', item.tunniste, escape(item.nimi)) }
                 </div>
             `}
         },

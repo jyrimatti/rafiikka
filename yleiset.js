@@ -16,6 +16,7 @@ let params = () => new URLSearchParams(window.location.hash.replace('#', '?'));
 let sijaintiParam = () => params().get('sijainti') || (window.location.hash ? '' : '009') ;
 let aikaParam     = () => new Date(params().get("aika") || new Date().toISOString());
 let kestoParam    = () => dateFns.durationFns.parse(params().get("kesto") || "P1D");
+let moodiParam    = () => params().get("moodi") || 'kartta';
 
 log("Parametri Sijainti", sijaintiParam());
 log("Parametri Aika", aikaParam());
@@ -25,7 +26,8 @@ let paivitaUrl = (sijainti, aika, kesto) => {
     log("Päivitetään urlia");    
     let hash = '#aika=' + toISOStringNoMillis(aika) +
                '&kesto=' + dateFns.durationFns.toString(dateFns.durationFns.normalize(kesto)) +
-               '&sijainti=' + (sijainti instanceof Array ? sijainti.join("-") : sijainti);
+               '&sijainti=' + (sijainti instanceof Array ? sijainti.join("-") : sijainti) +
+               (moodiParam() == 'kaavio' ? '&moodi=kaavio' : '');
     window.location.hash = hash;
 }
 
@@ -102,10 +104,14 @@ let koordinaattiUrl        = (coord,srsName) => infraAPIUrl + 'koordinaatit/' + 
 let ratakmMuunnosUrl       = coord => infraAPIUrl + 'koordinaatit/' + coord + '.json?propertyName=ratakmsijainnit&srsName=crs:84&' + infraAikavali();
 let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.geojson?propertyName=geometria&srsName=crs:84&' + infraAikavali();
 
+// FIXME: rata-beta pois
 let rtUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
+let rtSingleUrl        = (tunniste) => 'https://rata-beta.digitraffic.fi/api/v1/trackwork-notifications/' + tunniste + '/latest.json';
 let rtGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 
+// FIXME: rata-beta pois
 let lrUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
+let lrSingleUrl        = (tunniste) => 'https://rata-beta.digitraffic.fi/api/v1/trafficrestriction-notifications/' + tunniste + '/latest.json';
 let lrGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 
 let infraObjektityypitUrl = () => infraAPIUrl + "objektityypit.json";
@@ -308,6 +314,24 @@ let luoEtj2APIUrl = str => {
     }
 }
 
+let luoRumaUrl = str => {
+    let m = onkoRT(str);
+    if (m) {
+        return rtSingleUrl(m[0]);
+    }
+    m = onkoLR(str);
+    if (m) {
+        return lrSingleUrl(m[0]);
+    }
+}
+
+let luoAikatauluUrl = str => {
+    let m = onkoJuna(str);
+    if (m) {
+        return aikatauluAPIUrl + m[1] + '/' + m[2];
+    }
+}
+
 // charts ei piirrä näkyviin laatikoita, jotka ovat 0-mittaisia suuntaan tai toiseen.
 let fixPoints = x => {
     if (x.alkuX == x.loppuX) {
@@ -391,7 +415,7 @@ let splitString = str => {
     return m ? m.map(x => x.replace(/^"|"$/g, '')) : [];
 }
 
-let luoInfoLinkki = tunniste => onkoInfra(tunniste) || onkoJeti(tunniste) || onkoRatanumero(tunniste) ? `
+let luoInfoLinkki = tunniste => onkoInfra(tunniste) || onkoJeti(tunniste) || onkoRatanumero(tunniste) || onkoJuna(tunniste) || onkoRuma(tunniste) ? `
     <li>
         <a href=""
            title='Avaa tietoja'
@@ -505,12 +529,12 @@ let luoGrafiikkaLinkkiJunalle = (lahtopaiva, junanumero) => `
     </li>
 `;
 
-let luoLinkit = (tunniste, karttaTitle) => `
+let luoLinkit = (tyyppi, tunniste, karttaTitle) => `
 <ul class="ikonit">${
-    luoGrafiikkaLinkki(tunniste) +
-    luoInfoLinkki(tunniste) +
-    (karttaTitle ? luoKarttaLinkki(tunniste, karttaTitle) : '') +
-    luoAikatauluLinkki(tunniste) +
+    (tyyppi == 'grafiikka' ? '' : luoGrafiikkaLinkki(tunniste)) +
+    (tyyppi == 'info'      ? '' : luoInfoLinkki(tunniste)) +
+    (tyyppi == 'kartta'    ? '' : karttaTitle ? luoKarttaLinkki(tunniste, karttaTitle) : '') +
+    (tyyppi == 'aikataulu' ? '' : luoAikatauluLinkki(tunniste)) +
     luoInfraAPILinkki(tunniste) +
     luoEtj2APILinkki(tunniste)
 }</ul>`

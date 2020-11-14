@@ -30,6 +30,8 @@ let luoIkkuna = title => {
 let avaaInfo = tunniste => {
     let url = onkoInfra(tunniste) || onkoTREX(tunniste) ? luoInfraAPIUrl(tunniste) :
               onkoJeti(tunniste)                        ? luoEtj2APIUrl(tunniste) :
+              onkoJuna(tunniste)                        ? luoAikatauluUrl(tunniste) :
+              onkoRuma(tunniste)                        ? luoRumaUrl(tunniste) :
               undefined;
               //TODO ruma ja aikataulut jotenkin
     if (url) {
@@ -39,7 +41,7 @@ let avaaInfo = tunniste => {
         let open = document.createElement("div");
         open.setAttribute("class", "open");
 
-        open.innerHTML = luoLinkit(tunniste, tunniste);
+        open.innerHTML = luoLinkit('info', tunniste, tunniste);
         elemHeader.appendChild(open);
     
         let content = document.createElement("div");
@@ -48,7 +50,20 @@ let avaaInfo = tunniste => {
     
         dragElement(container);
 
-        content.innerHTML = '<iframe src="' + (url.indexOf('.json') > -1 ? url.replace('.json', '.html')
-                                                                         : url + '.html') + '"></iframe>';
+        if (onkoJuna(tunniste) || onkoRuma(tunniste)) {
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    /*'Digitraffic-User': 'Rafiikka'*/
+                }
+            }).then(response => response.json())
+              .then(data => {
+                content.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+              })
+              .catch(errorHandler);
+        } else {
+            content.innerHTML = '<iframe src="' + (url.indexOf('.json') > -1 ? url.replace('.json', '.html')
+                                                                             : url) + '"></iframe>';
+        }
     }
 }

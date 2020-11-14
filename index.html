@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="style.css" />
 
     <!-- TODO
-        - rumajutuille infoikkuna
         - columneille vastaava 2-portainen aktiivisuus kuin junille
         - urliin myös tasot
         - junanumero labeliksi viivan myötäisesti
@@ -20,11 +19,7 @@
         - dateaxis custom formaatit
         - dateaxis päivälabel erikseen tuntitickien alle
         - lataus scrollatessa, eli kun scrollataan reunaan tai hypätään tyhjälle, niin siirretään xAxis min/max keskikohta vanhaan reunaan. Ja trigataan load ennakkotietodatalle
-        - jump-to-date laatikko
         - aikataulupiste (erityisesti vaakasuora viiva) kertomaan "raide" eli siis kapasiteetinhallintayksikkö
-        - ratatöihin punainen viiva alkuun jos alkanut, ja punainen viiva loppuun jos loppunut. Ehkä vastaavaa muihinkin?
-        - valitut objektit listaksi legendiin, tooltip mukaan
-        - selectioniin valinnan alue tooltipiksi tms
         - ratanumero-akseli nyt olettaa ratakm=1000m. Miten korjata?
         - kielivalinta fi/en
         - ajat näyttämään suomen aikaa selaimen localesta riippumatta?
@@ -32,9 +27,6 @@
         - Jätä aktiiviset ennakkotiedot näkyviin vaikka sarja piilossa.
         - toteumille connect = false ja autoGapCount=999999999999 ?
         - koita toteumille/aikatauluille Heat-korostusta
-        - karttanäkymä. Jotenkin synccaan grafiikan kanssa.
-        - tavarajunat sinisellä, henkilöjunat punaisella myös junasijaintiin
-        - junasta avautumaan käyrä aikataulun ja toteuman erosta
     -->
 
     <script src="https://www.amcharts.com/lib/version/4.10.5/core.js"></script>
@@ -106,6 +98,7 @@
         <li>Objekteja voi avata kartalla tuplaklikkaamalla niitä.</li>
         <li>Klikkaamalla ikonia ℹ️, <img class="infoikoni" src="https://rata.digitraffic.fi/infra-api/r/favicon.ico" />, <img class="infoikoni" src="https://rata.digitraffic.fi/jeti-api/r/favicon.ico" />, 🗺, 📅 tai 📈 voi avata kyseisen objektin lisätietoikkunan, Infra-API-sivun, Jeti-API-sivun, kartan, aikataulu-käyrän tai kohdistaa siihen työrakografiikan, mikäli operaatio on järkevä kyseiselle objetille. Ikoneita näkyy esimerkiksi hakutuloksissa, popup-ikkunoiden yläpalkissa sekä työrakografiikan tasovalikon valituissa objekteissa.</li>
         <li>Kartalle voi hakea ratainfraa, ennakkotietoja (Jeti), ratatöitä (Ruma), junia sekä WKT-geometrioita.</li>
+        <li>Kartta tukee myös skemaattista kaavioesitystapaa.</li>
         <li>Valitsemalla työrakografiikalta Junat-tason näkyviin, alkavat junien sijainnit päivittyä myös kartalla.</li>
         <li>Voit yhdistää karttaikkunoita raahaamalla niitä päällekäin, ja hakea karttaikkunaan lisää sisältöä niiden omalla hakulaatikolla.</li>
         <li>Työrakogafiikkaa voi siirrellä ja zoomailla palkeilla ja painonapeilla. Valintatyökalulla voi piirtää työrakovalintoja.</li>
@@ -114,9 +107,13 @@
 
     <h2>Työkalu on vielä kehityksessä. Muutamia huomioita:</h2>
     <ul>
+        <li>Kuulisin mielelläni bugeista, puutteista ja kehitysehdotuksista. Kerro esimerkiksi <a href="https://github.com/jyrimatti/rafiikka/">Githubissa</a> tai <a href="https://twitter.com/jyrimatti/">Twitterissä</a> tai miten haluat.</li>
         <li>Aikataulujen ja toteumien piirtäminen on hidasta kun niitä on paljon (lue: pääkaupunkiseutu).</li>
         <li>Aikataulupaikkavälin hakeminen on hidasta, koska käyttää raskasta reittihakua. Tähän tulossa myöhemmin nopeutusta.</li>
         <li>Y-akselin ollessa ratanumero, tehdään junasijainneille jatkuvasti gps->ratakm-muunnosta, mikä aiheuttaa paljon requesteja. Tämä korjaantuu kun digitraffic tarjoaa junille ratakmsijainnit suoraan.</li>
+        <li>Kaavioesitystapaa ei ole junille, joiden sijaintitietona on toistaiseksi vain GPS.</li>
+        <li>Aikataulutietojen ja Rumatietojen lisätieto-popup näyttää toistaiseksi raaka-json-dataa, sillä kyseiset rajapinnat eivät tarjoa muuta valmiina.</li>
+        <li>Digitrafficin HTTP-cache ei vaikuta toimivan optimaalisesti, mikä lisää tähän sovellukseen ylimääräistä datan latausten odottelua. Asiaa tutkitaan.</li>
     </ul>
 </body>
 

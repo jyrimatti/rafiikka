@@ -204,12 +204,12 @@ let koordinaatti2sijainti = koordinaatti => {
     return undefined;
 };
 
-let resolveMask = (kmvali, voimassa, callback) => {
+let resolveMask = (kmvali, voimassa, kaavio, callback) => {
     // haetaan rajausta vastaava geometria
     var valiTaiSijainti = kmvali.alku.ratakm == kmvali.loppu.ratakm && kmvali.alku.etaisyys == kmvali.loppu.etaisyys
             ? 'radat/' + kmvali.ratanumero + '/' + kmvali.alku.ratakm + '+' + kmvali.alku.etaisyys
             : 'radat/' + kmvali.ratanumero + '/' + kmvali.alku.ratakm + '+' + kmvali.alku.etaisyys + '-' + kmvali.loppu.ratakm + '+' + kmvali.loppu.etaisyys;
-    let url = infraAPIUrl + valiTaiSijainti + '.geojson?propertyName=geometria&time=' + voimassa;
+    let url = infraAPIUrl + valiTaiSijainti + '.geojson?' + (kaavio() ? 'presentation=diagram&' : '') + 'propertyName=geometria&time=' + voimassa;
     fetch(url, {
         method: 'GET'/*,
         headers: {'Digitraffic-User': 'Rafiikka'}*/

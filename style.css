@@ -59,9 +59,10 @@ ul.ikonit  li {
 .info {
     position: absolute;
     bottom: 0;
-    top: 1em;
+    top: 1.1em;
     left: 0;
     right: 0;
+    overflow: scroll;
 }
 .info iframe {
     width: 100%;
@@ -106,7 +107,20 @@ ul.ikonit  li {
 }
 .kartta, .junaPopup {
     width: 100%;
-    height: 100%;
+    top: 1em;
+    bottom: 0;
+    position: absolute;
+}
+.schema {
+    position: absolute;
+    right: 7em;
+    margin-top: 0;
+    font-size: 0.8em;
+    font-variant: small-caps;
+}
+.schema input {
+    margin: 0px 1px;
+    vertical-align: text-bottom;
 }
 
 body.fi .en, body.en .fi {

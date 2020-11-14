@@ -116,7 +116,7 @@ let luoJunaPopup = (lahtopaiva, junanumero) => {
     let open = document.createElement("div");
     open.setAttribute("class", "open");
 
-    open.innerHTML = luoLinkit(tunniste, tunniste);
+    open.innerHTML = luoLinkit('aikataulu', tunniste, tunniste);
     elemHeader.appendChild(open);
 
     let content = document.createElement("div");
@@ -201,6 +201,6 @@ let luoJunaPopup = (lahtopaiva, junanumero) => {
 
     junapopup.series.pushAll([aikatauluPopup,toteumaPopup]);
 
-    junapopup.dataSource.url = aikatauluAPIUrl + lahtopaiva + '/' + junanumero;
+    junapopup.dataSource.url = luoAikatauluUrl(tunniste);
     junapopup.dataSource.load();
 }

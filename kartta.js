@@ -3,10 +3,19 @@ let luoKarttaElementti = (tunniste, title) => {
     let [container, elemHeader] = luoIkkuna(title);
     container.setAttribute("class", "popupContainer");
 
+    let schema = document.createElement("label");
+    schema.setAttribute("class", "schema");
+    schema.innerText = 'kaavio';
+    elemHeader.appendChild(schema);
+
+    let check = document.createElement("input");
+    check.setAttribute('type', 'checkbox');
+    schema.appendChild(check);
+
     let open = document.createElement("div");
     open.setAttribute("class", "open");
 
-    open.innerHTML = luoLinkit(tunniste);
+    open.innerHTML = luoLinkit('kartta', tunniste);
     elemHeader.appendChild(open);
 
     let haku = document.createElement('input');
@@ -18,7 +27,7 @@ let luoKarttaElementti = (tunniste, title) => {
     kartta.setAttribute("class", "kartta");
     container.appendChild(kartta);
 
-    return [container, kartta, haku];
+    return [container, kartta, haku, check];
 };
 
 let onDrop = lisaa => (source, target) => {
@@ -93,7 +102,8 @@ let junaLayer = (map, tunniste) => {
                     departureDate: juna.departureDate,
                     trainNumber:   juna.trainNumber,
                     name:          juna.departureDate + ' (' + juna.trainNumber + ')',
-                    speed:         juna.speed
+                    speed:         juna.speed,
+                    vari:          juna.trainCategory == 'Cargo' ? 'blue' : 'red'
                 }));
                 src.addFeature(f);
                 setInterval(paivitaYksikot(layer), 1000);
@@ -132,18 +142,23 @@ let wktLayer = (tunniste, nimi) => {
     });
 }
 
+let flatLayerGroups = layers => [].concat.apply([], layers.map(l => (l instanceof ol.layer.Group) ? l.getLayers().getArray() : l ));
+
 let kartta = (tunniste, title) => {
-    let [container, elem, haku] = luoKarttaElementti(tunniste, title || tunniste);
+    let [container, elem, haku, kaavioCheck] = luoKarttaElementti(tunniste, title || tunniste);
     let overlay = new ol.Overlay({
         element: elem.parentElement.getElementsByClassName('popup')[0],
         offset: [5, 5]
     });
+    kaavioCheck.checked = moodiParam() == 'kaavio';
+    let onkoKaavio = () => kaavioCheck.checked;
+    let lrs = layers(onkoKaavio);
     window.map = new ol.Map({
         target: elem,
         overlays: [overlay],
-        layers: layers.concat([
-            tileLayer(mkLayerTitle('Tausta', 'Background'), new ol.source.OSM()),
-        ]),
+        layers: lrs.concat(
+            (onkoKaavio() ? [] : [tileLayer(mkLayerTitle('Tausta', 'Background'), new ol.source.OSM())]),
+        ),
         view: new ol.View({
             center: [342900, 6820390],//ol.proj.fromLonLat(center || [24.0490989,61.4858273]),
             resolution: 2048,
@@ -162,7 +177,13 @@ let kartta = (tunniste, title) => {
         ]
     });
     elem.kartta = map;
-    map.addInteraction(hover(overlay, layers));
+    map.addInteraction(hover(overlay, lrs));
+
+    map.kaavio = onkoKaavio;
+    kaavioCheck.onchange = _ => {
+        log('Moodi vaihtui arvoon', onkoKaavio(), 'päivitetään layer data');
+        flatLayerGroups(map.getLayers().getArray()).forEach(l => l.getSource().refresh());
+    };
 
     onStyleChange(elem.parentElement, () => setTimeout(() => map.updateSize(), 200));
 
@@ -190,20 +211,19 @@ let kartta = (tunniste, title) => {
 }
 
 let poistaKartalta = map => tunniste => {
-    map.removeLayer(map.getLayers().getArray().find(l => l.get('shortName') == tunniste));
+    map.removeLayer(flatLayerGroups(map.getLayers().getArray()).find(l => l.get('shortName') == tunniste));
 }
 
 let lisaaKartalle = (map, overlay) => tunniste => {
     let wkt = onkoWKT(tunniste);
     let preselectLayer =
         onkoJuna(tunniste)                   ? junaLayer(map, tunniste) :
-        onkoRT(tunniste)                     ? newVectorLayerNoTile(rtGeojsonUrl()         , tunniste, tunniste, tunniste, undefined, undefined, rtStyle, undefined, rumaPrepareFeature(tunniste)) :
-        onkoLR(tunniste)                     ? newVectorLayerNoTile(lrGeojsonUrl()         , tunniste, tunniste, tunniste, undefined, undefined, lrStyle, undefined, rumaPrepareFeature(tunniste)) :
-        onkoLOI(tunniste)                    ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, loStyle) :
-        onkoEI(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, eiStyle) :
-        onkoES(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, esStyle) :
-        onkoVS(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, vsStyle) :
-        onkoInfra(tunniste) || onkoTREX(tunniste) ? newVectorLayerNoTile(luoInfraAPIUrl(tunniste), tunniste, tunniste, tunniste) :
+        onkoRuma(tunniste)                   ? newVectorLayerNoTile(luoRumaUrl(tunniste)   , tunniste, tunniste, tunniste, undefined, undefined, rtStyle, undefined, rumaPrepareFeatures, map.kaavio) :
+        onkoLOI(tunniste)                    ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, loStyle, undefined, undefined, map.kaavio) :
+        onkoEI(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, eiStyle, undefined, undefined, map.kaavio) :
+        onkoES(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, esStyle, undefined, undefined, map.kaavio) :
+        onkoVS(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, vsStyle, undefined, undefined, map.kaavio) :
+        onkoInfra(tunniste) || onkoTREX(tunniste) ? newVectorLayerNoTile(luoInfraAPIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, undefined, undefined, undefined, map.kaavio) :
         wkt ? wktLayer(tunniste, wkt[1]) :
         undefined;
     preselectLayer.setVisible(true);
@@ -217,7 +237,7 @@ let hover = (overlay, layers) => {
     let hoverInteraction = new ol.interaction.Select({
         hitTolerance: 2,
         condition:    ol.events.condition.pointerMove,
-        layers:       [].concat.apply([], layers.map(l => (l instanceof ol.layer.Group) ? l.getLayers().getArray() : l ))
+        layers:       flatLayerGroups(layers)
     });
     hoverInteraction.on('select', evt => {
         let map = evt.target.getMap();
@@ -228,7 +248,7 @@ let hover = (overlay, layers) => {
             }
             overlay.setPosition(coordinate);
 
-            let layer = tarkennaEnnakkotieto(map.highlightLayers, feature.getProperties().tunniste);
+            let layer = tarkennaEnnakkotieto(map.highlightLayers, feature.getProperties().tunniste, map.kaavio);
             if (layer) {
                 layer.setMap(map);
             }
@@ -244,10 +264,10 @@ let hover = (overlay, layers) => {
     return hoverInteraction;
 };
 
-let cropIfConstrained = (voimassa, f) => kohteet =>
+let cropIfConstrained = (voimassa, kaavio, f) => kohteet =>
     kohteet.filter(kohde => kohde.tunniste == f.getProperties().tunniste)
            .filter(kohde => kohde.rajaus) // jos oli rajaus, niin tehdään taiat. Muuten jätetään geometria kokonaiseksi.
-           .forEach(kohde => resolveMask(kohde.rajaus, voimassa, mask => {
+           .forEach(kohde => resolveMask(kohde.rajaus, voimassa, kaavio, mask => {
             if (mask) {
                 var original = olParser.read(f.getGeometry());
                 f.setStyle(null);
@@ -284,7 +304,7 @@ let getAllGeometries = f => {
     }
 };
 
-let tarkennaEnnakkotieto = (highlightLayers, tunniste) => {
+let tarkennaEnnakkotieto = (highlightLayers, tunniste, kaavio) => {
     let prefix = onkoEI(tunniste) ? 'liikennevaikutusalue' :
                  onkoES(tunniste) ? 'tyonosat.tekopaikka' :
                  onkoVS(tunniste) ? 'kohde' : undefined;
@@ -292,10 +312,10 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste) => {
     if (prefix) {
         let props = 'voimassa,' + kohdeProps.map(x => prefix + x).join(',');
         
-        if (highlightLayers[tunniste]) {
-            highlightLayers[tunniste].forEach(l => l.setVisible(true));
+        if (highlightLayers[tunniste + '_' + kaavio()]) {
+            highlightLayers[tunniste + '_' + kaavio()].forEach(l => l.setVisible(true));
         } else {
-            highlightLayers[tunniste] = [];
+            highlightLayers[tunniste + '_' + kaavio()] = [];
             var raiteet;
             var radat;
             var lpvalit;
@@ -342,16 +362,16 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste) => {
 
                     kohteet.forEach(k => {
                         f.setStyle(loadingIndicatorStyle);
-                        cropIfConstrained(voimassa, f)(k);
+                        cropIfConstrained(voimassa, kaavio, f)(k);
                     });
                 }
                 
                 newLayer.getSource().once('change', onchange);
-            });
+            }, undefined, undefined, kaavio);
 
             newLayer.getSource().addFeature(mbcFeature);
 
-            highlightLayers[tunniste].push(newLayer);
+            highlightLayers[tunniste + '_' + kaavio()].push(newLayer);
             newLayer.setVisible(true);
             return newLayer;
         }
