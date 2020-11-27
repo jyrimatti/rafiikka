@@ -68,25 +68,31 @@
     <a href="https://github.com/jyrimatti/rafiikka/"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
     <h1>Rafiikka - Rataverkon reaaliaikagrafiikka, työrakografiikka ja karttakäyttöliittymä</h1>
 
-    <input style="display: none" id="search" placeholder="hae..." />
-    <div class="hakuohje">
-        ?
-        <h5>Hakulaatikon ymmärtämä syntaksi ja esimerkkejä:</h5>
-        <dl>
-            <dt>OID:</dt>                        <dd>1.2.246.586.1.39.81466</dd>
-            <dt>Lyhyt nimi:</dt>                 <dd>EI123</dd>
-            <dt>Koordinaatti:</dt>               <dd>701829,6954463</dd><dd>30.940161,62.66599</dd>
-            <dt>Ratanumero:</dt>                 <dd>003</dd>
-            <dt>Ratakilometrisijainti:</dt>      <dd>(003) 1+0345</dd>
-            <dt>Ratakilometriväli:</dt>          <dd>(003) 1+0345-2+0012</dd>
-            <dt>Paikantamismerkkisijainti:</dt>  <dd>3+120</dd><dd>3-120</dd>
-            <dt>Juna:</dt>                       <dd>2020-10-31 148</dd>
-            <dt>Lähtöpäivän aikataulut:</dt>     <dd>2020-10-31</dd>
-            <dt>Tämän päivän juna:</dt>          <dd>148</dd>
-            <dt>Reitti:</dt>                     <dd>1.2.246.586.1.39.81428=>1.2.246.586.1.14.248258</dd>
-            <dt>WKT-geometria:</dt>              <dd>POINT(701829 6954463)</dd>
-            <dt>Vapaasanahaku:</dt>              <dd>Kangasala</dd>
-        </dl>
+    <div class="palkki">
+        <div>
+            <a style="font-size: 2em;" href="" title="Avaa kartta" onclick="try {kartta(sijaintiParam())} catch(e) {log(e);}; return false;">🗺</a>
+            <a style="font-size: 1.8em;" href="" title="Avaa aikataulu" onclick="luoJunaPopup(); return false;">📅</a>
+        </div>
+        <div class="hakuohje">
+            ?
+            <h5>Hakulaatikon ymmärtämä syntaksi ja esimerkkejä:</h5>
+            <dl>
+                <dt>OID:</dt>                        <dd>1.2.246.586.1.39.81466</dd>
+                <dt>Lyhyt nimi:</dt>                 <dd>EI123</dd>
+                <dt>Koordinaatti:</dt>               <dd>701829,6954463</dd><dd>30.940161,62.66599</dd>
+                <dt>Ratanumero:</dt>                 <dd>003</dd>
+                <dt>Ratakilometrisijainti:</dt>      <dd>(003) 1+0345</dd>
+                <dt>Ratakilometriväli:</dt>          <dd>(003) 1+0345-2+0012</dd>
+                <dt>Paikantamismerkkisijainti:</dt>  <dd>3+120</dd><dd>3-120</dd>
+                <dt>Juna:</dt>                       <dd>2020-10-31 148</dd>
+                <dt>Lähtöpäivän aikataulut:</dt>     <dd>2020-10-31</dd>
+                <dt>Tämän päivän juna:</dt>          <dd>148</dd>
+                <dt>Reitti:</dt>                     <dd>1.2.246.586.1.39.81428=>1.2.246.586.1.14.248258</dd>
+                <dt>WKT-geometria:</dt>              <dd>POINT(701829 6954463)</dd>
+                <dt>Vapaasanahaku:</dt>              <dd>Kangasala</dd>
+            </dl>
+        </div>
+        <input style="display: none" id="search" placeholder="hae..." />
     </div>
 
     <div id="chartdiv"></div>

@@ -1,8 +1,33 @@
 
 let log = (msg1, msg2, msg3, msg4, msg5, msg6) => {
     if (console && console.log) {
-        console.log(dateFns.dateFns.format(new Date(), 'yyyy-MM-dd HH:mm:ss.SSS'), ":", msg1, msg2, msg3, msg4, msg5, msg6);
+        console.log(dateFns.dateFns.format(new Date(), 'yyyy-MM-dd HH:mm:ss.SSS'), "      :",
+                    msg1 == undefined ? '' : msg1,
+                    msg2 == undefined ? '' : msg2,
+                    msg3 == undefined ? '' : msg3,
+                    msg4 == undefined ? '' : msg4,
+                    msg5 == undefined ? '' : msg5,
+                    msg6 == undefined ? '' : msg6);
     }
+};
+
+let logDiff = (msg1, msg2, msg3, msg4, msg5, msg6) => {
+    let started = new Date();
+    let lastGiven = [msg1, msg2, msg3, msg4, msg5, msg6].reverse().find(x => x !== undefined);
+    let ret = lastGiven();
+    if (console && console.log) {
+        let ended = new Date();
+        let dur = (ended.getTime() - started.getTime());
+        console.log(dateFns.dateFns.format(new Date(), 'yyyy-MM-dd HH:mm:ss.SSS'),
+                    '(' + ' '.repeat(2 - (dur+'').length) + dur + 'ms):',
+                    msg1 instanceof Function || msg1 == undefined ? '' : msg1,
+                    msg2 instanceof Function || msg2 == undefined ? '' : msg2,
+                    msg3 instanceof Function || msg3 == undefined ? '' : msg3,
+                    msg4 instanceof Function || msg4 == undefined ? '' : msg4,
+                    msg5 instanceof Function || msg5 == undefined ? '' : msg5,
+                    msg6 instanceof Function || msg6 == undefined ? '' : msg6);
+    }
+    return ret;
 };
 
 // https://stackoverflow.com/a/31732310
@@ -215,11 +240,11 @@ let luoDatasource = (type, urlF, f) => {
     initDS(ds);
     monitor(ds, type);
     on(ds.events, "parseended", ev => {
-        log("Parsitaan", type);
-        var ret = {};
-        Object.values(ev.target.data).flat().forEach(x => f(ret, x));
-        ev.target.data = ret;
-        log("Parsittu", type);
+        logDiff("Parsitaan", type, () => {
+            var ret = {};
+            Object.values(ev.target.data).flat().forEach(x => f(ret, x));
+            ev.target.data = ret;
+        });
     });
     return ds;
 };
@@ -234,7 +259,7 @@ let onkoKoordinaatti   = str => str && str.match && str.match(/^(\d+)(?:\.\d+)?,
 let onkoRatakmSijainti = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)$/);
 let onkoPmSijainti     = str => str && str.match && str.match(/^(\d+)([+-])(\d+)$/);
 let onkoRatakmVali     = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)\s*-\s*(\d+)[+](\d+)$/);
-let onkoRatanumero     = str => str && str.match && str.match(/^\(([^)]+)\)$/);
+let onkoRatanumero     = str => str && str.match && str.match(/^\(?([^)]+|[^() ]{1,6}(?: [^() ]{1,3})?)\)?$/);
 let onkoReitti         = str => str && str.match && str.match(/^(.*?)\s*(?:=>)\s*(?:(.*)(?:=>))?\s*(.*?)$/);
 
 let onkoInfra = str => onkoInfraOID(str) ||

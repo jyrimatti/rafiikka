@@ -14,16 +14,16 @@ window.hakuUrlitInfraDS = hakuUrlitInfra()                   .map( (url,i) => lu
 window.hakuUrlitEtj2DS  = hakuUrlitEtj2()                    .map( (url,i) => luoDatasource("Haku-Etj2:" + i,  () => url, hakudataHandler));
 window.hakuUrlitRumaDS  = hakuUrlitRT().concat(hakuUrlitLR()).map( (url,i) => luoDatasource("Haku-Ruma:" + i,  () => url, hakudataHandler));
 
-let initSearch = (elem, lisaaKartalle, poistaKartalta) => {
+let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) => {
     let search = $(elem).selectize({
-        plugins: ['remove_button'],
+        plugins: eiPoistoa ? [] : ['remove_button'],
         valueField: 'tunniste',
         labelField: 'nimi',
         searchField: ['query'],
         hideSelected: false,
         highlight: false,
         maxOptions: 100,
-        closeAfterSelect: lisaaKartalle !== undefined,
+        closeAfterSelect: lisaaPopuppiin !== undefined,
         optgroups: [{luokka: 'Infra'}, {luokka: 'Jeti'}, {luokka: 'Ruma'}, {luokka: 'Aikataulut'}, {luokka: 'Junat'}],
         optgroupField: 'luokka',
         optgroupValueField: 'luokka',
@@ -49,23 +49,23 @@ let initSearch = (elem, lisaaKartalle, poistaKartalta) => {
                         <span class="name">${item.nimi}</span>
                         <span class="score">${escape(item.score)}</span>
                     </span>
-                    ${ lisaaKartalle ? '' : luoLinkit('', item.tunniste, escape(item.nimi)) }
+                    ${ lisaaPopuppiin ? '' : luoLinkit('', item.tunniste, escape(item.nimi)) }
                 </div>
             `}
         },
         load: (query, callback) => {
             let cb = x => callback(x.map(y => { return {...y, query: query}; }));
-            hakuMuodosta(query, cb);
-            hakuDatasta(query, cb);
+            hakuMuodosta(query, cb, vainJunat);
+            hakuDatasta(query, cb, vainJunat);
         },
         onItemAdd: value => {
-            if (lisaaKartalle) {
-                lisaaKartalle(value);
+            if (lisaaPopuppiin) {
+                lisaaPopuppiin(value);
             } else {
                 search.clear();
             }
         },
-        onItemRemove: poistaKartalta,
+        onItemRemove: poistaPopupista,
         onType: query => {
             // tallennetaan käytetty hakusana queryksi, jotta voidaan sillä matchata aina kaikkiin riveihin
             Object.values(search.options)
@@ -102,7 +102,7 @@ let initSearch = (elem, lisaaKartalle, poistaKartalta) => {
         }
     })[0].selectize;
 
-    if (!lisaaKartalle) {
+    if (!lisaaPopuppiin) {
         // laitetaan clickit valumaan varsinaisiin linkkeihin saakka
         search.$dropdown_content.on('mousedown', () => false);
     }
@@ -121,258 +121,272 @@ setTimeout(() => {
     });
 }, 500);
 
-let hakuMuodosta = (str, callback) => {
+let hakuMuodosta = (str, callback, vainJunat) => {
     setTimeout( () => {
         var ret = [];
         var m;
 
-        // ETJ2
-        m = str.match(/^(1\.2\.246\.586\.2(?:\.\d+)+)$/);
-        if (m) {
-            ret.push({
-                luokka:     'Jeti',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       m[1],
-                score:      93000
-            });
-        }
-        m = str.match(/^(VS\d+)$/);
-        if (m) {
-            ret.push({
-                luokka:     'Jeti',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       'Vuosisuunnitelma ' + m[1],
-                score:      93000
-            });
-        }
-        m = str.match(/^(ES\d+)$/);
-        if (m) {
-            ret.push( {
-                luokka:     'Jeti',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       'Ennakkosuunnitelma ' + m[1],
-                score:      93000
-            });
-        }
-        m = str.match(/^(EI\d+)$/);
-        if (m) {
-            ret.push({
-                luokka:     'Jeti',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       'Ennakkoilmoitus ' + m[1],
-                score:      93000
-            });
-        }
-        m = str.match(/^(LOI\d+)$/);
-        if (m) {
-            ret.push({
-                luokka:     'Jeti',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       'LOIlmoitus ' + m[1],
-                score:      93000
-            });
-        }
-
-        // Infra
-        m = str.match(/^(1\.2\.246\.586\.1(?:\.\d+)+)$/);
-        if (m) {
-            ret.push({
-                luokka:     'Infra',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       m[1],
-                score:      91000
-            });
-        }
-        m = str.match(/^(\d+)(?:\.\d+)?,[ ]?(\d+)(?:\.\d+)?$/);
-        if (m) {
-            var srs = undefined;
-            if (m[1] > 999 && m[2] > 999) {
-                // epsg:3067
-                srs = undefined;
-            } else if (m[1] < 50 && m[2] > 50) {
-                // epsg:4326
-                srs = 'srsName=epsg:4326';
-            } else if (m[1] > 50 && m[2] < 50) {
-                // crs:84
-                srs = 'srsName=crs:84';
+        if (!vainJunat) {
+            // ETJ2
+            m = str.match(/^(1\.2\.246\.586\.2(?:\.\d+)+)$/);
+            if (m) {
+                ret.push({
+                    luokka:     'Jeti',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       m[1],
+                    score:      93000
+                });
+            }
+            m = str.match(/^(VS\d+)$/);
+            if (m) {
+                ret.push({
+                    luokka:     'Jeti',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       'Vuosisuunnitelma ' + m[1],
+                    score:      93000
+                });
+            }
+            m = str.match(/^(ES\d+)$/);
+            if (m) {
+                ret.push( {
+                    luokka:     'Jeti',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       'Ennakkosuunnitelma ' + m[1],
+                    score:      93000
+                });
+            }
+            m = str.match(/^(EI\d+)$/);
+            if (m) {
+                ret.push({
+                    luokka:     'Jeti',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       'Ennakkoilmoitus ' + m[1],
+                    score:      93000
+                });
+            }
+            m = str.match(/^(LOI\d+)$/);
+            if (m) {
+                ret.push({
+                    luokka:     'Jeti',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       'LOIlmoitus ' + m[1],
+                    score:      93000
+                });
             }
 
-            let id = ''+Math.random();
-            fetch(koordinaattiUrl(m[1] + ',' + m[2], srs), {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'/*,
-                    'Digitraffic-User': 'Rafiikka'*/
+            // Infra
+            m = str.match(/^(1\.2\.246\.586\.1(?:\.\d+)+)$/);
+            if (m) {
+                ret.push({
+                    luokka:     'Infra',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       m[1],
+                    score:      91000
+                });
+            }
+            m = str.match(/^(\d+)(?:\.\d+)?,[ ]?(\d+)(?:\.\d+)?$/);
+            if (m) {
+                var srs = undefined;
+                if (m[1] > 999 && m[2] > 999) {
+                    // epsg:3067
+                    srs = undefined;
+                } else if (m[1] < 50 && m[2] > 50) {
+                    // epsg:4326
+                    srs = 'srsName=epsg:4326';
+                } else if (m[1] > 50 && m[2] < 50) {
+                    // crs:84
+                    srs = 'srsName=crs:84';
                 }
-            }).then(response => response.json())
-              .then(data => {
-                  let rkm = data.flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
-                  let pm  = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
-                  document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '') + (pm ? ' <br />' + pm : '');
-              })
-              .catch(errorHandler);
-            
-            ret.push({
-                luokka:     'Infra',
-                ryhma:      'Muunnokset',
-                tunniste:   str,
-                nimi:       'Koordinaatti ' + m[1] + ',' + m[2] + '<span class="muunnos" id="' + id + '"></span>',
-                score:      999999
-            });
-        }
-        m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)$/);
-        if (m) {
-            let id = Math.random();
-            fetch(ratakmSijaintiUrl(m[1], m[2], m[3]), {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'/*,
-                    'Digitraffic-User': 'Rafiikka'*/
-                }
-            }).then(response => response.json())
-              .then(data => {
-                  let pm = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
-                  document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
-              })
-              .catch(errorHandler);
-            
-            ret.push({
-                luokka:     'Infra',
-                ryhma:      'Muunnokset',
-                tunniste:   str,
-                nimi:       'Ratakilometrisijainti (' + m[1] + ') ' + m[2] + '+' + m[3] + '<span class="muunnos" id="' + id + '"></span>',
-                score:      999999
-            });
-        }
-        m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)\s*(?:->|-|>|\/)\s*([^+]+)\+(\d+)$/);
-        if (m) {
-            let id = Math.random();
-            fetch(ratakmValiUrl(m[1], m[2], m[3], m[4], m[5]), {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'/*,
-                    'Digitraffic-User': 'Rafiikka'*/
-                }
-            }).then(response => response.json())
-              .then(data => {
-                  let pm = data.flatMap(x => x.paikantamismerkkivalit.map(muotoilePmv)).join('<br />');
-                  document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
-              })
-              .catch(errorHandler);
 
-            ret.push({
-                luokka:     'Infra',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       'Ratakilometriväli (' + m[1] + ') ' + m[2] + '+' + m[3] + '-' + m[4] + '+' + m[5] + '<span class="muunnos" id="' + id + '"></span>',
-                score:      91000
-            });
-        }
-        m = str.match(/^\(([^)]+)\)$/);
-        if (m) {
-            ret.push({
-                luokka:     'Infra',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       'Ratanumero (' + m[1] + ')',
-                score:      91000
-            });
-        }
-        m = onkoReitti(str);
-        if (m) {
-            ret.push({
-                luokka:     'Infra',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       'Kaikki reitit ' + m[1] + ' => ' + (m[2] ? m[2] + ' => ': '') + m[3],
-                score:      91000
-            });
-        }
-        m = str.match(/^(\d+)([+-])(\d+)$/);
-        if (m) {
-            let id = Math.random();
-            fetch(pmSijaintiUrl(m[1], m[2], m[3], m[4], m[5]), {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'/*,
-                    'Digitraffic-User': 'Rafiikka'*/
-                }
-            }).then(response => response.json())
-              .then(data => {
-                  let rkm = data.flatMap(x => x.sijainnit).flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
-                  document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '');
-              })
-              .catch(errorHandler);
+                let id = ''+Math.random();
+                fetch(koordinaattiUrl(m[1] + ',' + m[2], srs), {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'/*,
+                        'Digitraffic-User': 'Rafiikka'*/
+                    }
+                }).then(response => response.json())
+                .then(data => {
+                    let rkm = data.flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
+                    let pm  = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
+                    document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '') + (pm ? ' <br />' + pm : '');
+                })
+                .catch(errorHandler);
+                
+                ret.push({
+                    luokka:     'Infra',
+                    ryhma:      'Muunnokset',
+                    tunniste:   str,
+                    nimi:       'Koordinaatti ' + m[1] + ',' + m[2] + '<span class="muunnos" id="' + id + '"></span>',
+                    score:      999999
+                });
+            }
+            m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)$/);
+            if (m) {
+                let id = Math.random();
+                fetch(ratakmSijaintiUrl(m[1], m[2], m[3]), {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'/*,
+                        'Digitraffic-User': 'Rafiikka'*/
+                    }
+                }).then(response => response.json())
+                .then(data => {
+                    let pm = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
+                    document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
+                })
+                .catch(errorHandler);
+                
+                ret.push({
+                    luokka:     'Infra',
+                    ryhma:      'Muunnokset',
+                    tunniste:   str,
+                    nimi:       'Ratakilometrisijainti (' + m[1] + ') ' + m[2] + '+' + m[3] + '<span class="muunnos" id="' + id + '"></span>',
+                    score:      999999
+                });
+            }
+            m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)\s*(?:->|-|>|\/)\s*([^+]+)\+(\d+)$/);
+            if (m) {
+                let id = Math.random();
+                fetch(ratakmValiUrl(m[1], m[2], m[3], m[4], m[5]), {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'/*,
+                        'Digitraffic-User': 'Rafiikka'*/
+                    }
+                }).then(response => response.json())
+                .then(data => {
+                    let pm = data.flatMap(x => x.paikantamismerkkivalit.map(muotoilePmv)).join('<br />');
+                    document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
+                })
+                .catch(errorHandler);
 
-            ret.push({
-                luokka:     'Infra',
-                ryhma:      'Muunnokset',
-                tunniste:   str,
-                nimi:       'Paikantamismerkkisijainti ' + m[1] + '+' + m[3] + (m[2] == '+' ? ' nousevaan' : ' laskevaan') + ' suuntaan' + '<span class="muunnos" id="' + id + '"></span>',
-                score:      999999
-            });
-        }
+                ret.push({
+                    luokka:     'Infra',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       'Ratakilometriväli (' + m[1] + ') ' + m[2] + '+' + m[3] + '-' + m[4] + '+' + m[5] + '<span class="muunnos" id="' + id + '"></span>',
+                    score:      91000
+                });
+            }
+            m = str.match(/^\(([^)]+)\)$/);
+            if (m) {
+                ret.push({
+                    luokka:     'Infra',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       'Ratanumero (' + m[1] + ')',
+                    score:      91000
+                });
+            }
+            m = onkoReitti(str);
+            if (m) {
+                ret.push({
+                    luokka:     'Infra',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       'Kaikki reitit ' + m[1] + ' => ' + (m[2] ? m[2] + ' => ': '') + m[3],
+                    score:      91000
+                });
+            }
+            m = str.match(/^(\d+)([+-])(\d+)$/);
+            if (m) {
+                let id = Math.random();
+                fetch(pmSijaintiUrl(m[1], m[2], m[3], m[4], m[5]), {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'/*,
+                        'Digitraffic-User': 'Rafiikka'*/
+                    }
+                }).then(response => response.json())
+                .then(data => {
+                    let rkm = data.flatMap(x => x.sijainnit).flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
+                    document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '');
+                })
+                .catch(errorHandler);
 
-        // Rumat
-        m = str.match(/^(1\.2\.246\.586\.7.1(?:\.\d+)+)$/);
-        if (m) {
-            ret.push({
-                luokka:     'Ruma',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       'Ratatyö ' + m[1],
-                score:      95000
-            });
-        }
-        m = str.match(/^(1\.2\.246\.586\.7.2(?:\.\d+)+)$/);
-        if (m) {
-            ret.push({
-                luokka:     'Ruma',
-                ryhma:      'Linkit',
-                tunniste:   str,
-                nimi:       'Liikenteenrajoite ' + m[1],
-                score:      95000
-            });
-        }
-        m = str.match(/^RT(\d+)$/);
-        if (m) {
-            ret.push({
-                luokka:     'Ruma',
-                ryhma:      'Linkit',
-                tunniste:   '1.2.246.586.7.1.' + m[1],
-                nimi:       'Ratatyö RT' + m[1],
-                score:      95000
-            });
-        }
-        m = str.match(/^LR(\d+)$/);
-        if (m) {
-            ret.push({
-                luokka:     'Ruma',
-                ryhma:      'Linkit',
-                tunniste:   '1.2.246.586.7.2.' + m[1],
-                nimi:       'Liikenteenrajoite LR' + m[1],
-                score:      95000
-            });
-        }
+                ret.push({
+                    luokka:     'Infra',
+                    ryhma:      'Muunnokset',
+                    tunniste:   str,
+                    nimi:       'Paikantamismerkkisijainti ' + m[1] + '+' + m[3] + (m[2] == '+' ? ' nousevaan' : ' laskevaan') + ' suuntaan' + '<span class="muunnos" id="' + id + '"></span>',
+                    score:      999999
+                });
+            }
 
-        // aikataulut
-        m = str.match(/^(\d\d\d\d-\d\d-\d\d)$/);
-        if (m) {
-            ret.push({
-                luokka:   'Aikataulut',
-                ryhma:    'Linkit',
-                tunniste: str,
-                nimi:     'Lähtöpäivän aikataulu ' + m[1],
-                score:    98000
-            });
-        }
+            // Rumat
+            m = str.match(/^(1\.2\.246\.586\.7.1(?:\.\d+)+)$/);
+            if (m) {
+                ret.push({
+                    luokka:     'Ruma',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       'Ratatyö ' + m[1],
+                    score:      95000
+                });
+            }
+            m = str.match(/^(1\.2\.246\.586\.7.2(?:\.\d+)+)$/);
+            if (m) {
+                ret.push({
+                    luokka:     'Ruma',
+                    ryhma:      'Linkit',
+                    tunniste:   str,
+                    nimi:       'Liikenteenrajoite ' + m[1],
+                    score:      95000
+                });
+            }
+            m = str.match(/^RT(\d+)$/);
+            if (m) {
+                ret.push({
+                    luokka:     'Ruma',
+                    ryhma:      'Linkit',
+                    tunniste:   '1.2.246.586.7.1.' + m[1],
+                    nimi:       'Ratatyö RT' + m[1],
+                    score:      95000
+                });
+            }
+            m = str.match(/^LR(\d+)$/);
+            if (m) {
+                ret.push({
+                    luokka:     'Ruma',
+                    ryhma:      'Linkit',
+                    tunniste:   '1.2.246.586.7.2.' + m[1],
+                    nimi:       'Liikenteenrajoite LR' + m[1],
+                    score:      95000
+                });
+            }
 
+            // aikataulut
+            m = str.match(/^(\d\d\d\d-\d\d-\d\d)$/);
+            if (m) {
+                ret.push({
+                    luokka:   'Aikataulut',
+                    ryhma:    'Linkit',
+                    tunniste: str,
+                    nimi:     'Lähtöpäivän aikataulu ' + m[1],
+                    score:    98000
+                });
+            }
+
+            // geometriat
+            m = onkoWKT(str);
+            if (m) {
+                ret.push({
+                    luokka:   'Geometria',
+                    ryhma:    'Geometria',
+                    tunniste: m[0],
+                    nimi:     m[1],
+                    score:    100000
+                });
+            }
+        }
+        
         // junat
         m = str.match(/^(\d\d\d\d-\d\d-\d\d)\s+\(?(\d+)\)?$/);
         if (m) {
@@ -395,32 +409,12 @@ let hakuMuodosta = (str, callback) => {
                 score:    100000
             });
         }
-        m = str.match(/^(\d\d\d\d-\d\d-\d\d)$/);
-        if (m) {
-            ret.push({
-                luokka:   'Junat',
-                ryhma:    'Linkit',
-                tunniste: str,
-                nimi:     'Lähtöpäivän junat ' + m[1],
-                score:    100000
-            });
-        }
-        m = onkoWKT(str);
-        if (m) {
-            ret.push({
-                luokka:   'Geometria',
-                ryhma:    'Geometria',
-                tunniste: m[0],
-                nimi:     m[1],
-                score:    100000
-            });
-        }
 
         callback(ret);
     }, 1);
 };
 
-let hakuDatasta = (str, callback) => {
+let hakuDatasta = (str, callback, vainJunat) => {
     if (onkoWKT(str)) {
         return; // don't bother
     }
@@ -437,40 +431,42 @@ let hakuDatasta = (str, callback) => {
         }
     };
 
-    hakuUrlitInfraDS.forEach(suodata(r => {
-        let ryhma = parsiInfraRyhma(r[0]);
-        return {
-            luokka:     'Infra',
-            ryhma:      ryhma,
-            tunniste:   ryhma == 'Rata' ? '(' + r[0].ratanumero + ')' : r[0].tunniste,
-            data:       r[0],
-            nimi:       parsiInfraNimi(ryhma, r[0]),
-            score:      ryhma == 'Rata' ? r[1]+1000 : r[1] // nostetaan Ratojen pisteitä
-        }
-    }));
+    if (!vainJunat) {
+        hakuUrlitInfraDS.forEach(suodata(r => {
+            let ryhma = parsiInfraRyhma(r[0]);
+            return {
+                luokka:     'Infra',
+                ryhma:      ryhma,
+                tunniste:   ryhma == 'Rata' ? '(' + r[0].ratanumero + ')' : r[0].tunniste,
+                data:       r[0],
+                nimi:       parsiInfraNimi(ryhma, r[0]),
+                score:      ryhma == 'Rata' ? r[1]+1000 : r[1] // nostetaan Ratojen pisteitä
+            }
+        }));
 
-    hakuUrlitEtj2DS.forEach(suodata(r => {
-        return {
-            luokka:     'Jeti',
-            ryhma:      parsiJetiRyhma(r[0]),
-            tunniste:   r[0].tunniste,
-            data:       r[0],
-            nimi:       parsiJetiNimi(r[0]),
-            score:      r[1]
-        }
-    }));
-    
-    hakuUrlitRumaDS.forEach(suodata(r => {
-        let ratatyo = r[0].id.startsWith('1.2.246.586.7.1.');
-        return {
-            luokka:     'Ruma',
-            ryhma:      ratatyo ? 'Ratatyö' : 'Liikenteenrajoite',
-            tunniste:   r[0].id,
-            data:       r[0],
-            nimi:       (ratatyo ? 'RT' : 'LR') + r[0].id.replaceAll(/.*[.]/g,''),
-            score:      r[1]
-        }
-    }));
+        hakuUrlitEtj2DS.forEach(suodata(r => {
+            return {
+                luokka:     'Jeti',
+                ryhma:      parsiJetiRyhma(r[0]),
+                tunniste:   r[0].tunniste,
+                data:       r[0],
+                nimi:       parsiJetiNimi(r[0]),
+                score:      r[1]
+            }
+        }));
+        
+        hakuUrlitRumaDS.forEach(suodata(r => {
+            let ratatyo = r[0].id.startsWith('1.2.246.586.7.1.');
+            return {
+                luokka:     'Ruma',
+                ryhma:      ratatyo ? 'Ratatyö' : 'Liikenteenrajoite',
+                tunniste:   r[0].id,
+                data:       r[0],
+                nimi:       (ratatyo ? 'RT' : 'LR') + r[0].id.replaceAll(/.*[.]/g,''),
+                score:      r[1]
+            }
+        }));
+    }
 }
 
 let osuuko = str => row => [row, osuuko_(splitString(str).map(x =>

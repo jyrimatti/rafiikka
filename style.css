@@ -38,6 +38,15 @@ ul.ikonit  li {
     top: 6.5em;
 }
 
+.palkki {
+    position: absolute;
+    z-index: 2;
+    width: 100%;
+}
+.palkki > * {
+    float: left;
+}
+
 .popupContainer {
     position: absolute;
     bottom: 0;
@@ -48,13 +57,7 @@ ul.ikonit  li {
     background: white;
     resize: both;
     overflow: auto;
-    z-index: 1;
-}
-.popupContainer.infoPopup {
-    left: 818px;
-}
-.popupContainer.aikatauluPopup {
-    left: 1218px;
+    z-index: 3;
 }
 .info {
     position: absolute;
@@ -110,6 +113,12 @@ ul.ikonit  li {
     top: 1em;
     bottom: 0;
     position: absolute;
+}
+.junaPopup {
+    top: 3em;
+}
+.popupContainer.aikatauluPopup .selectize-control {
+    margin-left: 0;
 }
 .schema {
     position: absolute;
@@ -179,10 +188,10 @@ body.fi .en, body.en .fi {
 .selectize-input {
     position: absolute;
     max-width: 10em;
-    margin-top: 2em;
 }
-.selectize-input.dropdown-active {
-    max-width: 50%;
+.selectize-input.dropdown-active,
+.popupContainer .selectize-input.dropdown-active  {
+    max-width: 100%;
 }
 .popupContainer .selectize-input {
     margin-top: 0em;
@@ -191,11 +200,16 @@ body.fi .en, body.en .fi {
 .popupContainer .selectize-input.has-items {
     max-width: 70%;
 }
+.aikatauluPopup.popupContainer .selectize-input.has-items {
+    max-width: 100%;
+}
 .selectize-control {
-    margin-left: 1em;
+    margin-left: 2em;
+    width: 50%;
 }
 .popupContainer .selectize-control {
-    margin-left: none;
+    margin-left: 0.7em;
+    width: 90%;
 }
 .selectize-control .optgroup div[data-selectable].active {
     background-color: thistle;
@@ -244,12 +258,12 @@ body.fi .en, body.en .fi {
 
 .hakuohje {
     position: absolute;
+    left: 5em;
     width: 2em;
     height: 2em;
-    margin-top: 1.6em;
     padding-top: 0.5em;
     overflow: hidden;
-    z-index: 1;
+    z-index: 2;
 }
 .hakuohje h5 {
     display: none;

@@ -12,7 +12,7 @@ let luoIkkuna = title => {
 
     let elemTitle = document.createElement("div");
     elemTitle.setAttribute("class", "title");
-    elemTitle.innerText = title;
+    elemTitle.innerText = title || '';
     elemHeader.appendChild(elemTitle);
 
     let close = document.createElement("div");

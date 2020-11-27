@@ -3,7 +3,7 @@ on(aikataulupaikatDS.events, "done", ev => {
     if (!valittuDS.data && sijaintiParam().split("-").length >= 2) {
         let paikat = sijaintiParam().split("-").map(x => Object.values(ev.target.data).find(y => y.lyhenne == x || y.uicKoodi == x));
         if (paikat.includes(undefined)) {
-            // ehkei vielä latautunut...
+            log('odotellaan aikataulupaikkojen latautumista...');
             return;
         }
         valittuDS.data = paikat.map(x => x.uicKoodi);
@@ -27,17 +27,6 @@ window.aktiivisetJunatDS.data = {};
 
 on(valittuDS.events, "done", _ => paivitaUrl(valittuDS.data, aikaParam(), kestoParam()));
 
-on(valittuDS.events, "done", _ => {
-    if (valittunaRatanumero()) {
-        kartta('(' + valittuDS.data + ')');
-    } else if (valittunaAikataulupaikka()) {
-        let reittiTunniste = valittuDS.data.map(x => aikataulupaikatDS.data[x].tunniste);
-        let reittiOtsikko = valittuDS.data.map(x => aikataulupaikatDS.data[x].lyhenne);
-        kartta(reittiTunniste[0] + '=>' + (reittiTunniste.length > 2 ? reittiTunniste.slice(1,-1).join(',') + "=>" : '') + reittiTunniste[reittiTunniste.length-1],
-               reittiOtsikko[0]  + '=>' + (reittiOtsikko.length  > 2 ? reittiOtsikko .slice(1,-1).join(',') + "=>" : '') + reittiOtsikko[reittiOtsikko.length-1]);
-    }
-});
-
 window.addEventListener('hashchange', () => {
     let uusiSijainti = sijaintiParam().split("-");
     if (uusiSijainti.length == 1) {
@@ -50,8 +39,8 @@ window.addEventListener('hashchange', () => {
 });
 
 window.ratanumeroChanged = val => {
-    if (!ratanumerotDS.data[val]) {
-        log("Ohitetaan, ehkä data ei ollut vielä latautunut...");
+    if (!ratanumerotDS.data || ratanumerotDS.data.length == 0) {
+        log("odotellaan ratanumeroiden latautumista...");
         return false;
     }
     if (val != valittuDS.data) {
@@ -71,7 +60,7 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
                          .map(x => x.replace(/ \(.*?\)/,''))
                          .map(x => Object.values(aikataulupaikatDS.data).find(a => a.lyhenne == x.trim() || a.tunniste == x.trim() || a.uicKoodi == x.trim()));
     if (uusiVali.includes(undefined)) {
-        log("Ohitetaan, ehkä data ei ollut vielä latautunut...");
+        log('odotellaan aikataulupaikkojen latautumista...');
         return false;
     }
     uusiVali = uusiVali.map(x => x.tunniste);
@@ -298,11 +287,19 @@ window.onload = () => {
 
         on(valittuDS.events, "done", ev => {
             if (valittunaRatanumero()) {
+                if (!ratanumerotDS.data || ratanumerotDS.data.length == 0) {
+                    log('odotellaan ratanumeroiden latautumista...');
+                    return;
+                }
                 yAxis.title.text = "(" + ev.target.data + ")";
                 on(yAxis.title.events, 'doublehit', () => kartta(yAxis.title.text));
                 yAxis.min = ratanumerotDS.data[ev.target.data][0];
                 yAxis.max = ratanumerotDS.data[ev.target.data][1];
             } else if (valittunaAikataulupaikka()) {
+                if (!aikataulupaikatDS.data || aikataulupaikatDS.data.length == 0) {
+                    log('odotellaan aikataulupaikkojen latautumista...');
+                    return;
+                }
                 yAxis.title.text = ev.target.data.map(x => aikataulupaikatDS.data[x].lyhenne).join(" - ");
                 yAxis.min = 0;
                 yAxis.max = ev.target.data.length - 1;
@@ -574,70 +571,71 @@ window.onload = () => {
         
 
         let luoRangetJaBreakit = ev => {
-            log("Luodaan rangeja ja breakkeja");
-            Object.values(ev.target.data).flat().forEach(x => {
-                x.ratakmvalit.filter(x => x.ratanumero == valittuDS.data)
-                                .forEach(function(r) {
-                    let range                        = new am4charts.ValueAxisDataItem();
-                    yAxis.axisRanges.push(range);
-                    range.value                      = r.alku.ratakm*1000 + r.alku.etaisyys;
-                    range.endValue                   = r.loppu.ratakm*1000 + r.loppu.etaisyys;
-                    range.grid.stroke                = am4core.color("blue").lighten(0.5);
-                    range.label.inside               = true;
-                    range.label.fontSize             = 12;
+            logDiff("Luodaan rangeja ja breakkeja", () => {
+                Object.values(ev.target.data).flat().forEach(x => {
+                    x.ratakmvalit.filter(x => x.ratanumero == valittuDS.data)
+                                    .forEach(function(r) {
+                        let range                        = new am4charts.ValueAxisDataItem();
+                        yAxis.axisRanges.push(range);
+                        range.value                      = r.alku.ratakm*1000 + r.alku.etaisyys;
+                        range.endValue                   = r.loppu.ratakm*1000 + r.loppu.etaisyys;
+                        range.grid.stroke                = am4core.color("blue").lighten(0.5);
+                        range.label.inside               = true;
+                        range.label.fontSize             = 12;
 
-                    if (x.uicKoodi) {
-                        range.label.dx               = -30;
-                    } else {
-                        range.label.dx               = -9;
-                        range.label.dy               = -15;
-                        range.label.verticalCenter   = "bottom"
-                        range.label.horizontalCenter = "middle"
-                        range.label.rotation         = 270;
-                    }
+                        if (x.uicKoodi) {
+                            range.label.dx               = -30;
+                        } else {
+                            range.label.dx               = -9;
+                            range.label.dy               = -15;
+                            range.label.verticalCenter   = "bottom"
+                            range.label.horizontalCenter = "middle"
+                            range.label.rotation         = 270;
+                        }
 
-                    range.label.tooltipText = x.tyyppi + "\n" + x.nimi;
-                    range.label.adapter.add("text", () => x.lyhenne);
-                    on(range.label.events, "doublehit", () => kartta(x.tunniste, x.tyyppi + ' ' + x.nimi + (x.lyhenne != x.nimi ? ' (' + x.lyhenne + ')' : '')));
+                        range.label.tooltipText = x.tyyppi + "\n" + x.nimi;
+                        range.label.adapter.add("text", () => x.lyhenne);
+                        on(range.label.events, "doublehit", () => kartta(x.tunniste, x.tyyppi + ' ' + x.nimi + (x.lyhenne != x.nimi ? ' (' + x.lyhenne + ')' : '')));
 
-                    if (range.value != range.endValue) {
-                        range.grid.strokeWidth = 0;
+                        if (range.value != range.endValue) {
+                            range.grid.strokeWidth = 0;
 
-                        let axisBreak = new am4charts.ValueAxisBreak();
-                        yAxis.axisBreaks.insert(axisBreak); // pitää insertoida aluksi, koska ylikirjottaa endLinet sun muut...
+                            let axisBreak = new am4charts.ValueAxisBreak();
+                            yAxis.axisBreaks.insert(axisBreak); // pitää insertoida aluksi, koska ylikirjottaa endLinet sun muut...
 
-                        axisBreak.stroke                = range.grid.stroke;
-                        axisBreak.breakSize             = 0.05;
-                        axisBreak.startValue            = range.value;
-                        axisBreak.endValue              = range.endValue;
-                        axisBreak.fillShape.opacity     = 0.2;
-                        axisBreak.endLine.strokeWidth   = 0;
-                        axisBreak.startLine.strokeWidth = 0;
+                            axisBreak.stroke                = range.grid.stroke;
+                            axisBreak.breakSize             = 0.05;
+                            axisBreak.startValue            = range.value;
+                            axisBreak.endValue              = range.endValue;
+                            axisBreak.fillShape.opacity     = 0.2;
+                            axisBreak.endLine.strokeWidth   = 0;
+                            axisBreak.startLine.strokeWidth = 0;
 
-                        on(range.label.events, "over", () => axisBreak.animate([{ property: "breakSize", to: 1    }], 100, am4core.ease.sinOut));
-                        on(range.label.events, "hit",  () => axisBreak.animate([{ property: "breakSize", to: 0.05 }], 100, am4core.ease.quadOut));
-                    }
+                            on(range.label.events, "over", () => axisBreak.animate([{ property: "breakSize", to: 1    }], 100, am4core.ease.sinOut));
+                            on(range.label.events, "hit",  () => axisBreak.animate([{ property: "breakSize", to: 0.05 }], 100, am4core.ease.quadOut));
+                        }
+                    });
+
                 });
-
             });
-            log("ranget ja breakit luotu");
         };
 
         let luoRanget = () => {
-            log("Luodaan rangeja");
-            Object.values(valittuDS.data).forEach((uicKoodi,index) => {
-                let x = aikataulupaikatDS.data[uicKoodi];
-                let range               = new am4charts.ValueAxisDataItem();
-                yAxis.axisRanges.push(range);
-                range.value             = index;
-                range.endValue          = index;
-                range.grid.stroke       = am4core.color("blue").lighten(0.5);
-                range.label.dx          = -30;
-                range.label.inside      = true;
-                range.label.fontSize    = 12;
-                range.label.tooltipText = x.tyyppi + "\n" + x.nimi;
-                range.label.adapter.add("text", () => x.lyhenne);
-                on(range.label.events, "doublehit", () => kartta(x.tunniste, x.tyyppi + ' ' + x.nimi + (x.lyhenne != x.nimi ? ' (' + x.lyhenne + ')' : '')));
+            logDiff("Luodaan rangeja", () => {
+                Object.values(valittuDS.data).forEach((uicKoodi,index) => {
+                    let x = aikataulupaikatDS.data[uicKoodi];
+                    let range               = new am4charts.ValueAxisDataItem();
+                    yAxis.axisRanges.push(range);
+                    range.value             = index;
+                    range.endValue          = index;
+                    range.grid.stroke       = am4core.color("blue").lighten(0.5);
+                    range.label.dx          = -30;
+                    range.label.inside      = true;
+                    range.label.fontSize    = 12;
+                    range.label.tooltipText = x.tyyppi + "\n" + x.nimi;
+                    range.label.adapter.add("text", () => x.lyhenne);
+                    on(range.label.events, "doublehit", () => kartta(x.tunniste, x.tyyppi + ' ' + x.nimi + (x.lyhenne != x.nimi ? ' (' + x.lyhenne + ')' : '')));
+                });
             });
         };
         
@@ -728,17 +726,17 @@ window.onload = () => {
             });
 
             on(series.events, "datavalidated", ev => {
-                log("Populoidaan", ev.target.name, "object cache");
-                ev.target.columns.each(x => {
-                    let sisainenTunniste = x.dataItem.dataContext.sisainenTunniste;
-                    let columns = objectCache[sisainenTunniste];
-                    if (!columns) {
-                        columns = [];
-                        objectCache[sisainenTunniste] = columns;
-                    }
-                    columns.push(x);
+                logDiff('Populoidaan', ev.target.name, 'object cache', () => {
+                    ev.target.columns.each(x => {
+                        let sisainenTunniste = x.dataItem.dataContext.sisainenTunniste;
+                        let columns = objectCache[sisainenTunniste];
+                        if (!columns) {
+                            columns = [];
+                            objectCache[sisainenTunniste] = columns;
+                        }
+                        columns.push(x);
+                    });
                 });
-                log(ev.target.name, "object cache populoitu");
             });
 
             let hoveroi = val => ev => objectCache[ev.target.dataItem.dataContext.sisainenTunniste]

@@ -1,3 +1,4 @@
+
 let aikataulutGraphQL = departureDate => `{
   "query": "{
     viewer {
@@ -108,7 +109,7 @@ let naytetaankoAikataulut = (min, max, seriesShown) => {
 };
 
 let luoJunaPopup = (lahtopaiva, junanumero) => {
-    let tunniste = lahtopaiva + ' (' + junanumero + ')';
+    let tunniste = !lahtopaiva ? undefined : lahtopaiva + ' (' + junanumero + ')';
 
     let [container, elemHeader] = luoIkkuna(tunniste);
     container.setAttribute("class", "popupContainer infoPopup aikatauluPopup");
@@ -156,28 +157,6 @@ let luoJunaPopup = (lahtopaiva, junanumero) => {
     yAxis.tooltip.dx = 110;
     yAxis.renderer.labels.template.tooltipText = "{value.formatDate(dd.MM.yyyy HH:mm:ss)}";
 
-    junapopup.dataSource = new am4core.DataSource();
-    junapopup.dataSource.data = [];
-    initDS(junapopup.dataSource);
-    monitor(junapopup.dataSource, lahtopaiva + '(' + junanumero + ')');
-
-    on(junapopup.dataSource.events, "parseended", ev => {
-        if (ev.target.data.length == 0) {
-            log('Ei dataa junalle', lahtopaiva, junanumero);
-        } else {
-            ev.target.data = ev.target.data[0].timeTableRows;
-            ev.target.data.forEach((x,i) => {
-                let aika = x.actualTime ? new Date(x.actualTime) : x.liveEstimateTime ? new Date(x.liveEstimateTime) : undefined;
-                let viive = !aika ? aika : dateFns.durationFns.toSeconds({ milliseconds: Math.abs(aika.getTime() - (new Date(x.scheduledTime)).getTime()) });
-                x.scheduledTime = new Date(x.scheduledTime);
-                x.valueY        = aika; // || ev.target.data[0].scheduledTime;
-                x.categoryX     = x.stationShortCode + '(' + i + ')';
-                x.paikka        = aikataulupaikatDS.data['' + x.stationUICCode];
-                x.viive         = !viive ? '' : (new Date(x.scheduledTime) < new Date(x.actualTime || x.liveEstimateTime) ? 'myöhässä ' : 'etuajassa ') + (viive < 60 ? viive + ' sekuntia' : viive < 120 ? '1 minuutti ' + (viive-60) + ' sekuntia' : 'n.' + Math.floor(viive/60) + ' minuuttia');
-            });
-        }
-    });
-
     xAxis.renderer.labels.template.adapter.add("textOutput", x => !x ? x : x.replace(/\(.*/, ""));
 
     let bullet                        = new am4core.Circle();
@@ -185,22 +164,95 @@ let luoJunaPopup = (lahtopaiva, junanumero) => {
     bullet.tooltipText                = "{paikka.tyyppi} {stationShortCode} ({stationUICCode}) {paikka.nimi}\n{valueY}\n{viive}";
     bullet.states.create("hover").properties.scale = 1.5;
 
-    window.aikatauluPopup = new am4charts.LineSeries();
-    aikatauluPopup.fill                 = "blue";
-    aikatauluPopup.name                 = "Aikataulu";
-    aikatauluPopup.dataFields.categoryX = 'categoryX';
-    aikatauluPopup.dataFields.dateY     = 'scheduledTime';
-    aikatauluPopup.bullets.push(bullet);
-    
-    window.toteumaPopup = new am4charts.LineSeries();
-    toteumaPopup.fill                 = "red";
-    toteumaPopup.name                 = "Toteuma";
-    toteumaPopup.dataFields.categoryX = 'categoryX';
-    toteumaPopup.dataFields.dateY     = 'valueY';
-    toteumaPopup.bullets.push(bullet);
+    let initSeries = tunniste => {
+        let dataSource = new am4core.DataSource();
+        dataSource.data = [];
+        initDS(dataSource);
+        monitor(dataSource, tunniste);
 
-    junapopup.series.pushAll([aikatauluPopup,toteumaPopup]);
+        let aikatauluPopup = new am4charts.LineSeries();
+        aikatauluPopup.dataSource = dataSource;
+        aikatauluPopup.fill                 = "blue";
+        aikatauluPopup.name                 = tunniste + " aikataulu";
+        aikatauluPopup.dataFields.categoryX = 'categoryX';
+        aikatauluPopup.dataFields.dateY     = 'scheduledTime';
+        aikatauluPopup.bullets.push(bullet);
+        
+        let toteumaPopup = new am4charts.LineSeries();
+        toteumaPopup.dataSource = dataSource;
+        toteumaPopup.fill                 = "red";
+        toteumaPopup.name                 = tunniste + " toteuma";
+        toteumaPopup.dataFields.categoryX = 'categoryX';
+        toteumaPopup.dataFields.dateY     = 'valueY';
+        toteumaPopup.bullets.push(bullet);
+        
+        on(dataSource.events, "parseended", ev => {
+            if (ev.target.data.length == 0) {
+                log('Ei dataa junalle', tunniste);
+            } else {
+                ev.target.data = ev.target.data[0].timeTableRows;
+                ev.target.data.forEach(x => {
+                    let aika = x.actualTime ? new Date(x.actualTime) : x.liveEstimateTime ? new Date(x.liveEstimateTime) : undefined;
+                    let viive = !aika ? aika : dateFns.durationFns.toSeconds({ milliseconds: Math.abs(aika.getTime() - (new Date(x.scheduledTime)).getTime()) });
+                    x.scheduledTime = new Date(x.scheduledTime);
+                    x.valueY        = aika; // || ev.target.data[0].scheduledTime;
+                    x.categoryX     = x.stationShortCode;
+                    x.paikka        = aikataulupaikatDS.data['' + x.stationUICCode];
+                    x.viive         = !viive ? '' : (new Date(x.scheduledTime) < new Date(x.actualTime || x.liveEstimateTime) ? 'myöhässä ' : 'etuajassa ') + (viive < 60 ? viive + ' sekuntia' : viive < 120 ? '1 minuutti ' + (viive-60) + ' sekuntia' : 'n.' + Math.floor(viive/60) + ' minuuttia');
+                });
+            }
 
-    junapopup.dataSource.url = luoAikatauluUrl(tunniste);
-    junapopup.dataSource.load();
+            let uudet = ev.target.data.filter(x => !junapopup.data.find(y => y.categoryX == x.categoryX));
+            if (uudet.length > 0) {
+                if (junapopup.data.length == 0) {
+                    junapopup.data = uudet;    
+                } else {
+                    junapopup.data = junapopup.data.flatMap(x => {
+                        let i = ev.target.data.indexOf(x);
+                        if (i > -1) {
+                            let suffix = ev.target.data.slice(i);
+                            let firstIncluded = suffix.findIndex(x => junapopup.data.includes(x));
+                            if (firstIncluded > -1) {
+                                return [x, ...suffix.slice(0, firstIncluded)];
+                            }
+                            return [x, ...ev.target.data.slice(i)];
+                        }
+                        return [x];
+                    }).filter( (value, index, self) => self.indexOf(value) === index);
+                    let jaaneet = ev.target.data.filter(x => !junapopup.data.find(y => y.categoryX == x.categoryX));
+                    junapopup.data = junapopup.data.concat(jaaneet);
+                }
+                junapopup.data = junapopup.data.concat(uudet);
+                junapopup.series.values.map(x => x.invalidateData());
+            }
+        });
+
+        junapopup.series.pushAll([aikatauluPopup, toteumaPopup]);
+
+        dataSource.url = luoAikatauluUrl(tunniste);
+        dataSource.load();
+    }
+
+    let haku = document.createElement('input');
+    haku.setAttribute('placeholder', 'hae...');
+    haku.setAttribute('style', 'display: none');
+    container.appendChild(haku);
+
+    let poista = tunniste => {
+        junapopup.series.values.filter(x => x.name.startsWith(tunniste))
+                               .forEach(x => {
+                                let removed = junapopup.series.removeIndex(junapopup.series.indexOf(x));
+                                setTimeout(() => {
+                                    log("Viivästetysti siivotaan", tunniste);
+                                    removed.dispose();
+                                }, 60000);
+                               });
+    };
+    let search = initSearch(haku, initSeries, poista, true, true);
+    search.settings.create = x => ({tunniste: x, nimi: x});
+    search.disable();
+    search.createItem(tunniste);
+    search.enable();
+    search.close();
+    search.settings.create = false;
 }
