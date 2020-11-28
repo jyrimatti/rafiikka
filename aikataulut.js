@@ -84,18 +84,8 @@ let lataaAikatauluRest = (paiva, callback) => {
     aikataulutDS.load();
 };
 
-let lataaAikatauluGraphQL = (paiva, callback) => {
-    fetch(graphQLUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'/*,
-            'Digitraffic-User': 'Rafiikka'*/
-        },
-        body: aikataulutGraphQL(paiva)
-    }).then(response => response.json())
-      .then(data => callback(parsiAikataulu(paiva, data.data.viewer.getTrainsByDepartureDateUsingGET)))
-      .catch(errorHandler);
-};
+let lataaAikatauluGraphQL = (paiva, callback) =>
+    postJson(graphQLUrl, aikataulutGraphQL(paiva), data => callback(parsiAikataulu(paiva, data.data.viewer.getTrainsByDepartureDateUsingGET)));
 
 let lataaAikataulu = lataaAikatauluRest;
 //let lataaAikataulu = lataaAikatauluGraphQL;

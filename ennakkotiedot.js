@@ -67,9 +67,20 @@ let ajankohtaAikavaleiksi = ajankohta => {
     }
 };
 
-let muotoileAikavali = vali => vali.split("/")
-                                   .map(d => dateFns.dateFns.format(new Date(d), "dd.MM.yyyy HH:mm:ss"))
-                                   .join(" - ");
+let muotoileAikavali = vali => {
+    let dates = vali.split("/").map(d => new Date(d));
+    let ds = dates.map(d => dateFns.dateFnsTz.utcToZonedTime(d, 'Europe/Helsinki'));
+    let format = 
+        ds[0].getSeconds() + ds[0].getMinutes() + ds[0].getHours() + ds[0].getMonth() == 0 && ds[0].getDate() == 1 &&
+        ds[1].getSeconds() == 0 && ds[1].getMinutes() == 59 && ds[1].getHours() == 23 && ds[1].getDate() == 31 && ds[1].getMonth() == 11
+            ? "yyyy" :
+        ds[0].getSeconds() + ds[0].getMinutes() + ds[0].getHours() == 0 &&
+        ds[1].getSeconds() == 0 && ds[1].getMinutes() == 59 && ds[1].getHours() == 23
+            ? "dd.MM.yyyy" :
+              "dd.MM.yyyy HH:mm";
+    let formatted = dates.map(d => dateFns.dateFns.format(d, format));
+    return formatted[0] == formatted[1] ? formatted[0] : formatted.join(" - ");
+};
 
 let luoEnnakkotieto = (ennakkotieto, aikavali) => rkmv => {
     let alkuRkm  = rkmv.alku.ratakm*1000  + rkmv.alku.etaisyys;
@@ -80,6 +91,7 @@ let luoEnnakkotieto = (ennakkotieto, aikavali) => rkmv => {
         alkuX:            aikavali[0],
         loppuX:           aikavali[1],
         voimassa:         muotoileAikavali(ennakkotieto.voimassa),
+        ratakmvali:       rkmv,
         zIndex:           -1 * (loppuRkm - alkuRkm) - 0.001*(aikavali[1].getTime() - aikavali[0].getTime())
     };
 

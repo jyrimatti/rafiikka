@@ -33,20 +33,15 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
             let u2 = (kaavio() && url.indexOf('-notifications') == -1 ? '&presentation=diagram' : '') +
                      (kaavio() && url.indexOf('-notifications') >= 0  ? '&schema=true' : '');
 
-            fetch((u1 + (tiling ? '&bbox=' + extent.join(',') : '') + u2 + u3).replace('?&','?'), {
-                method: 'GET'/*,
-                headers: {'Digitraffic-User': 'Rafiikka'}*/
-            }).then(response => response.json())
-              .then(response => {
-                    let features = format.readFeatures(response);
-                    features.forEach(applyStyle(styleOrHandler));
-                    if (prepareFeatures) {
-                        source.addFeatures(prepareFeatures(features, layer));
-                    } else {
-                        source.addFeatures(features);
-                    }
-                })
-              .catch(errorHandler);
+            getJson((u1 + (tiling ? '&bbox=' + extent.join(',') : '') + u2 + u3).replace('?&','?'), data => {
+                let features = format.readFeatures(data);
+                features.forEach(applyStyle(styleOrHandler));
+                if (prepareFeatures) {
+                    source.addFeatures(prepareFeatures(features, layer));
+                } else {
+                    source.addFeatures(features);
+                }
+            });
         }
     });
     layer = new ol.layer.Vector({

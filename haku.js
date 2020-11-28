@@ -31,6 +31,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
         score: _ => item => item.score,
         render: {
             option: (item, escape) => {
+                let tunniste = item.tunniste;
                 let reitti = onkoReitti(item.tunniste);
                 if (reitti) {
                     reitti = [reitti[1]].concat(reitti[2] ? reitti[2].split(',') : []).concat(reitti[3]);
@@ -38,18 +39,17 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                                                                      .filter(y => x == y.tunniste || ''+x == y.uicKoodi || y.lyhenne && x.toLowerCase() == y.lyhenne.toLowerCase())
                                                                      .map(x => x.tunniste)
                                                                      .find(x => x))
-                    if (reitti.includes(undefined)) {
-                        reitti = undefined;
+                    if (!reitti.includes(undefined)) {
+                        tunniste = reitti[0] + '=>' + (reitti.length > 2 ? reitti.slice(1,-1).join(',') + '=>' : '') + reitti[reitti.length-1];
                     }
                 }
                 return `
                 <div>
-                    <span class="title">
-                        <span class="group">${item.ryhma == 'Linkit' || item.ryhma == 'Muunnokset' || item.ryhma == 'Raideosuus' || item.ryhma == 'Rautatieliikennepaikka tai liikennepaikan osa' ? '' : escape(item.ryhma)}</span>
+                    <div class="title">
+                        <span class="group">${['Linkit', 'Muunnokset', 'Raideosuus', 'Rautatieliikennepaikka tai liikennepaikan osa'].includes(item.ryhma) || item.nimi.startsWith(item.ryhma) ? '' : escape(item.ryhma)}</span>
                         <span class="name">${item.nimi}</span>
-                        <span class="score">${escape(item.score)}</span>
-                    </span>
-                    ${ lisaaPopuppiin ? '' : luoLinkit('', item.tunniste, escape(item.nimi)) }
+                    </div>
+                    ${ lisaaPopuppiin ? '' : luoLinkit('', tunniste, escape(item.nimi)) }
                 </div>
             `}
         },
@@ -105,6 +105,24 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
     if (!lisaaPopuppiin) {
         // laitetaan clickit valumaan varsinaisiin linkkeihin saakka
         search.$dropdown_content.on('mousedown', () => false);
+
+        var prev;
+        search.$control.on('keydown', ev => {
+            if (ev.key == "ArrowRight") {
+                if (prev) {
+                    prev.onmouseout();
+                    prev = undefined;
+                }
+                let opt = search.$activeOption[0];
+                prev = opt.querySelector('.karttaikoni');
+                prev.onmouseover({ pageX: 0, pageY: 0});
+            } else if (ev.key == 'ArrowLeft') {
+                if (prev) {
+                    prev.onmouseout();
+                    prev = undefined;
+                }
+            }
+        });
     }
 
     return search;
@@ -205,19 +223,11 @@ let hakuMuodosta = (str, callback, vainJunat) => {
                 }
 
                 let id = ''+Math.random();
-                fetch(koordinaattiUrl(m[1] + ',' + m[2], srs), {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'/*,
-                        'Digitraffic-User': 'Rafiikka'*/
-                    }
-                }).then(response => response.json())
-                .then(data => {
+                getJson(koordinaattiUrl(m[1] + ',' + m[2], srs), data => {
                     let rkm = data.flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
                     let pm  = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
                     document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '') + (pm ? ' <br />' + pm : '');
-                })
-                .catch(errorHandler);
+                });
                 
                 ret.push({
                     luokka:     'Infra',
@@ -230,18 +240,10 @@ let hakuMuodosta = (str, callback, vainJunat) => {
             m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)$/);
             if (m) {
                 let id = Math.random();
-                fetch(ratakmSijaintiUrl(m[1], m[2], m[3]), {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'/*,
-                        'Digitraffic-User': 'Rafiikka'*/
-                    }
-                }).then(response => response.json())
-                .then(data => {
+                getJson(ratakmSijaintiUrl(m[1], m[2], m[3]), data => {
                     let pm = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
                     document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
-                })
-                .catch(errorHandler);
+                });
                 
                 ret.push({
                     luokka:     'Infra',
@@ -254,18 +256,10 @@ let hakuMuodosta = (str, callback, vainJunat) => {
             m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)\s*(?:->|-|>|\/)\s*([^+]+)\+(\d+)$/);
             if (m) {
                 let id = Math.random();
-                fetch(ratakmValiUrl(m[1], m[2], m[3], m[4], m[5]), {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'/*,
-                        'Digitraffic-User': 'Rafiikka'*/
-                    }
-                }).then(response => response.json())
-                .then(data => {
+                getJson(ratakmValiUrl(m[1], m[2], m[3], m[4], m[5]), data => {
                     let pm = data.flatMap(x => x.paikantamismerkkivalit.map(muotoilePmv)).join('<br />');
                     document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
-                })
-                .catch(errorHandler);
+                });
 
                 ret.push({
                     luokka:     'Infra',
@@ -298,18 +292,10 @@ let hakuMuodosta = (str, callback, vainJunat) => {
             m = str.match(/^(\d+)([+-])(\d+)$/);
             if (m) {
                 let id = Math.random();
-                fetch(pmSijaintiUrl(m[1], m[2], m[3], m[4], m[5]), {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'/*,
-                        'Digitraffic-User': 'Rafiikka'*/
-                    }
-                }).then(response => response.json())
-                .then(data => {
+                getJson(pmSijaintiUrl(m[1], m[2], m[3], m[4], m[5]), data => {
                     let rkm = data.flatMap(x => x.sijainnit).flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
                     document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '');
-                })
-                .catch(errorHandler);
+                });
 
                 ret.push({
                     luokka:     'Infra',
@@ -518,13 +504,21 @@ let osuuko_ = matchers => value => {
 let parsiInfraNimi = (ryhma, row) => {
     let a = (row.tyyppi && row.tyyppi.toLowerCase() != ryhma.toLowerCase() ? row.tyyppi[0].toUpperCase() + row.tyyppi.slice(1) + ' ' : '');
     let b = (row.lyhenne || row.numero || row.uicKoodi || row.siltakoodi || (row.ratanumero && row.ratakm ? '(' + row.ratanumero + ') ' + row.ratakm : row.ratanumero ? '(' + row.ratanumero + ')' : undefined) );
-    let c = (row.tunnus || row.nimi || row.linjaraidetunnukset || row.turvalaiteNimi || (row.kaukoOhjausTunnisteet ? row.kaukoOhjausTunnisteet.map(x => x.kaukoOhjausPaikka + ' ' + x.kaukoOhjausNimi).join(', ') : undefined));
-    let d = row.turvalaiteRaide ? '(' + row.turvalaiteRaide + ')' : undefined;
-    let e = (b || c || d ? undefined : row.tunniste);
-    return [a,b,c,d,e].filter(x => x).join(' ');
+    let c = row.tunnus || row.kuvaus;
+    let d = (row.nimi || row.linjaraidetunnukset || row.turvalaiteNimi || (row.kaukoOhjausTunnisteet ? row.kaukoOhjausTunnisteet.map(x => x.kaukoOhjausPaikka + ' ' + x.kaukoOhjausNimi).join(', ') : undefined));
+    let e = row.turvalaiteRaide ? '(' + row.turvalaiteRaide + ')' : undefined;
+    let f = (b || c || d || e ? undefined : row.tunniste);
+    return [a,b,c,d,e,f].filter(x => x).map(x => '<span class="searchElem">' + x + '</span>').join(' ');
 }
 
-let parsiJetiNimi = row => row.sisainenTunniste;
+let parsiJetiNimi = row => {
+    let a = row.sisainenTunniste;
+    let b = row.tila;
+    let c = row.asia || row.tyyppi || row.tyo;
+    let d = row.voimassa ? muotoileAikavali(row.voimassa) : undefined;
+    let e = row.tyonLisatiedot || row.vekSelite || row.eivekSelite || (row.tyonosat ? row.tyonosat.map(x => x.tyyppi + ': ' + x.selite).join('. ') : undefined);
+    return [a,b,c,d,e].filter(x => x).map(x => '<span class="searchElem">' + x + '</span>').join(' ');
+};
 
 let parsiInfraRyhma = row => {
     let trex = onkoTREX(row.tunniste);

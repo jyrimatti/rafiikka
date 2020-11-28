@@ -1,6 +1,11 @@
-let luoIkkuna = title => {
+let luoIkkuna = (title, offsetX, offsetY) => {
     let container = document.createElement("div");
     document.body.appendChild(container);
+
+    if (offsetX) {
+        container.style.left = (offsetX + 400 > window.innerWidth ? offsetX - 405 : offsetX + 10) + 'px';
+        container.style.top  = (offsetY + 10) + 'px';
+    }
 
     let elemPopup = document.createElement("div");
     elemPopup.setAttribute("class", "popup");
@@ -27,15 +32,15 @@ let luoIkkuna = title => {
     return [container, elemHeader];
 };
 
-let avaaInfo = tunniste => {
+let avaaInfo = (tunniste, offsetX, offsetY) => {
     let url = onkoInfra(tunniste) || onkoTREX(tunniste) ? luoInfraAPIUrl(tunniste) :
               onkoJeti(tunniste)                        ? luoEtj2APIUrl(tunniste) :
               onkoJuna(tunniste)                        ? luoAikatauluUrl(tunniste) :
               onkoRuma(tunniste)                        ? luoRumaUrl(tunniste) :
               undefined;
-              //TODO ruma ja aikataulut jotenkin
+              //TODO aikataulut jotenkin
     if (url) {
-        let [container, elemHeader] = luoIkkuna(tunniste);
+        let [container, elemHeader] = luoIkkuna(tunniste, offsetX, offsetY);
         container.setAttribute("class", "popupContainer infoPopup");
 
         let open = document.createElement("div");
@@ -51,19 +56,21 @@ let avaaInfo = tunniste => {
         dragElement(container);
 
         if (onkoJuna(tunniste) || onkoRuma(tunniste)) {
-            fetch(url, {
-                method: 'GET',
-                headers: {
-                    /*'Digitraffic-User': 'Rafiikka'*/
-                }
-            }).then(response => response.json())
-              .then(data => {
+            getJson(url, data => {
                 content.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
-              })
-              .catch(errorHandler);
+            });
         } else {
             content.innerHTML = '<iframe src="' + (url.indexOf('.json') > -1 ? url.replace('.json', '.html')
                                                                              : url) + '"></iframe>';
         }
+        return container;
     }
-}
+};
+
+let kurkistaInfo = (elem, tunniste, offsetX, offsetY) => {
+    let container = avaaInfo(tunniste, offsetX, offsetY);
+    elem.onmouseout = () => {
+        container.parentElement.removeChild(container);
+        container.remove();
+    };
+};

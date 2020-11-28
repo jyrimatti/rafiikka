@@ -1,6 +1,6 @@
 
-let luoKarttaElementti = (tunniste, title) => {
-    let [container, elemHeader] = luoIkkuna(title);
+let luoKarttaElementti = (tunniste, title, offsetX, offsetY) => {
+    let [container, elemHeader] = luoIkkuna(title, offsetX, offsetY);
     container.setAttribute("class", "popupContainer");
 
     let schema = document.createElement("label");
@@ -144,8 +144,8 @@ let wktLayer = (tunniste, nimi) => {
 
 let flatLayerGroups = layers => [].concat.apply([], layers.map(l => (l instanceof ol.layer.Group) ? l.getLayers().getArray() : l ));
 
-let kartta = (tunniste, title) => {
-    let [container, elem, haku, kaavioCheck] = luoKarttaElementti(tunniste, title || tunniste);
+let kartta = (tunniste, title, offsetX, offsetY) => {
+    let [container, elem, haku, kaavioCheck] = luoKarttaElementti(tunniste, title || tunniste, offsetX, offsetY);
     let overlay = new ol.Overlay({
         element: elem.parentElement.getElementsByClassName('popup')[0],
         offset: [5, 5]
@@ -207,8 +207,16 @@ let kartta = (tunniste, title) => {
         search.settings.create = false;
     }));
     
-    return map;
+    return container;
 }
+
+let kurkistaKartta = (elem, tunniste, title, offsetX, offsetY) => {
+    let container = kartta(tunniste, title, offsetX, offsetY);
+    elem.onmouseout = () => {
+        container.parentElement.removeChild(container);
+        container.remove();
+    };
+};
 
 let poistaKartalta = map => tunniste => {
     map.removeLayer(flatLayerGroups(map.getLayers().getArray()).find(l => l.get('shortName') == tunniste));

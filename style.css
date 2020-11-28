@@ -20,15 +20,15 @@ ul.ikonit  {
     padding: 0;
     list-style-type: none;
 }
-ul.ikonit  li {
-    display: inline;
+ul.ikonit li {
+    display: table-cell;
 }
 .popupContainer ul, .selectize-control ul {
     margin: 0;
     list-style-type: none;
 }
-.popupContainer ul li, .selectize-control ul li {
-    display: inline;
+.selectize-control ul li {
+    display: table-cell;
 }
 
 .ol-zoom {
@@ -49,10 +49,10 @@ ul.ikonit  li {
 
 .popupContainer {
     position: absolute;
-    bottom: 0;
-    right: 20%;
+    top: 0;
+    right: 1em;
     width: 400px;
-    height: 400px;
+    height: 700px;
     border: 1px solid Gray;
     background: white;
     resize: both;
@@ -222,7 +222,7 @@ body.fi .en, body.en .fi {
 .selectize-control .optgroup div[data-selectable] > ul {
     position: absolute;
     top: 0;
-    right: 15px;
+    right: 0;
     bottom: unset;
     left: unset;
     padding: 0;
@@ -281,4 +281,19 @@ body.fi .en, body.en .fi {
 }
 .hakuohje:hover h5 {
     display: unset;
+}
+
+.searchElem {
+    border-left: 1px dotted gray;
+    padding-left: 3px;
+    white-space: nowrap;
+}
+.searchElem:first-child {
+    border-left: 0;
+    padding-left: 0;
+}
+.selectize-control .optgroup .title {
+    padding-left: 1.5em;
+    padding-right: 3em;
+    text-indent: -1.5em;
 }

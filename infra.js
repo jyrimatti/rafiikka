@@ -210,12 +210,8 @@ let resolveMask = (kmvali, voimassa, kaavio, callback) => {
             ? 'radat/' + kmvali.ratanumero + '/' + kmvali.alku.ratakm + '+' + kmvali.alku.etaisyys
             : 'radat/' + kmvali.ratanumero + '/' + kmvali.alku.ratakm + '+' + kmvali.alku.etaisyys + '-' + kmvali.loppu.ratakm + '+' + kmvali.loppu.etaisyys;
     let url = infraAPIUrl + valiTaiSijainti + '.geojson?' + (kaavio() ? 'presentation=diagram&' : '') + 'propertyName=geometria&time=' + voimassa;
-    fetch(url, {
-        method: 'GET'/*,
-        headers: {'Digitraffic-User': 'Rafiikka'}*/
-    }).then(response => response.json())
-      .then(response => {
-        let mask = format.readFeatures(response);
+    getJson(url, data => {
+        let mask = format.readFeatures(data);
         var virheelliset = [];
         var unionMask;
         mask.forEach(feature => {
@@ -251,6 +247,5 @@ let resolveMask = (kmvali, voimassa, kaavio, callback) => {
         });
         
         callback(unionMask);
-      })
-      .catch(errorHandler);
+      });
 }

@@ -19,7 +19,7 @@ on(ratanumerotDS.events, "done", () => {
     }
 });
 
-let valittunaRatanumero      = () => typeof valittuDS.data == "string" && valittuDS.data.length > 0;
+let valittunaRatanumero      = () => onkoRatanumero(valittuDS.data);
 let valittunaAikataulupaikka = () => valittuDS.data instanceof Array && valittuDS.data.length > 0;
 
 window.aktiivisetJunatDS = new am4core.DataSource();
@@ -324,6 +324,10 @@ window.onload = () => {
         let ratanumeroSelect = ratanumeroContainer.createChild(am4core.Label);
         ratanumeroSelect.paddingLeft = 25;
         on(ratanumerotDS.events, "done", ev => {
+            if (!ev.target.data || ev.target.data.length == 0) {
+                log("odotellaan ratanumeroiden latautumista...");
+                return false;
+            }
             let ratanumerot = Object.keys(ev.target.data).sort();
             ratanumeroSelect.html = "<label for='ratanumeroRadio'><select id='ratanumero' onchange='window.ratanumeroChanged(this.value)'>{}</select></label>";
             ratanumeroSelect.html = ratanumeroSelect.html.replace("{}", ratanumerot.map(x => "<option " + (sijaintiParam() == x ? "selected='selected'" : "") + ">" + x + "</option>").join(""));
@@ -338,6 +342,10 @@ window.onload = () => {
         let aikataulupaikkaSelect = aikataulupaikkaContainer.createChild(am4core.Label);
         aikataulupaikkaSelect.paddingLeft = 25;
         on(aikataulupaikatDS.events, "done", ev => {
+            if (!ev.target.data || ev.target.data.length == 0) {
+                log("odotellaan aikataulupaikkojen latautumista...");
+                return false;
+            }
             aikataulupaikkaSelect.html = "<label for='aikataulupaikkaRadio'><select id='aikataulupaikka1' onchange='window.aikataulupaikkaChanged(this.value, document.getElementById(\"aikataulupaikka2\").value)'><option></option>{1}</select> - " +
                                                                             "<select id='aikataulupaikka2' onchange='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value, this.value)'><option></option>{2}</select></label>";
             let aikataulupaikat1 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).sort( (a,b) => a.lyhenne < b.lyhenne ? -1 : a.lyhenne > b.lyhenne ? 1 : 0);
