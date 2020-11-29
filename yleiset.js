@@ -97,20 +97,20 @@ let rumaAikavali  = () => 'start=' + pyoristaAjanhetki(rajat()[0]) + "&end=" + p
 let junienEsitysaikavali = 1000*60*60*24*5;
 
 let ratanumeroUrl             = ratanumero => infraAPIUrl + "radat.json?cql_filter=ratanumero='" + ratanumero + "'&" + infraAikavali();
-let ratanumerotUrl            = () => infraAPIUrl + "radat.json?propertyName=ratakilometrit,ratanumero&" + infraAikavali();
+let ratanumerotUrl            = () => infraAPIUrl + "radat.json?propertyName=ratakilometrit,ratanumero,voimassa&" + infraAikavali();
 let ratakmSijaintiUrl         = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.json?' + infraAikavali();
 let pmSijaintiUrl             = (numero, suunta, etaisyys) => infraAPIUrl + 'paikantamismerkit/' + numero + suunta + etaisyys + '.json?' + infraAikavali();
 let ratakmValiUrl             = (ratanumero, alkuratakm, alkuetaisyys, loppuratakm, loppuetaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + alkuratakm + '+' + alkuetaisyys + '-' + loppuratakm + '+' + loppuetaisyys + '.json?' + infraAikavali();
-let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka,ratakmvalit&" + infraAikavali();
+let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka,ratakmvalit,voimassa&" + infraAikavali();
 let reittiUrl                 = (alku, etapit, loppu) => infraAPIUrl + "reitit/kaikki/" + alku + "/" + (/*TODO*/ false && etapit && etapit.length > 0 ? etapit.join(',') + '/' : '') + loppu + ".json?propertyName=geometria,liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet&" + infraAikavali();
 
-let rautatieliikennepaikatUrl = () => infraAPIUrl + "rautatieliikennepaikat.json?propertyName=lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti,virallinenSijainti&srsName=crs:84&" + infraAikavali();
-let liikennepaikanOsatUrl     = () => infraAPIUrl + "liikennepaikanosat.json?propertyName=liikennepaikka,lyhenne,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti,virallinenSijainti&srsName=crs:84&" + infraAikavali();
-let raideosuudetUrl           = () => infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27raideosuus%27&propertyName=geometria,tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tyyppi,uickoodi&srsName=crs:84&" + infraAikavali();
-let laituritUrl               = () => infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27laituri%27&propertyName=geometria,tunniste.tunniste,tunniste.kuvaus,tunniste.laskennallisetRatakmvalit,tunniste.tunnus,tyyppi,uickoodi&srsName=crs:84&" + infraAikavali();
+let rautatieliikennepaikatUrl = () => infraAPIUrl + "rautatieliikennepaikat.json?propertyName=lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,voimassa&srsName=crs:84&" + infraAikavali();
+let liikennepaikanOsatUrl     = () => infraAPIUrl + "liikennepaikanosat.json?propertyName=liikennepaikka,lyhenne,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,voimassa&srsName=crs:84&" + infraAikavali();
+let raideosuudetUrl           = () => infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27raideosuus%27&propertyName=geometria,tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tyyppi,uickoodi,voimassa&srsName=crs:84&" + infraAikavali();
+let laituritUrl               = () => infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27laituri%27&propertyName=geometria,tunniste.tunniste,tunniste.kuvaus,tunniste.laskennallisetRatakmvalit,tunniste.tunnus,tyyppi,uickoodi,voimassa&srsName=crs:84&" + infraAikavali();
 
-let elementitUrl              = () => infraAPIUrl + "elementit.json?propertyName=tunniste,nimi,ratakmsijainnit&" + infraAikavali();
-let lorajatUrl                = () => infraAPIUrl + "liikenteenohjauksenrajat.json?propertyName=tunniste,leikkaukset.ratakmsijainnit&" + infraAikavali();
+let elementitUrl              = () => infraAPIUrl + "elementit.json?propertyName=tunniste,nimi,ratakmsijainnit,voimassa&" + infraAikavali();
+let lorajatUrl                = () => infraAPIUrl + "liikenteenohjauksenrajat.json?propertyName=tunniste,leikkaukset.ratakmsijainnit,voimassa&" + infraAikavali();
 
 let eiUrlRatanumero = () => tila => etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27'  + tila + '%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa&' + etj2Aikavali();
 let esUrlRatanumero = () => tila => etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27' + tila + '%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa&' + etj2Aikavali();
@@ -126,8 +126,8 @@ let junasijainnitUrl        = () => 'https://rata.digitraffic.fi/api/v1/train-lo
 let junasijainnitGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/train-locations.geojson/latest/';
 
 let koordinaattiUrl        = (coord,srsName) => infraAPIUrl + 'koordinaatit/' + coord + '.json?' + (srsName ? 'srsName=' + srsName + '&' : '') + infraAikavali();
-let ratakmMuunnosUrl       = coord => infraAPIUrl + 'koordinaatit/' + coord + '.json?propertyName=ratakmsijainnit&srsName=crs:84&' + infraAikavali();
-let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.geojson?propertyName=geometria&srsName=crs:84&' + infraAikavali();
+let ratakmMuunnosUrl       = coord => infraAPIUrl + 'koordinaatit/' + coord + '.json?propertyName=ratakmsijainnit,voimassa&srsName=crs:84&' + infraAikavali();
+let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.geojson?propertyName=geometria,voimassa&srsName=crs:84&' + infraAikavali();
 
 let rtUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?'    + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 let rtSingleUrl        = (tunniste) => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications/'         + tunniste + '/latest.json';

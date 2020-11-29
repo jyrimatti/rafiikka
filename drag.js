@@ -1,10 +1,10 @@
 var elementDragged;
 
 let dragstart = ev => {
-    if (!ev.target.id) {
-        ev.target.id = Math.random().toString(36);
+    if (!ev.target.parentElement.id) {
+        ev.target.parentElement.id = Math.random().toString(36);
     }
-    elementDragged = [ev.target.id, ev.clientX, ev.clientY];
+    elementDragged = [ev.target.parentElement.id, ev.clientX, ev.clientY];
 };
 
 let dragend = ev => {
@@ -18,9 +18,9 @@ let dragend = ev => {
 };
 
 let dragElement = (elem, onDrop) => {
-    elem.setAttribute("draggable", "true");
-    elem.ondragstart = dragstart;
-    elem.ondragend = dragend;
+    elem.querySelector('.header').setAttribute("draggable", "true");
+    elem.querySelector('.header').ondragstart = dragstart;
+    elem.querySelector('.header').ondragend = dragend;
     if (onDrop) {
         let header = elem.getElementsByClassName('header')[0];
         header.ondragenter = ev => ev.target.ondrop ? ev.target.classList.add('over') : '';

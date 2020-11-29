@@ -38,6 +38,12 @@ ul.ikonit li {
     top: 6.5em;
 }
 
+.ol-scale-line,
+.ol-attribution.ol-uncollapsible {
+    bottom: 2.5em;
+    font-size: 0.6em;
+}
+
 .palkki {
     position: absolute;
     z-index: 2;
@@ -296,4 +302,25 @@ body.fi .en, body.en .fi {
     padding-left: 1.5em;
     padding-right: 3em;
     text-indent: -1.5em;
+}
+
+.aikavalinta {
+    position: absolute;
+    display: flex;
+    bottom: 0;
+    left: 0.5em;
+    right: 0.5em;
+}
+.aikavalinta .alkuaika,
+.aikavalinta .loppuaika {
+    width: 8em;
+    flex: 1;
+}
+.aikavalinta .slider {
+    appearance: none;
+    flex: auto;
+    min-width: 2em;
+}
+.aikavalinta input:disabled {
+    pointer-events: none;
 }

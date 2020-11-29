@@ -1,4 +1,27 @@
 let styles = {
+    // copy-pasted from ol source
+    default: [
+        new ol.style.Style({
+            image: new ol.style.Circle({
+            fill: new ol.style.Fill({
+                color: 'rgba(255,255,255,0.4)'
+                }),
+            stroke: new ol.style.Stroke({
+                color: '#3399CC',
+                width: 1.25
+                }),
+            radius: 5
+            }),
+            fill: new ol.style.Fill({
+            color: 'rgba(255,255,255,0.4)'
+            }),
+            stroke: new ol.style.Stroke({
+            color: '#3399CC',
+            width: 1.25
+            })
+        })
+        ],
+
     circle: (radius, color) => {
         var vcolor = ol.color.asArray(color);
         vcolor[3] = 1.0;

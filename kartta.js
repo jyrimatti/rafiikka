@@ -27,7 +27,91 @@ let luoKarttaElementti = (tunniste, title, offsetX, offsetY) => {
     kartta.setAttribute("class", "kartta");
     container.appendChild(kartta);
 
-    return [container, kartta, haku, check];
+    let aikavalinta = document.createElement('div');
+    aikavalinta.setAttribute('class', 'aikavalinta');
+    container.appendChild(aikavalinta);
+
+    let hetki = pyoristaAjanhetki(aikaParam())
+
+    let alkuaika = document.createElement('input');
+    alkuaika.setAttribute('class', 'ajanhetki alkuaika');
+    alkuaika.setAttribute('placeholder', 'alkuaika');
+    alkuaika.value = hetki;
+
+    let loppuaika = document.createElement('input');
+    loppuaika.setAttribute('class', 'ajanhetki loppuaika');
+    loppuaika.setAttribute('placeholder', 'loppuaika');
+    loppuaika.value = hetki;
+
+    let sliderParent = document.createElement('span');
+    let slider = document.createElement('input');
+    sliderParent.appendChild(slider);
+    slider.setAttribute('type', 'range');
+    slider.setAttribute('class', 'slider');
+    slider.disabled = true;
+    slider.min = new Date(alkuaika.value).getTime();
+    slider.max = new Date(loppuaika.value).getTime();
+    sliderParent.title = 'Näytetään ajanhetki ' + dateFns.dateFns.format(dateFns.dateFnsTz.utcToZonedTime(new Date(hetki), 'Europe/Helsinki'), "dd.MM.yyyy HH:mm");
+
+    aikavalinta.appendChild(alkuaika);
+    aikavalinta.appendChild(sliderParent);
+    aikavalinta.appendChild(loppuaika);
+
+    let [aa,la] = [alkuaika, loppuaika].map(x => flatpickr(x, { enableTime: true, allowInput: true }));
+    aa.config.onChange.push( () => {
+        if (aa.selectedDates[0] > la.selectedDates[0]) {
+            la.setDate(aa.selectedDates[0]);
+        }
+    });
+    la.config.onChange.push( () => {
+        if (aa.selectedDates[0] > la.selectedDates[0]) {
+            la.setDate(aa.selectedDates[0]);
+        }
+    });
+    [aa, la].forEach(x => x.config.onChange.push( () => {
+        if (aa.selectedDates[0] == la.selectedDates[0]) {
+            slider.disabled = true;
+        }
+        slider.min = aa.selectedDates[0].getTime();
+        slider.max = la.selectedDates[0].getTime();
+        slider.step = Math.floor((slider.max - slider.min) / 20);
+    }));
+    slider.parentElement.onclick = _ => {
+        let a = aa.selectedDates[0];
+        let b = la.selectedDates[0];
+        if (a.getTime() != b.getTime()) {
+            slider.disabled = false;
+            slider.onchange();
+        }
+    };
+    slider.onclick = () => {
+        slider.disabled = true;
+        slider.onchange();
+    };
+    slider.onchange = ev => {
+        let a = aa.selectedDates[0];
+        let b = la.selectedDates[0];
+        if (a.getTime() == b.getTime() || !slider.disabled) {
+            slider.parentElement.title = 'Näytetään ajanhetki ' + dateFns.dateFns.format(dateFns.dateFnsTz.utcToZonedTime(a, 'Europe/Helsinki'), "dd.MM.yyyy HH:mm");
+        } else {
+            slider.parentElement.title = 'Näytetään aikaväli ' + dateFns.dateFns.format(a, "dd.MM.yyyy HH:mm") + ' - ' + dateFns.dateFns.format(b, "dd.MM.yyyy HH:mm");
+        }
+        if (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+        }
+        let stored1 = slider.onclick
+        let stored2 = slider.parentElement.onclick
+        slider.onclick = undefined;
+        slider.parentElement.onclick = undefined;
+        setTimeout(() => {
+                slider.onclick = stored1;
+                slider.parentElement.onclick = stored2;
+            } , 10);
+    };
+
+    return [container, kartta, haku, check, slider, alkuaika, loppuaika];
 };
 
 let onDrop = lisaa => (source, target) => {
@@ -97,7 +181,7 @@ let junaLayer = (map, tunniste) => {
         strategy: ol.loadingstrategy.all,
         loader: _ => {
             etsiJunat(tunniste).forEach(juna => {
-                let f = applyStyle(trainStyle)(new ol.Feature({
+                let f = applyStyle(trainStyle, map.ajanhetki)(new ol.Feature({
                     geometry:      mkPoint(juna.location),
                     departureDate: juna.departureDate,
                     trainNumber:   juna.trainNumber,
@@ -145,14 +229,18 @@ let wktLayer = (tunniste, nimi) => {
 let flatLayerGroups = layers => [].concat.apply([], layers.map(l => (l instanceof ol.layer.Group) ? l.getLayers().getArray() : l ));
 
 let kartta = (tunniste, title, offsetX, offsetY) => {
-    let [container, elem, haku, kaavioCheck] = luoKarttaElementti(tunniste, title || tunniste, offsetX, offsetY);
+    let [container, elem, haku, kaavioCheck, slider, alkuaika, loppuaika] = luoKarttaElementti(tunniste, title || tunniste, offsetX, offsetY);
     let overlay = new ol.Overlay({
         element: elem.parentElement.getElementsByClassName('popup')[0],
         offset: [5, 5]
     });
+
     kaavioCheck.checked = moodiParam() == 'kaavio';
     let onkoKaavio = () => kaavioCheck.checked;
-    let lrs = layers(onkoKaavio);
+    let ajanhetki = () => new Date(parseInt(slider.value));
+    window.aikavali = () => [new Date(parseInt(slider.min)), new Date(parseInt(slider.max))];
+
+    let lrs = layers(onkoKaavio, ajanhetki, aikavali);
     window.map = new ol.Map({
         target: elem,
         overlays: [overlay],
@@ -180,9 +268,41 @@ let kartta = (tunniste, title, offsetX, offsetY) => {
     map.addInteraction(hover(overlay, lrs));
 
     map.kaavio = onkoKaavio;
+    map.ajanhetki = ajanhetki;
+    map.aikavali = aikavali;
+
     kaavioCheck.onchange = _ => {
         log('Moodi vaihtui arvoon', onkoKaavio(), 'päivitetään layer data');
         flatLayerGroups(map.getLayers().getArray()).forEach(l => l.getSource().refresh());
+    };
+    let paivitaTitle = () => {
+        let a = aikavali()[0];
+        let b = aikavali()[1];
+        if (a.getTime() == b.getTime() || !slider.disabled) {
+            slider.parentElement.title = 'Näytetään ajanhetki ' + dateFns.dateFns.format(ajanhetki(), "dd.MM.yyyy HH:mm");
+        } else {
+            slider.parentElement.title = 'Näytetään aikaväli ' + dateFns.dateFns.format(a, "dd.MM.yyyy HH:mm") + ' - ' + dateFns.dateFns.format(b, "dd.MM.yyyy HH:mm");
+        }
+        if (a.getTime() == b.getTime()) {
+            slider.disabled = true;
+        }
+    };
+    [alkuaika, loppuaika].forEach(x => x.onchange = _ => {
+        logDiff('Aikaväli vaihtui arvoon', aikavali(), 'päivitetään layer data', () => {
+            paivitaTitle();
+            flatLayerGroups(map.getLayers().getArray()).forEach(l => l.getSource().refresh());
+        });
+    });
+    let handler = _ => {
+        logDiff('Aikavalinta vaihtui, renderöidään kartta', () => {
+            paivitaTitle();
+            flatLayerGroups(map.getLayers().getArray()).forEach(l => l.getSource().changed());
+        });
+    };
+    let orig = slider.onchange;
+    slider.onchange = ev => {
+        orig(ev);
+        handler(ev);
     };
 
     onStyleChange(elem.parentElement, () => setTimeout(() => map.updateSize(), 200));
@@ -226,12 +346,12 @@ let lisaaKartalle = (map, overlay) => tunniste => {
     let wkt = onkoWKT(tunniste);
     let preselectLayer =
         onkoJuna(tunniste)                   ? junaLayer(map, tunniste) :
-        onkoRuma(tunniste)                   ? newVectorLayerNoTile(luoRumaUrl(tunniste)   , tunniste, tunniste, tunniste, undefined, undefined, rtStyle, undefined, rumaPrepareFeatures, map.kaavio) :
-        onkoLOI(tunniste)                    ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, loStyle, undefined, undefined, map.kaavio) :
-        onkoEI(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, eiStyle, undefined, undefined, map.kaavio) :
-        onkoES(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, esStyle, undefined, undefined, map.kaavio) :
-        onkoVS(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, vsStyle, undefined, undefined, map.kaavio) :
-        onkoInfra(tunniste) || onkoTREX(tunniste) ? newVectorLayerNoTile(luoInfraAPIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, undefined, undefined, undefined, map.kaavio) :
+        onkoRuma(tunniste)                   ? newVectorLayerNoTile(luoRumaUrl(tunniste)   , tunniste, tunniste, tunniste, undefined, undefined, rtStyle, undefined, rumaPrepareFeatures, map.kaavio, map.ajanhetki, map.aikavali) :
+        onkoLOI(tunniste)                    ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, loStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
+        onkoEI(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, eiStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
+        onkoES(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, esStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
+        onkoVS(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, vsStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
+        onkoInfra(tunniste) || onkoTREX(tunniste) ? newVectorLayerNoTile(luoInfraAPIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, undefined, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
         wkt ? wktLayer(tunniste, wkt[1]) :
         undefined;
     preselectLayer.setVisible(true);

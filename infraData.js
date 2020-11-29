@@ -9,7 +9,8 @@ window.liikennepaikkavalitDS = luoDatasource("Liikennepaikkavalit", liikennepaik
     ret[x.tunniste] = {
         alkuliikennepaikka:  x.alkuliikennepaikka,
         loppuliikennepaikka: x.loppuliikennepaikka,
-        ratakmvalit:         x.ratakmvalit
+        ratakmvalit:         x.ratakmvalit,
+        voimassa:            x.voimassa
     };
 });
 window.liikennepaikkavalitDS.load();
@@ -26,7 +27,8 @@ window.rautatieliikennepaikatDS = luoDatasource("Rautatieliikennepaikat", rautat
                             type: "Point",
                             coordinates: x.virallinenSijainti
                          }),
-        ratakmvalit:     x.ratakmvalit
+        ratakmvalit:     x.ratakmvalit,
+        voimassa:        x.voimassa
     };
 });
 
@@ -50,7 +52,8 @@ window.liikennepaikanOsatDS = luoDatasource("LiikennepaikanOsat", liikennepaikan
                 alku:       {ratakm: r.ratakm, etaisyys: r.etaisyys},
                 loppu:      {ratakm: r.ratakm, etaisyys: r.etaisyys}
             };
-        })
+        }),
+        voimassa:        x.voimassa
     };
 });
 
@@ -66,7 +69,8 @@ window.raideosuudetDS = luoDatasource("Raideosuudet", raideosuudetUrl, (ret, x) 
                             type: "MultiLineString",
                             coordinates: x.geometria
                          }),
-        ratakmvalit:     x.tunniste[0].ratakmvalit
+        ratakmvalit:     x.tunniste[0].ratakmvalit,
+        voimassa:        x.voimassa
     };
 });
 
@@ -82,7 +86,8 @@ window.laituritDS = luoDatasource("Laiturit", laituritUrl, (ret, x) => {
                             type: "MultiLineString",
                             coordinates: x.geometria
                          }),
-        ratakmvalit:     x.tunniste[0].laskennallisetRatakmvalit
+        ratakmvalit:     x.tunniste[0].laskennallisetRatakmvalit,
+        voimassa:        x.voimassa
     };
 });
 
@@ -90,7 +95,8 @@ window.elementitDS = luoDatasource("Elementit", elementitUrl, (ret, x) => {
     ret[x.tunniste] = {
         tunniste:        x.tunniste,
         nimi:            x.nimi,
-        ratakmsijainnit: x.ratakmsijainnit
+        ratakmsijainnit: x.ratakmsijainnit,
+        voimassa:        x.voimassa
     };
 });
 window.elementitDS.load();
@@ -99,7 +105,8 @@ window.lorajatDS = luoDatasource("LiikenteenohjauksenRajat", lorajatUrl, (ret, x
     ret[x.tunniste] = {
         tunniste:        x.tunniste,
         nimi:            'Liikenteenohjauksen raja',
-        ratakmsijainnit: x.leikkaukset.flatMap(y => y.ratakmsijainnit)
+        ratakmsijainnit: x.leikkaukset.flatMap(y => y.ratakmsijainnit),
+        voimassa:        x.voimassa
     };
 });
 window.lorajatDS.load();
