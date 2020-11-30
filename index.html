@@ -107,6 +107,7 @@
         <li>Klikkaamalla ikonia ℹ️, <img class="infoikoni" src="https://rata.digitraffic.fi/infra-api/r/favicon.ico" />, <img class="infoikoni" src="https://rata.digitraffic.fi/jeti-api/r/favicon.ico" />, 🗺, 📅 tai 📈 voi avata kyseisen objektin lisätietoikkunan, Infra-API-sivun, Jeti-API-sivun, kartan, aikataulu-käyrän tai kohdistaa siihen työrakografiikan, mikäli operaatio on järkevä kyseiselle objetille. Ikoneita näkyy esimerkiksi hakutuloksissa, popup-ikkunoiden yläpalkissa sekä työrakografiikan tasovalikon valituissa objekteissa.</li>
         <li>Kartalle voi hakea ratainfraa, ennakkotietoja (Jeti), ratatöitä (Ruma), junia sekä WKT-geometrioita.</li>
         <li>Kartta tukee myös skemaattista kaavioesitystapaa.</li>
+        <li>Kartan aikakontekstiksi voi valita ajanhetken tai aikavälin. Aikavälin ollessa valittu ladataan ratainfra/ennakkotiedot kyseisellä välillä, ja slideria klikkaamalla vaihdettua näkymää lennossa esittämään eri ajanhetkiä.</li>
         <li>Valitsemalla työrakografiikalta Junat-tason näkyviin, alkavat junien sijainnit päivittyä myös kartalla.</li>
         <li>Voit yhdistää karttaikkunoita raahaamalla niitä päällekäin, ja hakea karttaikkunaan lisää sisältöä niiden omalla hakulaatikolla.</li>
         <li>Työrakogafiikkaa voi siirrellä ja zoomailla palkeilla ja painonapeilla. Valintatyökalulla voi piirtää työrakovalintoja.</li>
@@ -117,6 +118,7 @@
     <h2>Työkalu on vielä kehityksessä. Muutamia huomioita:</h2>
     <ul>
         <li>Kuulisin mielelläni bugeista, puutteista ja kehitysehdotuksista. Kerro esimerkiksi <a href="https://github.com/jyrimatti/rafiikka/">Githubissa</a> tai <a href="https://twitter.com/jyrimatti/">Twitterissä</a> tai miten haluat.</li>
+        <li>Käytän kehityksessä Chromea, joten muilla selaimilla voi tapahtua outouksia.</li>
         <li>Aikataulujen ja toteumien piirtäminen on hidasta kun niitä on paljon (lue: pääkaupunkiseutu).</li>
         <li>Aikataulupaikkavälin hakeminen on hidasta, koska käyttää raskasta reittihakua. Tähän tulossa myöhemmin nopeutusta.</li>
         <li>Y-akselin ollessa ratanumero, tehdään junasijainneille jatkuvasti gps->ratakm-muunnosta, mikä aiheuttaa paljon requesteja. Tämä korjaantuu kun digitraffic tarjoaa junille ratakmsijainnit suoraan.</li>
