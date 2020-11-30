@@ -579,7 +579,7 @@ let dataJetille = tunniste =>
     onkoLOI(tunniste) ? seriesLOI.data :
     undefined;
 
-let luoGrafiikkaLinkkiJetille = tunniste => `
+let luoGrafiikkaLinkkiJetille = tunniste => !dataJetille(tunniste) ? '' : `
 <li>
     <a href=""
        title='Avaa työrakografiikalla'

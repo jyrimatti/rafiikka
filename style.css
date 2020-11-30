@@ -40,7 +40,7 @@ ul.ikonit li {
 
 .ol-scale-line,
 .ol-attribution.ol-uncollapsible {
-    bottom: 2.5em;
+    bottom: 3.1em;
     font-size: 0.6em;
 }
 
@@ -311,14 +311,16 @@ body.fi .en, body.en .fi {
     left: 0.5em;
     right: 0.5em;
 }
+.aikavalinta > * {
+    flex: 1;
+}
 .aikavalinta .alkuaika,
 .aikavalinta .loppuaika {
     width: 8em;
-    flex: 1;
+    z-index: 9;
 }
 .aikavalinta .slider {
-    appearance: none;
-    flex: auto;
+    width: 99%;
     min-width: 2em;
 }
 .aikavalinta input:disabled {

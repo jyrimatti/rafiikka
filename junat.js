@@ -9,6 +9,8 @@ let juna2sijainti = data => {
 let etsiJunat = tunniste => window.junatSeries.dataSource.data.filter(j => j.departureDate + ' (' + j.trainNumber + ')' == tunniste ||  
                                                                            j.departureDate == tunniste);
 
+let junanVari = data => data.trainCategory == 'Cargo' ? 'blue' : 'red';
+
 let muunnaJunasijainti = (data, ohitaMuunnos) => {
     // TODO: muuta käyttämään suoraan DT:stä tulevaa ratakmsijaintia, kun sellainen tulee
     let pyoristettySijainti = data.location.coordinates.map(x => Number(Number(x).toFixed(3)));
@@ -19,7 +21,7 @@ let muunnaJunasijainti = (data, ohitaMuunnos) => {
         sijainti:      juna2sijainti(data) || koordinaatti2sijainti({type:'Point', coordinates: pyoristettySijainti}) || (onkoAktiivinen(data) || !ohitaMuunnos ? lataaSijainti(pyoristettySijainti) : undefined),
         location:      pyoristettySijainti,
         speed:         data.speed,
-        vari:          data.trainCategory == 'Cargo' ? 'blue' : 'red'
+        vari:          junanVari(data)
     };
 };
 

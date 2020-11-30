@@ -259,8 +259,9 @@ let lrStyle = styles.onLoad(feature => {
 
 let trainStyle = styles.onLoad(feature => {
     let props = feature.getProperties();
-    feature.setStyle([styles.circle(Math.max(1.0, props.speed/10), props.vari),
-                      styles.line(2.0, props.vari == 'blue' ? 'rgba(0,0,255,0.5)' : props.vari == 'red' ? 'rgba(255,0,0,0.5)' : 'rgba(0,0,0,0.5)')]);
+    let vari = junanVari(props);
+    feature.setStyle([styles.circle(Math.max(1.0, props.speed/10), vari),
+                      styles.line(2.0, vari == 'blue' ? 'rgba(0,0,255,0.5)' : props.vari == 'red' ? 'rgba(255,0,0,0.5)' : 'rgba(0,0,0,0.5)')]);
 });
 
 let loadingIndicatorStyle = new ol.style.Style({

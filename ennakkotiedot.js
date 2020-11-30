@@ -54,18 +54,19 @@ let ajankohtaAikavaleiksi = ajankohta => {
                    su && dateFns.dateFns.isSunday(paiva);
         };
 
-        let interval = { start: dateFns.dateFns.max([ensimmainenAloitusPaiva, dateFns.dateFns.addDays(rajat()[0], -1)]),
-                         end:   dateFns.dateFns.min([viimeinenAloitusPaiva,   dateFns.dateFns.addDays(rajat()[1],  1)])};
+        let interval = { start: dateFns.dateFns.max([ensimmainenAloitusPaiva, dateFns.dateFns.addDays(dateFns.dateFns.startOfDay(rajat()[0]), -1)]),
+                         end:   dateFns.dateFns.min([viimeinenAloitusPaiva,   dateFns.dateFns.addDays(dateFns.dateFns.startOfDay(rajat()[1]),  1)])};
         let aloitusPaivat = dateFns.dateFns.eachDayOfInterval(interval)
                                            .filter(kelpaaViikonPerusteella)
                                            .filter(kelpaaViikonpaivanPerusteella);
-
         return aloitusPaivat.map(paiva => {
             let alku = dateFns.dateFnsTz.toDate(dateFns.dateFns.format(paiva, 'yyyy-MM-dd') + 'T' + aloitusaika, { timeZone: timezone });
             return [alku, dateFns.dateFns.add(alku, kesto)];
         });
     }
 };
+
+let muotoileAjanhetki = hetki => dateFns.dateFns.format(dateFns.dateFnsTz.utcToZonedTime(hetki, 'Europe/Helsinki'), "yyyy-MM-dd HH:mm");
 
 let muotoileAikavali = vali => {
     let dates = vali.split("/").map(d => new Date(d));
@@ -76,8 +77,8 @@ let muotoileAikavali = vali => {
             ? "yyyy" :
         ds[0].getSeconds() + ds[0].getMinutes() + ds[0].getHours() == 0 &&
         ds[1].getSeconds() == 0 && ds[1].getMinutes() == 59 && ds[1].getHours() == 23
-            ? "dd.MM.yyyy" :
-              "dd.MM.yyyy HH:mm";
+            ? "yyyy-MM-dd" :
+              "yyyy-MM-dd HH:mm";
     let formatted = dates.map(d => dateFns.dateFns.format(d, format));
     return formatted[0] == formatted[1] ? formatted[0] : formatted.join(" - ");
 };

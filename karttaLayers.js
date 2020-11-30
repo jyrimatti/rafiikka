@@ -4,12 +4,16 @@ let newVectorLayer =        (url, shortName, title_fi, title_en, opacity, proper
 let newVectorLayerNoTile =   (url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, projection, kaavio, ajanhetki, aikavali) =>
     newVectorLayerImpl(false, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, projection, kaavio, ajanhetki, aikavali);
 
-let applyStyle = (styleOrHandler, ajanhetki) => feature => {
-    feature.setStyle((a,b,c,d,e,f) => {
-        let voimassa = feature.getProperties().voimassa || (feature.getProperties().ensimmainenAktiivisuusaika ? feature.getProperties().ensimmainenAktiivisuusaika + '/' + feature.getProperties().viimeinenAktiivisuusaika : undefined);
+let applyStyle = (styleOrHandler, ajanhetki, aikavali) => feature => {
+    let voimassa = feature.getProperties().voimassa || (feature.getProperties().ensimmainenAktiivisuusaika ? feature.getProperties().ensimmainenAktiivisuusaika + '/' + feature.getProperties().viimeinenAktiivisuusaika : undefined);
+    let vali = !voimassa ? undefined : voimassa.split('/').map(x => new Date(x));
+    if (!aikavali()) {
+        aikavali(vali[0], vali[1]);
+    }
+    let func = (a,b,c,d,e,f) => {
         let hetki = ajanhetki();
         let osuu = ([alkuaika,loppuaika]) => alkuaika <= hetki && hetki <= loppuaika;
-        if (voimassa && !osuu(voimassa.split('/').map(x => new Date(x)))) {
+        if (vali && hetki && !osuu(vali)) {
             // voimassaolo ei osu kartan ajanhetkeen -> piilotetaan feature
             return undefined;
         } else if (styleOrHandler instanceof Function && styleOrHandler.length == 1) {
@@ -20,7 +24,10 @@ let applyStyle = (styleOrHandler, ajanhetki) => feature => {
         } else {
             return styleOrHandler || styles.default;
         }
-    });
+    };
+    func.getImage = () => undefined;
+    func.getGeometryFunction = () => () => undefined;
+    feature.setStyle(func);
     return feature;
 }
 
@@ -30,6 +37,7 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
     u1 = u1.indexOf('.json') >= 0 ? u1.replace('.json', '.geojson') : u1.indexOf('.geojson') < 0 ? u1.replace('?', '.geojson?') : u1; 
 
     var layer;
+    let paivitetaanAjankohtamuutoksessa = url.indexOf('/jeti-api/') >= 0;
     let source = new ol.source.Vector({
         format:     format,
         projection: projection,
@@ -37,18 +45,22 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
         loader:     extent => {
             let u2 = (kaavio() && url.indexOf('-notifications') == -1 ? '&presentation=diagram' : '') +
                      (kaavio() && url.indexOf('-notifications') >= 0  ? '&schema=true' : '');
+            let time = paivitetaanAjankohtamuutoksessa && ajanhetki() ? limitInterval(toISOStringNoMillis(ajanhetki()) + '/' + toISOStringNoMillis(ajanhetki()))
+                                                                      : aikavali() ? limitInterval(toISOStringNoMillis(aikavali()[0]) + '/' + toISOStringNoMillis(aikavali()[1]))
+                                                                      : undefined;
             let u3 = (!propertyName                                           ? '' : '&propertyName=' + propertyName) +
-             (u1.indexOf('time=') >= 0 || u1.indexOf('start=') >= 0 || u1.indexOf('train-locations') >= 0 || u1.indexOf('-notifications') >= 0 ? '' : '&time=' + toISOStringNoMillis(aikavali()[0]) + "/" + toISOStringNoMillis(aikavali()[1])) +
+             (u1.indexOf('time=') >= 0 || u1.indexOf('start=') >= 0 || u1.indexOf('train-locations') >= 0 || u1.indexOf('-notifications') >= 0 || aikavali() == undefined ? '' : '&time=' + time) +
              (!typeNames                                              ? '' : '&typeNames=' + typeNames);
 
             getJson((u1 + (tiling ? '&bbox=' + extent.join(',') : '') + u2 + u3).replaceAll('?&','?'), data => {
                 let features = format.readFeatures(data);
-                features.forEach(applyStyle(styleOrHandler, ajanhetki));
+                features.forEach(applyStyle(styleOrHandler, ajanhetki, aikavali));
                 if (prepareFeatures) {
                     source.addFeatures(prepareFeatures(features, layer));
                 } else {
                     source.addFeatures(features);
                 }
+                source.dispatchEvent("featuresLoaded");
             });
         }
     });
@@ -61,7 +73,8 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
         //extent: dataExtent[projection.getCode()],
         renderBuffer:           500,
         updateWhileInteracting: true,
-        updateWhileAnimating:   true
+        updateWhileAnimating:   true,
+        paivitetaanAjankohtamuutoksessa: paivitetaanAjankohtamuutoksessa
     });
     layer.setVisible(false);
     return layer;

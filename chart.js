@@ -1290,4 +1290,11 @@ window.onload = () => {
 
         log("Grafiikka valmis");
     });
+
+    let sijainti = sijaintiParam();
+    if (sijainti) {
+        if (onkoJeti(sijainti) || onkoRuma(sijainti) || onkoInfra(sijainti) && !onkoRatanumero(sijainti)) {
+            kartta(sijainti);
+        }
+    }
 }
