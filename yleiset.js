@@ -231,8 +231,8 @@ let monitor = (ds, type) => {
     });
 }
 
-let getJson  = (url,       callback) => fetchJson(url, {method: 'GET'}             , callback);
-let postJson = (url, body, callback) => fetchJson(url, {method: 'POST', body: body}, callback);
+let getJson  = (url,       callback, signal) => fetchJson(url, {method: 'GET', signal: signal}             , callback);
+let postJson = (url, body, callback, signal) => fetchJson(url, {method: 'POST', signal: signal, body: body}, callback);
 
 let fetchJson = (url, opts, callback) =>
     fetch(url, {

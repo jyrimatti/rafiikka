@@ -38,6 +38,7 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
 
     var layer;
     let paivitetaanAjankohtamuutoksessa = url.indexOf('/jeti-api/') >= 0;
+    var aborter = new AbortController();
     let source = new ol.source.Vector({
         format:     format,
         projection: projection,
@@ -61,9 +62,14 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
                     source.addFeatures(features);
                 }
                 source.dispatchEvent("featuresLoaded");
-            });
+            }, aborter.signal);
         }
     });
+    source.on('clear', () => {
+        aborter.abort();
+        aborter = new AbortController();
+    });
+
     layer = new ol.layer.Vector({
         title:                  mkLayerTitle(title_fi, title_en),
         shortName:              shortName,

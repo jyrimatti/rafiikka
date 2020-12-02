@@ -513,7 +513,7 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste, kaavio, ajanhetki, aikava
                  onkoVS(tunniste) ? 'kohde' : undefined;
 
     if (prefix) {
-        let props = 'voimassa,' + kohdeProps.map(x => prefix + x).join(',');
+        let props = '-laskennallinenKarttapiste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
         let avain = tunniste + '_' + kaavio() + '-' + ajanhetki();
 
         if (highlightLayers[avain]) {
