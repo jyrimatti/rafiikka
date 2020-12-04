@@ -73,7 +73,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                   .forEach(x => x.query = query);
             search.clearOptions();
         },
-        onFocus: () => {
+        onType: () => {
             var lukot = 0;
             let originalPlaceholder = search.settings.placeholder;
             let vapautaLukko = () => {

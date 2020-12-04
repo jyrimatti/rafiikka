@@ -5,6 +5,7 @@ let luoKarttaElementti = (tunniste, title, offsetX, offsetY) => {
 
     let schema = document.createElement("label");
     schema.setAttribute("class", "schema");
+    schema.setAttribute("title", "Kaavionäkymä päälle/pois");
     schema.innerText = 'kaavio';
     elemHeader.appendChild(schema);
 
@@ -33,13 +34,14 @@ let luoKarttaElementti = (tunniste, title, offsetX, offsetY) => {
 
     let alkuaika = document.createElement('input');
     alkuaika.setAttribute('class', 'ajanhetki alkuaika');
-    alkuaika.setAttribute('placeholder', 'alkuaika');
+    alkuaika.setAttribute('title', 'alkuaika');
 
     let loppuaika = document.createElement('input');
     loppuaika.setAttribute('class', 'ajanhetki loppuaika');
-    loppuaika.setAttribute('placeholder', 'loppuaika');
+    loppuaika.setAttribute('title', 'loppuaika');
 
     let sliderParent = document.createElement('span');
+    sliderParent.setAttribute('title', '');
     let ticks = document.createElement('datalist');
     sliderParent.appendChild(ticks);
     ticks.id = ''+Math.random();
@@ -210,10 +212,10 @@ let junaLayer = (map, tunniste) => {
 }
 
 let fitToView = map => ev => {
-    let extent = ev.target.getSource().getExtent();
+    let extent = ev.target.getExtent();
     if (extent && !ol.extent.isEmpty(extent)) {
         map.getView().fit(extent, {
-            maxZoom: 10,
+            maxZoom: 14,
             padding: [50,50,50,50],
             duration: 1000
         });
@@ -307,6 +309,21 @@ let kartta = (tunniste, title, offsetX, offsetY) => {
     });
     elem.kartta = map;
 
+    tippy('[title]', {
+        content(reference) {
+            const title = reference.getAttribute('title');
+            reference.removeAttribute('title');
+            onTitleChange(reference, () => {
+                let title = reference.getAttribute('title');
+                if (title) {
+                    reference._tippy.setContent(title);
+                    reference.removeAttribute('title');
+                }
+            });
+            return title;
+        }
+    });
+
     let paivitaMuutosajankohdat = () => {
         let ajankohdat = haeMuutosajankohdat(map);
         log('Muutosajankohdat kartalla', ajankohdat);
@@ -315,6 +332,15 @@ let kartta = (tunniste, title, offsetX, offsetY) => {
     map.getLayers().on('add', ev => flatLayerGroups([ev.element]).forEach(x => {
         x.getSource().on('featuresLoaded', paivitaMuutosajankohdat);
         x.on('change:visible', paivitaMuutosajankohdat);
+
+        let update = diff => {
+            let e = elem.querySelector('.layer-switcher');
+            e.setAttribute('data-loading', parseInt(e.getAttribute('data-loading') || '0') + diff);
+        };
+        x.on('loadStart', () => update(1));
+        x.on('loadSuccess', () => update(-1));
+        x.on('loadFail', () => update(-1));
+        x.on('loadAbort', () => update(-1));
     }));
     map.getView().on('change', paivitaMuutosajankohdat);
 
@@ -430,7 +456,7 @@ let lisaaKartalle = (map, overlay) => tunniste => {
         wkt ? wktLayer(tunniste, wkt[1]) :
         undefined;
     preselectLayer.setVisible(true);
-    preselectLayer.once('change', fitToView(map));
+    preselectLayer.getSource().on('addfeature', fitToView(map));
 
     map.addLayer(preselectLayer);    
     map.addInteraction(hover(overlay, [preselectLayer]));
@@ -501,7 +527,7 @@ let getAllGeometries = f => {
     // gather all geometries, also inside geometrycollections
     let geometryOrCollection = f.getGeometry();
     if (geometryOrCollection.getGeometries) {
-        return geometryOrCollection.getGeometries().map(olParser.read);
+        return geometryOrCollection.getGeometries().map(x => olParser.read(x));
     } else {
         return [olParser.read(geometryOrCollection)];
     }
@@ -553,7 +579,7 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste, kaavio, ajanhetki, aikava
 
                     raiteet  = getKohde('raiteet');
                     radat    = getKohde('radat');
-                    lpvalit  = getKohde('lpvalit');
+                    lpvalit  = getKohde('liikennepaikkavalit');
                     voimassa = limitInterval(ps.voimassa);
                 }
 

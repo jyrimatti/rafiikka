@@ -53,7 +53,9 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
              (u1.indexOf('time=') >= 0 || u1.indexOf('start=') >= 0 || u1.indexOf('train-locations') >= 0 || u1.indexOf('-notifications') >= 0 || aikavali() == undefined ? '' : '&time=' + time) +
              (!typeNames                                              ? '' : '&typeNames=' + typeNames);
 
+            layer.dispatchEvent("loadStart");
             getJson((u1 + (tiling ? '&bbox=' + extent.join(',') : '') + u2 + u3).replaceAll('?&','?'), data => {
+                layer.dispatchEvent("loadSuccess");
                 let features = format.readFeatures(data);
                 features.forEach(applyStyle(styleOrHandler, ajanhetki, aikavali));
                 if (prepareFeatures) {
@@ -62,7 +64,14 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
                     source.addFeatures(features);
                 }
                 source.dispatchEvent("featuresLoaded");
-            }, aborter.signal);
+            }, aborter.signal, err => {
+                if (err.name == 'AbortError') {
+                    layer.dispatchEvent("loadAbort");
+                } else {
+                    errorHandler(err);
+                    layer.dispatchEvent("loadFail");
+                }
+            });
         }
     });
     source.on('clear', () => {

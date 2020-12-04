@@ -231,10 +231,10 @@ let monitor = (ds, type) => {
     });
 }
 
-let getJson  = (url,       callback, signal) => fetchJson(url, {method: 'GET', signal: signal}             , callback);
-let postJson = (url, body, callback, signal) => fetchJson(url, {method: 'POST', signal: signal, body: body}, callback);
+let getJson  = (url,       callback, signal, errorCallback) => fetchJson(url, {method: 'GET', signal: signal}             , callback, errorCallback);
+let postJson = (url, body, callback, signal, errorCallback) => fetchJson(url, {method: 'POST', signal: signal, body: body}, callback, errorCallback);
 
-let fetchJson = (url, opts, callback) =>
+let fetchJson = (url, opts, callback, errorCallback) =>
     fetch(url, {
         ...opts,
         headers: {
@@ -243,7 +243,7 @@ let fetchJson = (url, opts, callback) =>
         }
     }).then(response => response.json())
       .then(callback)
-      .catch(errorHandler);
+      .catch(errorCallback || errorHandler);
 
 let luoDatasource = (type, urlF, f) => {
     let ds = new am4core.DataSource();
@@ -380,12 +380,15 @@ let fixPoints = x => {
     return x;
 };
 
-let onStyleChange = (elem, callback) => {
+let onAttributeMutation = (attr) => (elem, callback) => {
     let observer = new MutationObserver(mutations => {
         mutations.forEach(callback);    
     });
-    observer.observe(elem, { attributes : true, attributeFilter : ['style'] });
+    observer.observe(elem, { attributes : true, attributeFilter : [attr] });
 };
+
+let onStyleChange = onAttributeMutation('style');
+let onTitleChange = onAttributeMutation('title');
 
 let withoutProp = (obj, unwantedProp) => {
     var ret = {};
@@ -579,7 +582,7 @@ let dataJetille = tunniste =>
     onkoLOI(tunniste) ? seriesLOI.data :
     undefined;
 
-let luoGrafiikkaLinkkiJetille = tunniste => !dataJetille(tunniste) ? '' : `
+let luoGrafiikkaLinkkiJetille = tunniste => !dataJetille(tunniste) || dataJetille(tunniste).length == 0 ? '' : `
 <li>
     <a href=""
        title='Avaa työrakografiikalla'

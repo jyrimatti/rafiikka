@@ -136,12 +136,6 @@ window.onload = () => {
         chart.tooltip.label.maxWidth = 400;
         chart.tooltip.label.wrap = true;
 
-        on(chart.legend.itemContainers.template.events, 'hit', e => {
-            if (e.target.isActive && loading.dataItem.categories.aktiiviset != "" && !loading.dataItem.categories.aktiiviset.trim().split(" ").every(x => x.startsWith('Haku-'))) {
-                throw "odotetaan dataa...";
-            }
-        });
-
         let luoAktiivinenListaus = (series, dataSource) => {
             let legend = chart.legend.itemContainers.values.find(x => x.dataItem.name == series.name);
             let aktiiviset             = new am4charts.Legend();
