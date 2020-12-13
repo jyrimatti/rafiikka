@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="style.css" />
 
     <!-- TODO
+        - grafiikan tasojen järjestys (piirto-z-index) jotenkin valittavaksi
         - columneille vastaava 2-portainen aktiivisuus kuin junille
         - urliin myös tasot
         - junanumero labeliksi viivan myötäisesti
@@ -37,7 +38,7 @@
 
     <div class="palkki">
         <div>
-            <a style="font-size: 2em;" href="" title="Avaa kartta" onclick="try {kartta(sijaintiParam())} catch(e) {log(e);}; return false;">🗺</a>
+            <a style="font-size: 2em;" href="" title="Avaa kartta" onclick="try {kartta()} catch(e) {log(e);}; return false;">🗺</a>
             <a style="font-size: 1.8em;" href="" title="Avaa aikataulu" onclick="luoJunaPopup(); return false;">📅</a>
         </div>
         <div class="hakuohje">
@@ -112,6 +113,7 @@
     <script src="datefns.js"></script>
     <script src="drag.js"></script>
     <script src="yleiset.js"></script>
+    <script src="tooltip.js"></script>
     <script src="spatial.js"></script>
     <script src="popup.js"></script>
     <script src="haku.js"></script>

@@ -100,7 +100,7 @@ let luoKarttaElementti = (tunniste, title, offsetX, offsetY) => {
         if (a.getTime() == b.getTime() || !slider.disabled) {
             slider.parentElement.title = 'Näytetään ajanhetki ' + dateFns.dateFns.format(dateFns.dateFnsTz.utcToZonedTime(a, 'Europe/Helsinki'), "dd.MM.yyyy HH:mm");
         } else {
-            slider.parentElement.title = 'Näytetään aikaväli ' + dateFns.dateFns.format(a, "dd.MM.yyyy HH:mm") + ' - ' + dateFns.dateFns.format(b, "dd.MM.yyyy HH:mm");
+            slider.parentElement.title = 'Näytetään aikaväli ' + dateFns.dateFns.format(a, "dd.MM.yyyy HH:mm") + ' - ' + dateFns.dateFns.format(b, "dd.MM.yyyy HH:mm") + '. Klikkaa valitaksesi ajanhetken.';
         }
         if (ev) {
             ev.preventDefault();
@@ -212,8 +212,10 @@ let junaLayer = (map, tunniste) => {
 }
 
 let fitToView = map => ev => {
-    let extent = ev.target.getExtent();
+    let extent = ev.target.getExtent() || (ev.target.getSource ? ev.target.getSource().getExtent() : undefined);
     if (extent && !ol.extent.isEmpty(extent)) {
+        log('Fitting map to extent', extent);
+        map.getView().cancelAnimations();
         map.getView().fit(extent, {
             maxZoom: 14,
             padding: [50,50,50,50],
@@ -271,11 +273,11 @@ let kartta = (tunniste, title, offsetX, offsetY) => {
     let aikavali = (alku, loppu) => {
         if (alku) {
             alkuaika.value = muotoileAjanhetki(alku);
-            alkuaika.onchange();
             loppuaika.value = muotoileAjanhetki(loppu);
-            loppuaika.onchange();
             slider.min = alku.getTime();
             slider.max = loppu.getTime();
+            alkuaika.onchange();
+            loppuaika.onchange();
         } else {
             return slider.min === undefined || slider.min == 0 ? undefined : [new Date(parseInt(slider.min)), new Date(parseInt(slider.max))];
         }
@@ -309,25 +311,14 @@ let kartta = (tunniste, title, offsetX, offsetY) => {
     });
     elem.kartta = map;
 
-    tippy('[title]', {
-        content(reference) {
-            const title = reference.getAttribute('title');
-            reference.removeAttribute('title');
-            onTitleChange(reference, () => {
-                let title = reference.getAttribute('title');
-                if (title) {
-                    reference._tippy.setContent(title);
-                    reference.removeAttribute('title');
-                }
-            });
-            return title;
-        }
-    });
+    initTooltips(container);
 
     let paivitaMuutosajankohdat = () => {
-        let ajankohdat = haeMuutosajankohdat(map);
-        log('Muutosajankohdat kartalla', ajankohdat);
-        slider.getTickList().innerHTML = ajankohdat.map(x => '<option value="' + x.getTime() + '" label="' + muotoileAjanhetki(x) + '"></option>').join('');
+        if (!slider.disabled) {
+            let ajankohdat = haeMuutosajankohdat(map);
+            log('Muutosajankohdat kartalla', ajankohdat);
+            slider.getTickList().innerHTML = ajankohdat.map(x => '<option value="' + x.getTime() + '" label="' + muotoileAjanhetki(x) + '"></option>').join('');
+        }
     };
     map.getLayers().on('add', ev => flatLayerGroups([ev.element]).forEach(x => {
         x.getSource().on('featuresLoaded', paivitaMuutosajankohdat);
@@ -368,7 +359,7 @@ let kartta = (tunniste, title, offsetX, offsetY) => {
             if (a.getTime() == b.getTime() || !slider.disabled) {
                 slider.parentElement.title = 'Näytetään ajanhetki ' + muotoileAjanhetki(ajanhetki());
             } else {
-                slider.parentElement.title = 'Näytetään aikaväli ' + muotoileAjanhetki(a) + ' - ' + muotoileAjanhetki(b);
+                slider.parentElement.title = 'Näytetään aikaväli ' + muotoileAjanhetki(a) + ' - ' + muotoileAjanhetki(b) + '. Klikkaa valitaksesi ajanhetken.';
             }
             if (a.getTime() == b.getTime()) {
                 slider.disabled = true;
@@ -456,16 +447,32 @@ let lisaaKartalle = (map, overlay) => tunniste => {
         wkt ? wktLayer(tunniste, wkt[1]) :
         undefined;
     preselectLayer.setVisible(true);
-    preselectLayer.getSource().on('addfeature', fitToView(map));
+    preselectLayer.getSource().on('featuresLoaded', fitToView(map));
+    
+    if (onkoJeti(tunniste)) {
+        preselectLayer.getSource().once('featuresLoaded', () => {
+            // Yksittäiselle ennakkotiedolle trigataan tarkennus samantein jotta tarkempi kohde latautuu
+            ennakkotiedonTarkennus(map, tunniste);
+        });
+    }
 
     map.addLayer(preselectLayer);    
     map.addInteraction(hover(overlay, [preselectLayer]));
 };
 
+let ennakkotiedonTarkennus = (map, tunniste) => {
+    let layer = tarkennaEnnakkotieto(map.highlightLayers, tunniste, map.kaavio, map.ajanhetki, map.aikavali);
+    if (layer) {
+        layer.setMap(map);
+        layer.getSource().on('featuresLoaded', fitToView(map));
+        layer.on('mbcUpdated', fitToView(map));
+    }
+};
+
 let hover = (overlay, layers) => {
     let hoverInteraction = new ol.interaction.Select({
         hitTolerance: 2,
-        condition:    ol.events.condition.pointerMove,
+        condition:    ol.events.condition.click,
         layers:       flatLayerGroups(layers)
     });
     hoverInteraction.on('select', evt => {
@@ -476,11 +483,7 @@ let hover = (overlay, layers) => {
                 overlay.getElement().innerHTML = prettyPrint(withoutProp(feature.getProperties(), 'geometry'));
             }
             overlay.setPosition(coordinate);
-
-            let layer = tarkennaEnnakkotieto(map.highlightLayers, feature.getProperties().tunniste, map.kaavio, map.ajanhetki, map.aikavali);
-            if (layer) {
-                layer.setMap(map);
-            }
+            ennakkotiedonTarkennus(map, feature.getProperties().tunniste);
         });
         if (evt.selected.length == 0) {
             overlay.setPosition(undefined);
@@ -493,7 +496,7 @@ let hover = (overlay, layers) => {
     return hoverInteraction;
 };
 
-let cropIfConstrained = (voimassa, kaavio, f) => kohteet =>
+let cropIfConstrained = (voimassa, kaavio, f, source) => kohteet =>
     kohteet.filter(kohde => kohde.tunniste == f.getProperties().tunniste)
            .filter(kohde => kohde.rajaus) // jos oli rajaus, niin tehdään taiat. Muuten jätetään geometria kokonaiseksi.
            .forEach(kohde => resolveMask(kohde.rajaus, voimassa, kaavio, mask => {
@@ -501,6 +504,7 @@ let cropIfConstrained = (voimassa, kaavio, f) => kohteet =>
                 var original = olParser.read(f.getGeometry());
                 f.setStyle(null);
                 f.setGeometry(olParser.write(mask.intersection(original)));
+                source.dispatchEvent("geometriesUpdated");
             } else {
                 log('Hmm, could not resolve masking geometry for:', JSON.stringify(kohde));
             }
@@ -550,55 +554,63 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste, kaavio, ajanhetki, aikava
             var radat;
             var lpvalit;
             var voimassa;
-            
-            var newLayer;
 
             // minimum bounding circle for the whole etj2 feature
             let mbcFeature = new ol.Feature();
             mbcFeature._mbc = true;
-            mbcFeature.setStyle(mbcStyle);
             
-            let onchange = () => {
-                let geometries = newLayer.getSource().getFeatures()
-                                         .filter(f => !f._mbc) // exclude mbc feature
-                                         .flatMap(getAllGeometries);
-                // calculate mbc with jsts
-                mbcFeature.setGeometry(olMBC(geometries));
-                
-                // re-calculate mbc whenever the hightlight layer contents change (like when a feature is cropped)
-                newLayer.getSource().once('change', () => setTimeout(onchange, 500));
-            };
-            
-            newLayer = newVectorLayerNoTile(etj2APIUrl + tunniste + '.geojson', '-', 'Korostus', 'Highlight', undefined, props, f => {
-                let ps = f.getProperties();
-                if (!raiteet) {
-                    // yes, this assumes that the first feature is the "original" one containing all the data. Not the most elegant this way...
-                    let prefixParts = prefix.split('.');
-                    let getKohde = prop => prefixParts[1] ? ps[prefixParts[0]].flatMap(x => x[prefixParts[1]][prop])
-                                                          : ps[prefix][prop];
+            let newLayer = newVectorLayerNoTile(etj2APIUrl + tunniste + '.geojson', '-', 'Korostus', 'Highlight', undefined, props, f => {
+                if (!f._kasitelty) {
+                    let ps = f.getProperties();
+                    if (!raiteet) {
+                        // yes, this assumes that the first feature is the "original" one containing all the data. Not the most elegant this way...
+                        let prefixParts = prefix.split('.');
+                        let getKohde = prop => prefixParts[1] ? ps[prefixParts[0]].flatMap(x => x[prefixParts[1]][prop])
+                                                            : ps[prefix][prop];
 
-                    raiteet  = getKohde('raiteet');
-                    radat    = getKohde('radat');
-                    lpvalit  = getKohde('liikennepaikkavalit');
-                    voimassa = limitInterval(ps.voimassa);
+                        raiteet  = getKohde('raiteet');
+                        radat    = getKohde('radat');
+                        lpvalit  = getKohde('liikennepaikkavalit');
+                        voimassa = limitInterval(ps.voimassa);
+
+                        if ([raiteet, radat, lpvalit].filter(x => x != undefined).find(x => x.rajaus)) {
+                            // löytyy ainakin jokin rajaus, joten asetetaan style väliaikaiseksi
+                            f.setStyle(loadingIndicatorStyle);
+                            mbcFeature.setStyle(() => undefined);
+                        } else {
+                            mbcFeature.setStyle(mbcStyle);
+                        }
+                    }
+
+                    // possibly constraint target kinds
+                    if (ps._source) {
+                        let kohteet = ps._source.indexOf('.raiteet')             > -1 ? [raiteet] :
+                                    ps._source.indexOf('.radat')               > -1 ? [radat] :
+                                    ps._source.indexOf('.liikennepaikkavalit') > -1 ? [lpvalit] :
+                                    [];
+
+                        kohteet.forEach(k => {
+                            cropIfConstrained(voimassa, kaavio, f, newLayer.getSource())(k);
+                        });
+                    }
                 }
-
-                // possibly constraint target kinds
-                if (ps._source) {
-                    let kohteet = ps._source.indexOf('.raiteet')             > -1 ? [raiteet] :
-                                  ps._source.indexOf('.radat')               > -1 ? [radat] :
-                                  ps._source.indexOf('.liikennepaikkavalit') > -1 ? [lpvalit] :
-                                  [];
-
-                    kohteet.forEach(k => {
-                        f.setStyle(loadingIndicatorStyle);
-                        cropIfConstrained(voimassa, kaavio, f)(k);
-                    });
-                }
-                
-                newLayer.getSource().once('change', onchange);
+                f._kasitelty = true;
             }, undefined, undefined, kaavio, ajanhetki, aikavali);
+            
+            let updateMBC = () => {
+                logDiff('MBC updated', () => {
+                    let geometries = newLayer.getSource().getFeatures()
+                                             .filter(f => !f._mbc) // exclude mbc feature
+                                             .flatMap(getAllGeometries);
+                    // calculate mbc with jsts
+                    mbcFeature.setGeometry(olMBC(geometries));
+                    mbcFeature.setStyle(mbcStyle);
+                    newLayer.dispatchEvent('mbcUpdated');
+                });
+            };
 
+            newLayer.getSource().on('featuresLoaded', updateMBC);
+            newLayer.getSource().on('geometriesUpdated', updateMBC);
             newLayer.getSource().addFeature(mbcFeature);
 
             highlightLayers[avain].push(newLayer);
