@@ -122,6 +122,10 @@ let esUrlAikataulupaikka = () => tila => etj2APIUrl + 'ennakkosuunnitelmat.json?
 let vsUrlAikataulupaikka = () => tila => etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila=%27'   + tila + '%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa&' + etj2Aikavali();
 let loUrlAikataulupaikka = () => tila => etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27'       + tila + '%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika&' + etj2Aikavali();
 
+let eiUrlTilasto = () => etj2APIUrl + 'ennakkoilmoitukset.json?propertyName=asia,luontiaika,sisainenTunniste,tila,tyyppi,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+let esUrlTilasto = () => etj2APIUrl + 'ennakkosuunnitelmat.json?propertyName=luontiaika,sisainenTunniste,tila,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+let vsUrlTilasto = () => etj2APIUrl + 'vuosisuunnitelmat.json?propertyName=luontiaika,sisainenTunniste,tila,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+
 let junasijainnitUrl        = () => 'https://rata.digitraffic.fi/api/v1/train-locations/latest/';
 let junasijainnitGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/train-locations.geojson/latest/';
 

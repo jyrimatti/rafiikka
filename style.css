@@ -114,7 +114,7 @@ ul.ikonit li {
 .over {
     background-color: red !important;
 }
-.kartta, .junaPopup {
+.kartta, .junaPopup, .tilastoPopup {
     width: 100%;
     top: 1em;
     bottom: 0;
@@ -122,6 +122,10 @@ ul.ikonit li {
 }
 .junaPopup {
     top: 3em;
+}
+.tilastoContainer {
+    width: 800px;
+    height: 400px;
 }
 .popupContainer.aikatauluPopup .selectize-control {
     margin-left: 0;

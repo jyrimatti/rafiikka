@@ -237,7 +237,7 @@ window.onload = () => {
         
         //xAxis.renderer.labels.template.tooltip     = new am4core.Tooltip();
         xAxis.renderer.labels.template.location    = 0.0001; // akselin labelit mielellään aina grid-viivojen kohdalle
-        xAxis.renderer.labels.template.tooltipText = "{value.formatDate(dd.MM.yyyy HH:mm:ss)}";
+        xAxis.renderer.labels.template.tooltipText = "{value.formatDate('dd.MM.yyyy HH:mm:ss')}";
         
         let setXAxis = () => xAxis.zoomToDates(ikkuna()[0], ikkuna()[1], false, true);
         on(chart.events, "ready", setXAxis);
