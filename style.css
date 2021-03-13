@@ -1,13 +1,14 @@
 #chartdiv {
     width: 100%;
     height: 600px;
+    margin-top: 1em;
 }
 h1 {
     font-weight: 100;
     font-style: italic;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    margin-left: 1em;
-    margin-bottom: 0;
+    margin-left: 0.5em;
+    margin-bottom: 0.25em;
 }
 select {
     max-width: 7em;
@@ -45,12 +46,20 @@ ul.ikonit li {
 }
 
 .palkki {
-    position: absolute;
     z-index: 2;
+    margin-left: 2em;
     width: 100%;
+    position: absolute;
 }
 .palkki > * {
     float: left;
+}
+
+.palkki a {
+    min-width: 20px;
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
 }
 
 .popupContainer {
@@ -122,6 +131,10 @@ ul.ikonit li {
 }
 .junaPopup {
     top: 3em;
+}
+.aikatauluPopup {
+    width: 700px;
+    height: 500px;
 }
 .tilastoContainer {
     width: 800px;
@@ -268,12 +281,15 @@ body.fi .en, body.en .fi {
 
 .hakuohje {
     position: absolute;
-    left: 5em;
+    left: 9.5em;
     width: 2em;
-    height: 2em;
-    padding-top: 0.5em;
-    overflow: hidden;
+    padding: 0.25em;
+    margin-top: 2em;
     z-index: 2;
+}
+.hakuohje .trigger {
+    top: -1.5em;
+    position: absolute;
 }
 .hakuohje h5 {
     display: none;
@@ -281,6 +297,7 @@ body.fi .en, body.en .fi {
 .hakuohje dl {
     font-size: 0.75em;
     padding: 1em;
+    visibility: hidden;
 }
 .hakuohje:hover {
     width: auto;
@@ -291,6 +308,9 @@ body.fi .en, body.en .fi {
 }
 .hakuohje:hover h5 {
     display: unset;
+}
+.hakuohje:hover dl {
+    visibility: visible;
 }
 
 .searchElem {

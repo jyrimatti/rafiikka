@@ -122,9 +122,10 @@ let esUrlAikataulupaikka = () => tila => etj2APIUrl + 'ennakkosuunnitelmat.json?
 let vsUrlAikataulupaikka = () => tila => etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila=%27'   + tila + '%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa&' + etj2Aikavali();
 let loUrlAikataulupaikka = () => tila => etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27'       + tila + '%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika&' + etj2Aikavali();
 
+let asiatUrl     = () => etj2APIUrl + 'asiat.json';
 let eiUrlTilasto = () => etj2APIUrl + 'ennakkoilmoitukset.json?propertyName=asia,luontiaika,sisainenTunniste,tila,tyyppi,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
-let esUrlTilasto = () => etj2APIUrl + 'ennakkosuunnitelmat.json?propertyName=luontiaika,sisainenTunniste,tila,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
-let vsUrlTilasto = () => etj2APIUrl + 'vuosisuunnitelmat.json?propertyName=luontiaika,sisainenTunniste,tila,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+let esUrlTilasto = () => etj2APIUrl + 'ennakkosuunnitelmat.json?propertyName=luontiaika,sisainenTunniste,tila,tyyppi,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+let vsUrlTilasto = () => etj2APIUrl + 'vuosisuunnitelmat.json?propertyName=alustavakapasiteettivaraus,luontiaika,sisainenTunniste,tila,tyo,tyonlaji,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
 
 let junasijainnitUrl        = () => 'https://rata.digitraffic.fi/api/v1/train-locations/latest/';
 let junasijainnitGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/train-locations.geojson/latest/';
@@ -194,7 +195,9 @@ if (params().has("seed")) {
      .concat(hakuUrlitInfra())
      .concat(hakuUrlitEtj2())
      .concat(hakuUrlitRT())
-     .concat(hakuUrlitLR()).forEach(url => {
+     .concat(hakuUrlitLR())
+     .concat([asiatUrl(), eiUrlTilasto(), esUrlTilasto(), vsUrlTilasto()])
+     .forEach(url => {
         let ds = new am4core.DataSource();
         ds.url = url;
         initDS(ds);
