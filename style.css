@@ -48,7 +48,7 @@ ul.ikonit li {
 .palkki {
     z-index: 2;
     margin-left: 2em;
-    width: 100%;
+    width: 80%;
     position: absolute;
 }
 .palkki > * {

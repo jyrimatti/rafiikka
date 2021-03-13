@@ -102,7 +102,7 @@ let ratakmSijaintiUrl         = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 
 let pmSijaintiUrl             = (numero, suunta, etaisyys) => infraAPIUrl + 'paikantamismerkit/' + numero + suunta + etaisyys + '.json?' + infraAikavali();
 let ratakmValiUrl             = (ratanumero, alkuratakm, alkuetaisyys, loppuratakm, loppuetaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + alkuratakm + '+' + alkuetaisyys + '-' + loppuratakm + '+' + loppuetaisyys + '.json?' + infraAikavali();
 let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka,ratakmvalit,voimassa&" + infraAikavali();
-let reittiUrl                 = (alku, etapit, loppu) => infraAPIUrl + "reitit/kaikki/" + alku + "/" + (/*TODO*/ false && etapit && etapit.length > 0 ? etapit.join(',') + '/' : '') + loppu + ".json?propertyName=geometria,liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet&" + infraAikavali();
+let reittiUrl                 = (alku, etapit, loppu) => infraAPIUrl + "reitit/kaikki/" + alku + "/" + (etapit && etapit.length > 0 ? etapit.join(',') + '/' : '') + loppu + ".json?propertyName=geometria,liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet&" + infraAikavali();
 
 let rautatieliikennepaikatUrl = () => infraAPIUrl + "rautatieliikennepaikat.json?propertyName=lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,voimassa&srsName=crs:84&" + infraAikavali();
 let liikennepaikanOsatUrl     = () => infraAPIUrl + "liikennepaikanosat.json?propertyName=liikennepaikka,lyhenne,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,voimassa&srsName=crs:84&" + infraAikavali();
@@ -279,7 +279,7 @@ let onkoRatakmSijainti = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\
 let onkoPmSijainti     = str => str && str.match && str.match(/^(\d+)([+-])(\d+)$/);
 let onkoRatakmVali     = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)\s*-\s*(\d+)[+](\d+)$/);
 let onkoRatanumero     = str => str && str.match && !onkoJeti(str) && !onkoRuma(str) && !onkoWKT(str) && str.match(/^\(?([a-zA-Z0-9 ]+|[^a-zA-Z0-9 ]{1,6}(?: [^a-zA-Z0-9 ]{1,3})?)\)?$/);
-let onkoReitti         = str => str && str.match && str.match(/^(.*?)\s*(?:=>)\s*(?:(.*)(?:=>))?\s*(.*?)$/);
+let onkoReitti         = str => str && str.match && str.match(/^(.*?)\s*((?:=>.*?)*\s*)(?:=>)\s*(.*?)$/);
 
 let onkoInfra = str => onkoInfraOID(str) ||
                        onkoReitti(str) ||
@@ -328,7 +328,7 @@ let luoInfraAPIUrl = str => {
     }
     m = onkoReitti(str);
     if (m) {
-        return reittiUrl(m[1], m[2], m[3]);
+        return reittiUrl(m[1], (m[2] ? m[2].split('=>').filter(x => x != '') : []), m[3]);
     }
     m = onkoKoordinaatti(str);
     if (m) {
@@ -527,7 +527,7 @@ let luoGrafiikkaLinkki = tunniste => {
     }
     m = onkoReitti(tunniste);
     if (m) {
-        return luoGrafiikkaLinkkiReitille([m[1]].concat(m[2] ? m[2].split(',') : []).concat(m[3]));
+        return luoGrafiikkaLinkkiReitille([m[1]].concat(m[2] ? m[2].split('=>').filter(x => x != '') : []).concat(m[3]));
     }
     m = onkoJuna(tunniste);
     if (m) {
@@ -557,7 +557,7 @@ let luoGrafiikkaLinkkiReitille = reitti => {
         r = reitti;
     } else {
         let rr = onkoReitti(reitti).slice(1);
-        r = [rr[1]].concat(rr[2] ? rr[2].split(',') : []).concat(rr[3]);
+        r = [rr[1]].concat(rr[2] ? rr[2].split('=>').filter(x => x != '') : []).concat(rr[3]);
     }
     return `
         <li>

@@ -34,20 +34,20 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                 let tunniste = item.tunniste;
                 let reitti = onkoReitti(item.tunniste);
                 if (reitti) {
-                    reitti = [reitti[1]].concat(reitti[2] ? reitti[2].split(',') : []).concat(reitti[3]);
+                    reitti = [reitti[1]].concat(reitti[2] ? reitti[2].split('=>').filter(x => x != '') : []).concat(reitti[3]);
                     reitti = reitti.map(x => !x ? x : Object.values(aikataulupaikatDS.data)
-                                                                     .filter(y => x == y.tunniste || ''+x == y.uicKoodi || y.lyhenne && x.toLowerCase() == y.lyhenne.toLowerCase())
-                                                                     .map(x => x.tunniste)
-                                                                     .find(x => x))
+                                                            .filter(y => x == y.tunniste || ''+x == y.uicKoodi || y.lyhenne && x.toLowerCase() == y.lyhenne.toLowerCase())
+                                                            .map(x => x.tunniste)
+                                                            .find(x => x))
                     if (!reitti.includes(undefined)) {
-                        tunniste = reitti[0] + '=>' + (reitti.length > 2 ? reitti.slice(1,-1).join(',') + '=>' : '') + reitti[reitti.length-1];
+                        tunniste = reitti[0] + '=>' + (reitti.length > 2 ? reitti.slice(1,-1).join('=>') + '=>' : '') + reitti[reitti.length-1];
                     }
                 }
                 return `
                 <div>
                     <div class="title">
                         <span class="group">${['Linkit', 'Muunnokset', 'Raideosuus', 'Rautatieliikennepaikka tai liikennepaikan osa'].includes(item.ryhma) || item.nimi.startsWith(item.ryhma) ? '' : escape(item.ryhma)}</span>
-                        <span class="name">${item.nimi}</span>
+                        <span class="name">${item.nimi} (${item.score})</span>
                     </div>
                     ${ lisaaPopuppiin ? '' : luoLinkit('', tunniste, escape(item.nimi)) }
                 </div>
@@ -73,7 +73,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                   .forEach(x => x.query = query);
             search.clearOptions();
         },
-        onType: () => {
+        onLoad: () => {
             var lukot = 0;
             let originalPlaceholder = search.settings.placeholder;
             let vapautaLukko = () => {
@@ -285,7 +285,7 @@ let hakuMuodosta = (str, callback, vainJunat) => {
                     luokka:     'Infra',
                     ryhma:      'Linkit',
                     tunniste:   str,
-                    nimi:       'Kaikki reitit ' + m[1] + ' => ' + (m[2] ? m[2] + ' => ': '') + m[3],
+                    nimi:       'Kaikki reitit ' + m[1] + (m[2] ? ' ' + m[2].split('=>').join(' => ') : '') + ' => ' + m[3],
                     score:      91000
                 });
             }
@@ -426,7 +426,7 @@ let hakuDatasta = (str, callback, vainJunat) => {
                 tunniste:   ryhma == 'Rata' ? '(' + r[0].ratanumero + ')' : r[0].tunniste,
                 data:       r[0],
                 nimi:       parsiInfraNimi(ryhma, r[0]),
-                score:      ryhma == 'Rata' ? r[1]+1000 : r[1] // nostetaan Ratojen pisteitä
+                score:      r[1]
             }
         }));
 
@@ -460,6 +460,14 @@ let osuuko = str => row => [row, osuuko_(splitString(str).map(x =>
                               : escapeRegex(x), 'i')))(row)];
 let osuuko_ = matchers => value => {
     let fieldName = value instanceof Array ? value[0] : undefined;
+    let fieldNameScore = typeof fieldName !== 'string' ? 0 :
+                         fieldName.toLowerCase() == 'lyhenne' ? 5 :
+                         fieldName.toLowerCase() == 'tunnus' ? 4 :
+                         fieldName.toLowerCase() == 'nimi' ? 3 :
+                         fieldName.toLowerCase() == 'ratanumero' ? 2 :
+                         fieldName.toLowerCase() == 'kaukoohjauspaikka' ? -10 :
+                         fieldName.toLowerCase() == 'kaukoohjausnimi' ? -10 :
+                         0;
     let row = value instanceof Array ? value[1] : value;
     if (row === null || row === undefined) {
         return 0;
@@ -477,8 +485,8 @@ let osuuko_ = matchers => value => {
         let r = typeof row == 'string' ? row : ''+row;
         let numero = typeof row == 'number';
         let bool = typeof row == 'boolean';
-        return matchers.map(matcher => {
-            let oid = onkoOID(r);
+        let oid = onkoOID(r);
+        let ret = matchers.map(matcher => {
             if (bool && fieldName.match(matcher)) {
                 // boolean-arvoille matchataan kentän nimeen exact
                 let m = fieldName.match(matcher);
@@ -494,10 +502,18 @@ let osuuko_ = matchers => value => {
             } else {
                 // muussa tapauksessa säädetään osumatarkkuutta sen mukaan miten iso osa mätsäsi
                 let m = r.match(matcher);
-                return m ? (m[0] == m.input ? 200 : 10 + Math.floor((m[0].length / m.input.length) * 100))
-                         : 0;
+                let score = m ? (m[0] == m.input      ? 200 + 200*fieldNameScore :                                                  // tarkka osuma
+                    m.input.split(' ').includes(m[0]) ? 100 + 50*fieldNameScore + Math.floor((m[0].length / m.input.length) * 10) : // tarkka osuma johonkin sanaan
+                                                        10  + 10*fieldNameScore + Math.floor((m[0].length / m.input.length) * 10))
+                                                      : 0;
+                /*if (r == "TPEE/19") {
+                    log(score, r, m);
+                }*/
+                return score;
             }
-        }).reduce((a,b) => a+b, 0);
+        });
+
+        return ret.reduce((a,b) => a+b, 0);
     }
 };
 
