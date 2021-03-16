@@ -47,13 +47,18 @@ log("Parametri Sijainti", sijaintiParam());
 log("Parametri Aika", aikaParam());
 log("Parametri Kesto", kestoParam());
 
+var koneellisestiAsetettuHash = undefined;
 let paivitaUrl = (sijainti, aika, kesto) => {
     log("Päivitetään urlia");    
     let hash = '#aika=' + toISOStringNoMillis(aika) +
                '&kesto=' + dateFns.durationFns.toString(dateFns.durationFns.normalize(kesto)) +
                '&sijainti=' + (sijainti instanceof Array ? sijainti.join("-") : sijainti) +
                (moodiParam() == 'kaavio' ? '&moodi=kaavio' : '');
-    window.location.hash = hash;
+    if (window.location.hash != hash) {
+        log("Päivitetään hash arvoon", hash);
+        koneellisestiAsetettuHash = hash;
+        window.location.hash = hash;
+    }
 }
 
 window.ikkuna = () => {
@@ -81,8 +86,8 @@ let limitInterval = intervalString => {
 };
 
 // safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
-let infraAPIUrl = 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.6/';
-let etj2APIUrl  = 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.6/';
+let infraAPIUrl = 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/';
+let etj2APIUrl  = 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/';
 let aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
 let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
 
@@ -97,20 +102,20 @@ let rumaAikavali  = () => 'start=' + pyoristaAjanhetki(rajat()[0]) + "&end=" + p
 let junienEsitysaikavali = 1000*60*60*24*5;
 
 let ratanumeroUrl             = ratanumero => infraAPIUrl + "radat.json?cql_filter=ratanumero='" + ratanumero + "'&" + infraAikavali();
-let ratanumerotUrl            = () => infraAPIUrl + "radat.json?propertyName=ratakilometrit,ratanumero,voimassa&" + infraAikavali();
+let ratanumerotUrl            = () => infraAPIUrl + "radat.json?propertyName=ratakilometrit,ratanumero,objektinVoimassaoloaika&" + infraAikavali();
 let ratakmSijaintiUrl         = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.json?' + infraAikavali();
 let pmSijaintiUrl             = (numero, suunta, etaisyys) => infraAPIUrl + 'paikantamismerkit/' + numero + suunta + etaisyys + '.json?' + infraAikavali();
 let ratakmValiUrl             = (ratanumero, alkuratakm, alkuetaisyys, loppuratakm, loppuetaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + alkuratakm + '+' + alkuetaisyys + '-' + loppuratakm + '+' + loppuetaisyys + '.json?' + infraAikavali();
-let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka,ratakmvalit,voimassa&" + infraAikavali();
+let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka,ratakmvalit,objektinVoimassaoloaika&" + infraAikavali();
 let reittiUrl                 = (alku, etapit, loppu) => infraAPIUrl + "reitit/kaikki/" + alku + "/" + (etapit && etapit.length > 0 ? etapit.join(',') + '/' : '') + loppu + ".json?propertyName=geometria,liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet&" + infraAikavali();
 
-let rautatieliikennepaikatUrl = () => infraAPIUrl + "rautatieliikennepaikat.json?propertyName=lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,voimassa&srsName=crs:84&" + infraAikavali();
-let liikennepaikanOsatUrl     = () => infraAPIUrl + "liikennepaikanosat.json?propertyName=liikennepaikka,lyhenne,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,voimassa&srsName=crs:84&" + infraAikavali();
-let raideosuudetUrl           = () => infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27raideosuus%27&propertyName=geometria,tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tyyppi,uickoodi,voimassa&srsName=crs:84&" + infraAikavali();
-let laituritUrl               = () => infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27laituri%27&propertyName=geometria,tunniste.tunniste,tunniste.kuvaus,tunniste.laskennallisetRatakmvalit,tunniste.tunnus,tyyppi,uickoodi,voimassa&srsName=crs:84&" + infraAikavali();
+let rautatieliikennepaikatUrl = () => infraAPIUrl + "rautatieliikennepaikat.json?propertyName=lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,objektinVoimassaoloaika&srsName=crs:84&" + infraAikavali();
+let liikennepaikanOsatUrl     = () => infraAPIUrl + "liikennepaikanosat.json?propertyName=liikennepaikka,lyhenne,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,objektinVoimassaoloaika&srsName=crs:84&" + infraAikavali();
+let raideosuudetUrl           = () => infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27raideosuus%27&propertyName=geometria,tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tyyppi,uicKoodi,objektinVoimassaoloaika&srsName=crs:84&" + infraAikavali();
+let laituritUrl               = () => infraAPIUrl + "aikataulupaikat.json?cql_filter=tyyppi=%27laituri%27&propertyName=geometria,tunniste.tunniste,tunniste.kuvaus,tunniste.ratakmvalit,tunniste.tunnus,tyyppi,uicKoodi,objektinVoimassaoloaika&srsName=crs:84&" + infraAikavali();
 
-let elementitUrl              = () => infraAPIUrl + "elementit.json?propertyName=tunniste,nimi,ratakmsijainnit,voimassa&" + infraAikavali();
-let lorajatUrl                = () => infraAPIUrl + "liikenteenohjauksenrajat.json?propertyName=tunniste,leikkaukset.ratakmsijainnit,voimassa&" + infraAikavali();
+let elementitUrl              = () => infraAPIUrl + "elementit.json?propertyName=tunniste,nimi,ratakmsijainnit,objektinVoimassaoloaika&" + infraAikavali();
+let lorajatUrl                = () => infraAPIUrl + "liikenteenohjauksenrajat.json?propertyName=tunniste,leikkaukset.ratakmsijainnit,objektinVoimassaoloaika&" + infraAikavali();
 
 let eiUrlRatanumero = () => tila => etj2APIUrl + 'ennakkoilmoitukset.json?cql_filter=tila=%27'  + tila + '%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa&' + etj2Aikavali();
 let esUrlRatanumero = () => tila => etj2APIUrl + 'ennakkosuunnitelmat.json?cql_filter=tila=%27' + tila + '%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa&' + etj2Aikavali();
@@ -122,17 +127,19 @@ let esUrlAikataulupaikka = () => tila => etj2APIUrl + 'ennakkosuunnitelmat.json?
 let vsUrlAikataulupaikka = () => tila => etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila=%27'   + tila + '%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa&' + etj2Aikavali();
 let loUrlAikataulupaikka = () => tila => etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27'       + tila + '%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika&' + etj2Aikavali();
 
+let rautatieliikennepaikatUrlTilasto = () => infraAPIUrl + 'rautatieliikennepaikat.json?propertyName=objektinVoimassaoloaika,tunniste,tyyppi&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+
 let asiatUrl     = () => etj2APIUrl + 'asiat.json';
-let eiUrlTilasto = () => etj2APIUrl + 'ennakkoilmoitukset.json?propertyName=asia,luontiaika,sisainenTunniste,tila,tyyppi,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
-let esUrlTilasto = () => etj2APIUrl + 'ennakkosuunnitelmat.json?propertyName=luontiaika,sisainenTunniste,tila,tyyppi,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
-let vsUrlTilasto = () => etj2APIUrl + 'vuosisuunnitelmat.json?propertyName=alustavakapasiteettivaraus,luontiaika,sisainenTunniste,tila,tyo,tyonlaji,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+let eiUrlTilasto = () => etj2APIUrl + 'ennakkoilmoitukset.json?propertyName=asia,luontiaika,tila,tunniste,tyyppi,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+let esUrlTilasto = () => etj2APIUrl + 'ennakkosuunnitelmat.json?propertyName=luontiaika,tila,tunniste,tyyppi,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+let vsUrlTilasto = () => etj2APIUrl + 'vuosisuunnitelmat.json?propertyName=alustavakapasiteettivaraus,luontiaika,tila,tunniste,tyo,tyonlaji,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
 
 let junasijainnitUrl        = () => 'https://rata.digitraffic.fi/api/v1/train-locations/latest/';
 let junasijainnitGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/train-locations.geojson/latest/';
 
 let koordinaattiUrl        = (coord,srsName) => infraAPIUrl + 'koordinaatit/' + coord + '.json?' + (srsName ? 'srsName=' + srsName + '&' : '') + infraAikavali();
-let ratakmMuunnosUrl       = coord => infraAPIUrl + 'koordinaatit/' + coord + '.json?propertyName=ratakmsijainnit,voimassa&srsName=crs:84&' + infraAikavali();
-let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.geojson?propertyName=geometria,voimassa&srsName=crs:84&' + infraAikavali();
+let ratakmMuunnosUrl       = coord => infraAPIUrl + 'koordinaatit/' + coord + '.json?propertyName=ratakmsijainnit,haetunDatanVoimassaoloaika&srsName=crs:84&' + infraAikavali();
+let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.geojson?propertyName=geometria,haetunDatanVoimassaoloaika&srsName=crs:84&' + infraAikavali();
 
 let rtUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?'    + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 let rtSingleUrl        = (tunniste) => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications/'         + tunniste + '/latest.json';
@@ -154,12 +161,13 @@ let hakuUrlitInfra = () => [ infraAPIUrl + "ratapihapalvelut.json?propertyName=k
                            , infraAPIUrl + "rautatieliikennepaikat.json?propertyName=kuljettajaAikatauluNimi,lyhenne,muutRatakmsijainnit,nimi,paaristeysasema,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti"
                            , infraAPIUrl + "liikennepaikkavalit.json?propertyName=alkuliikennepaikka,loppuliikennepaikka,tunniste"
                            , infraAPIUrl + "raideosuudet.json?propertyName=kaukoOhjausTunnisteet,tunniste,turvalaiteNimi,turvalaiteRaide,tyyppi,uicKoodi"
-                           , infraAPIUrl + "elementit.json?propertyName=baliisi,kuumakayntiIlmaisin,kuvaus,nimi,opastin,pyorovoimailmaisin,raiteensulku,ratakmsijainnit,rfidLukija,ryhmityseristin,sahkoistysPaattyy,tunniste,tyyppi,vaihde,virroitinvalvontakamera"
+                           , infraAPIUrl + "elementit.json?propertyName=baliisi,kuumakayntiIlmaisin,kuvaus,nimi,opastin,pyoravoimailmaisin,pysaytyslaite,ratakmsijainnit,rfidLukija,ryhmityseristin,sahkoistysPaattyy,tunniste,tyyppi,vaihde,virroitinvalvontakamera"
+                           , infraAPIUrl + "raiteensulut.json?propertyName=kasinAsetettava,nimi,tunniste,varmuuslukittu"
                            , infraAPIUrl + "raiteet.json?propertyName=kaupallinenNumero,kayttotarkoitukset,kuvaus,linjaraidetunnukset,nopeusrajoitukset,tunniste,tunnus"
                            , infraAPIUrl + "liikenteenohjauksenrajat.json?propertyName=ensimmaisenLuokanAlueidenRaja,leikkaukset.ratakmsijainnit,tunniste"
                            , infraAPIUrl + "tunnelit.json?propertyName=nimi,tunniste"
-                           , infraAPIUrl + "sillat.json?propertyName=kayttotarkoitus,nimi,laskennallisetRatakmvalit,siltakoodi,tunniste"
-                           , infraAPIUrl + "laiturit.json?propertyName=kaupallinenNumero,kuvaus,laskennallisetRatakmvalit,tunniste,tunnus,uicKoodi"
+                           , infraAPIUrl + "sillat.json?propertyName=kayttotarkoitus,nimi,ratakmvalit,siltakoodi,tunniste"
+                           , infraAPIUrl + "laiturit.json?propertyName=kaupallinenNumero,kuvaus,ratakmvalit,tunniste,tunnus,uicKoodi"
                            , infraAPIUrl + "tasoristeykset.json?propertyName=nimi,tielaji,tunniste,tunnus,varoituslaitos,virallinenSijainti"
                            , infraAPIUrl + "kayttokeskukset.json?propertyName=nimi,tunniste"
                            , infraAPIUrl + "kytkentaryhmat.json?propertyName=numero,tunniste"

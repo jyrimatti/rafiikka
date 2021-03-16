@@ -28,11 +28,17 @@ window.aktiivisetJunatDS.data = {};
 on(valittuDS.events, "done", _ => paivitaUrl(valittuDS.data, aikaParam(), kestoParam()));
 
 window.addEventListener('hashchange', () => {
+    if (window.location.hash == koneellisestiAsetettuHash) {
+        return;
+    }
     let uusiSijainti = sijaintiParam().split("-");
     if (uusiSijainti.length == 1) {
         uusiSijainti = uusiSijainti[0];
+    } else if (uusiSijainti.every(x => x.match(/\d+/))) {
+        uusiSijainti = uusiSijainti.map(x => parseInt(x));
     }
     if (JSON.stringify(uusiSijainti) != JSON.stringify(valittuDS.data)) {
+        log("sijainti päivitetty arvosta", valittuDS.data, "arvoon", uusiSijainti);
         valittuDS.data = uusiSijainti;
         valittuDS.dispatch("done", {target: {data: valittuDS.data}});
     }
@@ -71,8 +77,10 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
     monitor(reittiDS, uusiVali.map(x => aikataulupaikatDS.data[x].lyhenne).join("=>"));
     on(reittiDS.events, "done", ev => {
         let data = ev.target.data;
-        let lpJaOsat = data.liikennepaikat.flatMap(x => aikataulupaikatDS.data[x] ? [x] : data.liikennepaikanOsat.filter(y => liikennepaikanOsatDS.data[y].liikennepaikka == x)
-                                                                                                                    .map(y => liikennepaikanOsatDS.data[y].tunniste));
+        let lpJaOsat = data.liikennepaikat.flatMap(x => aikataulupaikatDS.data[x.tunniste]
+            ? [x.tunniste]
+            : data.liikennepaikanOsat.filter(y => liikennepaikanOsatDS.data[y.tunniste].liikennepaikka == x.tunniste)
+                                     .map(y => liikennepaikanOsatDS.data[y.tunniste].tunniste));
         let aikataulupaikat   = lpJaOsat.flatMap( (_,index) => {
             let edellinen     = lpJaOsat[index];
             if (index == 0) {
@@ -88,9 +96,13 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
             let edelYhteiset  = edelRkm.filter(y => seurRkm.map(z => z.ratanumero).includes(y.ratanumero)).sort(ratakmsijaintiComparator);
             let seurYhteiset  = seurRkm.filter(y => edelRkm.map(z => z.ratanumero).includes(y.ratanumero)).sort(ratakmsijaintiComparator);
             let yhteisetValit = edelYhteiset.map( (y,index) => [y, seurYhteiset[index]].sort(ratakmsijaintiComparator));
+            if (yhteisetValit.length == 0) {
+                throw "Ei yhteisiä välejä, jokin meni vikaan. Oliko reitti lineaarinen?";
+            }
             let seLv = data.seisakkeet.concat(data.linjavaihteet)
-                                        .filter(y => rautatieliikennepaikatDS.data[y].ratakmSijainnit.find(z => yhteisetValit.find(valissa(z))))
-                                        .sort( (a,b) => ratakmsijaintiComparator(aikataulupaikatDS.data[a].ratakmSijainnit[0], aikataulupaikatDS.data[b].ratakmSijainnit[0]));
+                                      .map(rlp => rlp.tunniste)
+                                      .filter(rlp => rautatieliikennepaikatDS.data[rlp].ratakmSijainnit.find(rkm => yhteisetValit.find(valissa(rkm))))
+                                      .sort( (a,b) => ratakmsijaintiComparator(aikataulupaikatDS.data[a].ratakmSijainnit[0], aikataulupaikatDS.data[b].ratakmSijainnit[0]));
             if (ratakmsijaintiComparator(edelRkm[0], seurRkm[0]) > 0) {
                 seLv = seLv.reverse();
             }
@@ -226,22 +238,38 @@ window.onload = () => {
 
 
         let xAxis = chart.xAxes.push(new am4charts.DateAxis());
+        window.xAxis = xAxis;
         xAxis.showOnInit       = false;
         xAxis.snapTooltip      = false;
-        xAxis.strictMinMax     = true;
         xAxis.keepSelection    = true;
         xAxis.baseInterval     = { timeUnit: "second" }; // automatiikka tuntuu asettavan joksikin muuksi
         xAxis.mainBaseInterval = { timeUnit: "second" };
-        xAxis.min              = rajat()[0].getTime();
-        xAxis.max              = rajat()[1].getTime();
+        xAxis.strictMinMax     = true;
+
+        let paivitaBounds = () => {
+            xAxis.min = rajat()[0].getTime();
+            xAxis.max = rajat()[1].getTime();
+        };
+        paivitaBounds();
         
         //xAxis.renderer.labels.template.tooltip     = new am4core.Tooltip();
         xAxis.renderer.labels.template.location    = 0.0001; // akselin labelit mielellään aina grid-viivojen kohdalle
         xAxis.renderer.labels.template.tooltipText = "{value.formatDate('dd.MM.yyyy HH:mm:ss')}";
         
-        let setXAxis = () => xAxis.zoomToDates(ikkuna()[0], ikkuna()[1], false, true);
+        let setXAxis = () => {
+            let target = ikkuna();
+            log("Zoomataan ikkunaan", target);
+            paivitaBounds();
+            // pitää tehdä async, muuten amcharts sekoaa
+            setTimeout( () => {
+                xAxis.zoomToDates(target[0], target[1], false, false);
+            }, 100);
+        };
         on(chart.events, "ready", setXAxis);
         window.addEventListener('hashchange', () => {
+            if (window.location.hash == koneellisestiAsetettuHash) {
+                return;
+            }
             setXAxis();
         });
 
@@ -275,8 +303,8 @@ window.onload = () => {
 
         
         // säädetään scrollbar-charttien zoomit samalla kun päächartin zoomi muuttuu
-        on(xAxis.events, "selectionextremeschanged", () => chart.scrollbarY.scrollbarChart.xAxes.each(x => x.zoomToDates(xAxis.minZoomed, xAxis.maxZoomed, false, true)));
-        on(yAxis.events, "selectionextremeschanged", () => chart.scrollbarX.scrollbarChart.yAxes.each(x => x.zoomToValues(yAxis.minZoomed, yAxis.maxZoomed, false, true)));
+        on(xAxis.events, "startendchanged", () => chart.scrollbarY.scrollbarChart.xAxes.each(x => x.zoomToDates(xAxis.minZoomed, xAxis.maxZoomed, false, false)));
+        on(yAxis.events, "startendchanged", () => chart.scrollbarX.scrollbarChart.yAxes.each(x => x.zoomToValues(yAxis.minZoomed, yAxis.maxZoomed, false, false)));
 
 
         on(valittuDS.events, "done", ev => {
@@ -521,7 +549,7 @@ window.onload = () => {
             on(button.events, "hit", () => {
                 let diff = Math.abs(xAxis.maxZoomed - xAxis.minZoomed);
                 xAxis.zoomToDates(new Date(xAxis.minZoomed + deltaMin(diff)),
-                                    new Date(xAxis.maxZoomed + deltaMax(diff)));
+                                  new Date(xAxis.maxZoomed + deltaMax(diff)));
             });
             return button;
         }
@@ -535,7 +563,7 @@ window.onload = () => {
         on(nowButton.events, "hit", () => {
             let diff = xAxis.maxZoomed - xAxis.minZoomed;
             xAxis.zoomToDates(new Date(new Date().getTime() - diff/2),
-                                new Date(new Date().getTime() + diff/2));
+                              new Date(new Date().getTime() + diff/2));
         });
 
         luoAikavalinSiirtoButton("-", (x => -0.25 * x), (x =>  0.25 * x), 'Kavenna aikajaksoa').marginLeft = 10;
@@ -1237,8 +1265,8 @@ window.onload = () => {
             }
         };
 
-        on(xAxis.events, "selectionextremeschanged", haeAikatauluja);
-        on(xAxis.events, "selectionextremeschanged", haeToteumia);
+        on(xAxis.events, "startendchanged", haeAikatauluja);
+        on(xAxis.events, "startendchanged", haeToteumia);
         on(aikataulutToggle.events, "shown", haeAikatauluja);
         on(toteumatToggle.events,   "shown", haeToteumia);
         on(valittuDS.events, "done", () => {
@@ -1248,17 +1276,21 @@ window.onload = () => {
             haeToteumia();
         });
 
-        on(xAxis.events, "selectionextremeschanged", () => {
+        on(xAxis.events, "startendchanged", ev => {
             let start = xAxis.minZoomed || ikkuna()[0].getTime();
             let end = xAxis.maxZoomed || ikkuna()[1].getTime();
             // amcharts palauttaa joskus minZoomed > maxZoomed :shrug:
+            if (start > end) {
+                log("Start > end!", new Date(start), new Date(end), new Date(xAxis.min), new Date(xAxis.max), ikkuna());
+                return;
+            }
             let millis = Math.abs(end-start);
             let kesto = { seconds: Math.floor(millis/1000) };
             let aika = new Date(start + millis / 2);
             paivitaUrl(sijaintiParam(), aika, dateFns.durationFns.normalize(kesto));
         });
 
-        on(xAxis.events, "selectionextremeschanged", ev => {
+        on(xAxis.events, "startendchanged", ev => {
             if (!naytetaankoAikataulut(ev.target.minZoomed, ev.target.maxZoomed, !aikataulutToggle.hidden || !toteumatToggle.hidden)) {
                 log("Piilotetaan junat");
                 aikataulutToggle.hide();
@@ -1277,7 +1309,7 @@ window.onload = () => {
                 poistaAikataulu(series);
             }
         }
-        on(xAxis.events, "selectionextremeschanged", ev => {
+        on(xAxis.events, "startendchanged", ev => {
             kutsuJunalle(ladatutAikataulut, poistaKaukaisetJunat(ev.target));
             kutsuJunalle(ladatutToteumat,   poistaKaukaisetJunat(ev.target));
         });

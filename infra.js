@@ -10,7 +10,7 @@ let ratakmsijaintiComparator = (a,b) => {
     }
     return 0;
 };
-let valissa = (ratakmsijainti,vali) => [vali[0],ratakmsijainti,vali[1]].sort(ratakmsijaintiComparator) == [vali[0],ratakmsijainti,vali[1]];
+let valissa = ratakmsijainti => vali => ratakmsijaintiComparator(vali[0],ratakmsijainti) <= 0 && ratakmsijaintiComparator(ratakmsijainti, vali[1]) <= 0;
 
 let ratakmvaliComparator = (a,b) => {
     if (a.ratanumero < b.ratanumero) {

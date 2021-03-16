@@ -102,8 +102,9 @@ let lpValiStyle = styles.line(3.0, 'rgba(42,42,255,0.3)');
 
 let rataStyle = styles.line(1.0, 'rgb(255,42,42)');
 let kmStyle = styles.icon(infraAPIUrl + 'icons/kilometrimerkki.svg');
-let tasoristeysStyle = feature => styles.icon(infraAPIUrl + 'icons/tasoristeys.svg', undefined, feature.getProperties().rotaatio);
-let lorajaStyle      = feature => styles.icon(infraAPIUrl + 'icons/liikenteenohjauksenraja.svg', undefined, feature.getProperties().rotaatio);
+let tasoristeysStyle = (feature, resolution) => styles.icon(infraAPIUrl + 'icons/tasoristeys.svg', undefined, feature.getProperties().rotaatio);
+let lorajaStyle      = (feature, resolution) => styles.icon(infraAPIUrl + 'icons/liikenteenohjauksenraja.svg', undefined, feature.getProperties().rotaatio);
+let raiteensulkuStyle = (feature, resolution) => styles.icon(root + 'icons/raiteensulku' + (feature.getProperties().suistosuunta === 'vasen' ? 'Vasen' : 'Oikea') + (feature.getProperties().kasinAsetettava === true ? 'Kasin' : '') + '.svg', undefined, feature.getProperties().rotaatio);
 let nraStyle = styles.line(1.0, 'rgb(89,161,183)');
 
 let eristysosuusStyle = styles.line(1.0, 'rgba(0, 0, 255, 0.5)');
@@ -138,7 +139,7 @@ let elemStyle = (feature, resolution) => {
     let icon4elem = elemType == 'opastin' ? 'opastin_' + feature.getProperties().opastin.tyyppi :
                     elemType == 'baliisi' ? 'baliisi' + (feature.getProperties().baliisi.toistopiste === true ? 'toistopiste' : '') :
                     elemType == 'ryhmityseristin' ? 'ryhmityseristin' + (feature.getProperties().ryhmityseristin.nopeastiAjettava === true ? 'Nopea' : '') :
-                    elemType == 'raiteensulku' ? 'raiteensulku' + (feature.getProperties().raiteensulku.kasinAsetettava === true ? 'Kasin' : '') :
+                    elemType == 'pysaytyslaite' ? 'pysaytyslaite' + (feature.getProperties().pysaytyslaite.suojaussuunta === 'molemmat' ? 'Molemmat' : '') + (feature.getProperties().pysaytyslaite.kasinAsetettava === true ? 'Kasin' : '') :
                     elemType == 'vaihde' ? 'vaihde_' + feature.getProperties().vaihde.tyyppi + (feature.getProperties().vaihde.kasikaantoisyys == 'ei' ? '' : '_' + feature.getProperties().vaihde.kasikaantoisyys) + (feature.getProperties().vaihde.risteyssuhde == null || parseFloat(feature.getProperties().vaihde.risteyssuhde.split(':')[1]) <= 10 ? '' : parseFloat(feature.getProperties().vaihde.risteyssuhde.split(':')[1]) <= 18 ? '_keskinopea' : '_nopea' ) :
                     elemType;
     let style = styles.icon(infraAPIUrl + 'icons/' + icon4elem + '.svg', false, feature.getProperties().rotaatio, anchor, scales[resolutions.indexOf(resolution)]);

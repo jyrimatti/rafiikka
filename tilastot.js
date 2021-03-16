@@ -1,3 +1,5 @@
+let luoTilastoPopupRautatieliikennepaikat = () => luoTilastoPopup('Rautatieliikennepaikat', rautatieliikennepaikatUrlTilasto(), am4core.color("black").lighten(-0.5), [''], ['liikennepaikka','seisake','linjavaihde'], ['']);
+
 var estyypit = ['Rakentaminen', 'Kunnossapito'];
 var asiat = [];
 getJson(asiatUrl(), data => {
@@ -9,14 +11,12 @@ let luoTilastoPopupES = () => luoTilastoPopup('Ennakkosuunnitelmat', esUrlTilast
 let luoTilastoPopupVS = () => luoTilastoPopup('Vuosisuunnitelmat', vsUrlTilasto(), am4core.color("violet").lighten(-0.5), ['vuosiohjelmissa (tila poistunut käytöstä)', 'käynnissä (tila poistunut käytöstä)', 'poistettu', 'alustava', 'toteutuu', 'tehty'], [''], ['investointi', 'kunnossapito', 'ulkopuolisen tahon työ']);
 
 let paivitaNakyvyydet = (series, nakyvat) => {
-    series.filter(s => s.visible)
-          .filter(s => s.dummyData && s.dummyData.subtypes && !s.dummyData.subtypes.every(st => nakyvat[st]))
+    series.filter(s => s.dummyData && s.dummyData.subtypes && !s.dummyData.subtypes.every(st => nakyvat[st]))
           .forEach(s => {
         log("Piilotetaan", s.name);
         s.hide();
     });
-    series.filter(s => !s.visible)
-          .filter(s => s.dummyData && s.dummyData.subtypes && s.dummyData.subtypes.every(st => nakyvat[st]))
+    series.filter(s => s.dummyData && s.dummyData.subtypes && s.dummyData.subtypes.every(st => nakyvat[st]))
           .forEach(s => {
         log("Näytetään", s.name);
         s.show();
@@ -76,10 +76,12 @@ let luoTilastoPopup = (nimi, url, vari, tilat, tyypit, tyonlajit) => {
     buttonContainer.marginTop   = 5;
     buttonContainer.marginRight = 5;
 
-    // by default, hide states but show tyypit/tyonlajit
+    let togglet = [tilat, tyypit, tyonlajit].find(x => x[0] != '');
+    let muut = [tilat, tyypit, tyonlajit].filter(x => x != togglet);
+
     let nakyvat = {};
-    tilat.filter(x => x != '').forEach(x => nakyvat[x] = false);
-    tyypit.filter(x => x != '').concat(tyonlajit).forEach(x => nakyvat[x] = true);
+    togglet.filter(x => x != '').forEach(x => nakyvat[x] = false);
+    muut.flat().filter(x => x != '').forEach(x => nakyvat[x] = true);
 
     let ds = new am4core.DataSource();
     initDS(ds);
@@ -111,23 +113,23 @@ let luoTilastoPopup = (nimi, url, vari, tilat, tyypit, tyonlajit) => {
     var moodi;
     let ryhmitteleLuontiajanMukaan = () => moodi.label.text == 'luontiaika';
 
-    tyypit.concat(tyonlajit)
-          .filter(x => x != '')
-          .forEach(x => {
-        let button = buttonContainer.createChild(am4core.Button);
-        button.label.text = x;
-        button.label.fontSize = 12;
-        button.paddingLeft = 2;
-        button.paddingRight = 2;
-        button.background.states.create("active").properties.fill = button.background.fill.lighten(-0.5);
-        button.isActive = nakyvat[x];
+    muut.flat()
+        .filter(x => x != '')
+        .forEach(x => {
+            let button = buttonContainer.createChild(am4core.Button);
+            button.label.text = x;
+            button.label.fontSize = 12;
+            button.paddingLeft = 2;
+            button.paddingRight = 2;
+            button.background.states.create("active").properties.fill = button.background.fill.lighten(-0.5);
+            button.isActive = nakyvat[x];
 
-        on(button.events, "hit", ev => {
-            ev.target.isActive = !ev.target.isActive;
-            nakyvat[x] = ev.target.isActive;
-            let series = ryhmitteleLuontiajanMukaan() ? luontiajan : voimassaolon;
-            paivitaNakyvyydet(series, nakyvat);
-        });
+            on(button.events, "hit", ev => {
+                ev.target.isActive = !ev.target.isActive;
+                nakyvat[x] = ev.target.isActive;
+                let series = ryhmitteleLuontiajanMukaan() ? luontiajan : voimassaolon;
+                paivitaNakyvyydet(series, nakyvat);
+            });
     });
 
     moodi = buttonContainer.createChild(am4core.Button);
@@ -191,17 +193,18 @@ let luo = (nimi, ds, vari, tilat, tyypit, tyonlajit, ryhmitteleLuontiajanMukaan,
         on(ds.events, "parseended", ev => {
             logDiff("Parsitaan", nimi, "luontiajan mukaan", () => {
                 let ret = {};
-                ev.target.data.forEach(x => {
+                let rows = ev.target.data instanceof Array ? ev.target.data : Object.values(ev.target.data).flat();
+                rows.forEach(x => {
                     // grouppaus, koska dataa on muuten liian paljon.
                     let o = {
-                        tila:     x.tila,
-                        tyyppi:   x.tyyppi || '',
-                        tyonlaji: x.tyonlaji || x.asia || '', 
-                        loppu:    dateFns.dateFns.setMinutes(dateFns.dateFns.roundToNearestMinutes(new Date(x.luontiaika)), 0),
+                        tila:     (x.tila || '').toLowerCase(),
+                        tyyppi:   (x.tyyppi || '').toLowerCase(),
+                        tyonlaji: (x.tyonlaji || x.asia || '').toLowerCase(), 
+                        loppu:    dateFns.dateFns.setMinutes(dateFns.dateFns.roundToNearestMinutes(new Date(x.luontiaika || limitInterval(x.objektinVoimassaoloaika).split('/')[0])), 0),
                         value:    1
                     };
                     // pyöristetään vuorokausiin jos rivejä liikaa
-                    o.loppu = ev.target.data.length > 5000 ? dateFns.dateFns.setHours(o.loppu, 0).getTime() : o.loppu.getTime();
+                    o.loppu = rows.length > 5000 ? dateFns.dateFns.setHours(o.loppu, 0).getTime() : o.loppu.getTime();
                     let hash = o.tila + '_' + o.tyyppi + '_' + o.tyonlaji + '_' + o.loppu;
                     if (ret[hash]) {
                         ret[hash].value += 1;
@@ -215,20 +218,22 @@ let luo = (nimi, ds, vari, tilat, tyypit, tyonlajit, ryhmitteleLuontiajanMukaan,
     } else {
         on(ds.events, "parseended", ev => {
             logDiff("Parsitaan", nimi, "voimassaolon mukaan", () => {
-                let aikavalit = ev.target.data
+                let rows = ev.target.data instanceof Array ? ev.target.data : Object.values(ev.target.data).flat();
+                let aikavalit = rows
                     .map(x => {
-                        let voim = x.voimassa.split('/').map(y => new Date(y));
+                        let aikavali = limitInterval(x.voimassa || x.objektinVoimassaoloaika);
+                        let voim = aikavali.split('/').map(y => new Date(y));
                         let ret = {
-                            tila:             x.tila,
-                            sisainenTunniste: x.sisainenTunniste,
-                            tyyppi:           x.tyyppi || '',
-                            tyonlaji:         x.tyonlaji || x.asia || '', 
-                            alku:             dateFns.dateFns.setMinutes(dateFns.dateFns.roundToNearestMinutes(voim[0]), 0),
-                            loppu:            dateFns.dateFns.setMinutes(dateFns.dateFns.roundToNearestMinutes(voim[1]), 0),
+                            tila:     (x.tila || '').toLowerCase(),
+                            tunniste: x.tunniste,
+                            tyyppi:   (x.tyyppi || '').toLowerCase(),
+                            tyonlaji: (x.tyonlaji || x.asia || '').toLowerCase(), 
+                            alku:     dateFns.dateFns.setMinutes(dateFns.dateFns.roundToNearestMinutes(voim[0]), 0),
+                            loppu:    dateFns.dateFns.setMinutes(dateFns.dateFns.roundToNearestMinutes(voim[1]), 0),
                         }
                         // pyöristetään vuorokausiin jos rivejä liikaa
-                        ret.alku = ev.target.data.length > 5000 ? dateFns.dateFns.setHours(ret.alku, 0).getTime() : ret.alku.getTime();
-                        ret.loppu = ev.target.data.length > 5000 ? dateFns.dateFns.setHours(ret.loppu, 0).getTime() : ret.loppu.getTime();
+                        ret.alku = rows.length > 5000 ? dateFns.dateFns.setHours(ret.alku, 0).getTime() : ret.alku.getTime();
+                        ret.loppu = rows.length > 5000 ? dateFns.dateFns.setHours(ret.loppu, 0).getTime() : ret.loppu.getTime();
                         return ret;
                     });
                 let ajanhetket = [...new Set(aikavalit.flatMap(x => [x.alku, x.loppu]))].sort();
@@ -239,20 +244,20 @@ let luo = (nimi, ds, vari, tilat, tyypit, tyonlajit, ryhmitteleLuontiajanMukaan,
                         a = [new Set(), new Set()];
                         muutoshetket.set(x.alku, a);
                     }
-                    a[0].add(x.tila + '-' + x.tyyppi + '-' + x.tyonlaji + '-' + x.sisainenTunniste);
+                    a[0].add(x.tila + '-' + x.tyyppi + '-' + x.tyonlaji + '-' + x.tunniste);
     
                     let b = muutoshetket.get(x.loppu);
                     if (!b) {
                         b = [new Set(), new Set()];
                         muutoshetket.set(x.loppu, b);
                     }
-                    b[1].add(x.tila + '-' + x.tyyppi + '-' + x.tyonlaji + '-' + x.sisainenTunniste);
+                    b[1].add(x.tila + '-' + x.tyyppi + '-' + x.tyonlaji + '-' + x.tunniste);
                 });
                 let cur = new Set();
-                let alku = new Date('2014-01-01T00:00:00Z').getTime();
-                let loppu = new Date('2025-01-01T00:00:00Z').getTime();
+                //let alku = new Date('2014-01-01T00:00:00Z').getTime();
+                //let loppu = new Date('2025-01-01T00:00:00Z').getTime();
                 ev.target.voimassaolonMukaan = ajanhetket
-                    .filter(x => x >= alku && x < loppu)
+                    //.filter(x => x >= alku && x < loppu)
                     .map((x,i) => {
                         let diff = muutoshetket.get(x);
                         diff[0].forEach(y => cur.add(y));
@@ -268,31 +273,33 @@ let luo = (nimi, ds, vari, tilat, tyypit, tyonlajit, ryhmitteleLuontiajanMukaan,
         });
     }
 
-    let tilavari = i => vari.lighten(i*(1/tilat.length));
-    let f = ryhmitteleLuontiajanMukaan ? luontiajanMukaan(ds) : voimassaolonMukaan(ds);
-    let series = tilat.flatMap((tila,i) => tyypit.flatMap(tyyppi => tyonlajit.map(tyonlaji => f(luoSeries(tila, tyyppi, tyonlaji, tilavari(i)))(tila, tyyppi, tyonlaji))));
+    let togglet = [tilat, tyypit, tyonlajit].find(x => x[0] != '');
+    let muut = [tilat, tyypit, tyonlajit].filter(x => x != togglet);
+    let togglevari = i => vari.lighten(i*(1/togglet.length));
 
-    let toggles = tilat.map((tila,i) => {
+    let f = ryhmitteleLuontiajanMukaan ? luontiajanMukaan(ds) : voimassaolonMukaan(ds);
+    let series = tilat.flatMap((tila,i) => tyypit.flatMap((tyyppi,j) => tyonlajit.map((tyonlaji,k) => f(luoSeries(tila, tyyppi, tyonlaji, togglevari(togglet == tilat ? i : togglet == tyypit ? j : k)))(tila, tyyppi, tyonlaji))));
+
+    let toggles = togglet.map((tog,i) => {
         let toggle               = new am4charts.ColumnSeries();
-        toggle.name              = tila;
-        toggle.fill              = tilavari(i)
+        toggle.name              = tog;
+        toggle.fill              = togglevari(i)
         toggle.stroke            = toggle.fill;
         toggle.hidden            = true;
         toggle.hiddenInLegend    = true;
-        //toggle.stacked           = true;
         toggle.dataFields.dateX  = 'dummy1';
         toggle.dataFields.valueY = "dummy2";
         on(toggle.events, "hidden", () => {
-            series.filter(x => x.dummyData && x.dummyData.subtypes && x.dummyData.subtypes.includes(tila))
+            series.filter(x => x.dummyData && x.dummyData.subtypes && x.dummyData.subtypes.includes(tog))
                   .forEach(x => {
-                      nakyvat[tila] = false;
+                      nakyvat[tog] = false;
                   })
             paivitaNakyvyydet(series, nakyvat);
         });
         on(toggle.events, "shown", () => {
-            series.filter(x => x.dummyData && x.dummyData.subtypes && x.dummyData.subtypes.includes(tila))
+            series.filter(x => x.dummyData && x.dummyData.subtypes && x.dummyData.subtypes.includes(tog))
                   .forEach(x => {
-                      nakyvat[tila] = true;
+                      nakyvat[tog] = true;
                   })
             paivitaNakyvyydet(series, nakyvat);
         });
@@ -304,7 +311,6 @@ let luo = (nimi, ds, vari, tilat, tyypit, tyonlajit, ryhmitteleLuontiajanMukaan,
 
 let luoSeries = (tila, tyyppi, tyonlaji, vari) => {
     let series = new am4charts.ColumnSeries();
-    //series.dataSource           = new am4core.DataSource();
     series.fill                 = vari;
     series.name                 = tila + '-' + tyyppi + '-' + tyonlaji;
     series.columns.template.width  = am4core.percent(100);
@@ -314,7 +320,6 @@ let luoSeries = (tila, tyyppi, tyonlaji, vari) => {
     series.showOnInit           = false;
     series.dataFields.dateX     = 'loppu';
     series.dataFields.valueY    = 'value';
-    //series.stacked              = true;
     series.hidden               = true;
     series.hiddenInLegend       = true;
     series.tooltip.label.adapter.add("text", (text, target) => target.dataItem && target.dataItem.valueY == 0 ? '' : text);
@@ -326,10 +331,13 @@ let luoSeries = (tila, tyyppi, tyonlaji, vari) => {
 
 let luontiajanMukaan = ds => series => (tila, tyyppi, tyonlaji) => {
     add(series.adapter, "groupDataItem", val => {
+        let tila_ = tila.toLowerCase();
+        let tyyppi_ = tyyppi.toLowerCase();
+        let tyonlaji_ = tyonlaji.toLowerCase();
         val.value = val.dataItem.groupDataItems
-            .filter(x => x.dataContext.tila == tila &&
-                         x.dataContext.tyyppi == tyyppi &&
-                         x.dataContext.tyonlaji == tyonlaji)
+            .filter(x => x.dataContext.tila == tila_ &&
+                         x.dataContext.tyyppi == tyyppi_ &&
+                         x.dataContext.tyonlaji == tyonlaji_)
             .map(x => x.dataContext.value)
             .reduce((a, b) => a + b, 0);
         return val;
@@ -339,13 +347,15 @@ let luontiajanMukaan = ds => series => (tila, tyyppi, tyonlaji) => {
 
 let voimassaolonMukaan = ds => series => (tila, tyyppi, tyonlaji) => {
     add(series.adapter, "groupDataItem", val => {
+        let tila_ = tila.toLowerCase();
+        let tyyppi_ = tyyppi.toLowerCase();
+        let tyonlaji_ = tyonlaji.toLowerCase();
         let elems = new Set();
         val.dataItem.groupDataItems
-            //.filter(x => !x.dataContext.tyyppi || ds.includeTyyppi.includes(x.dataContext.tyyppi))
             .forEach(x => x.dataContext.elements.forEach(e => {
-                if (e.startsWith(tila) &&
-                    (tyyppi == '' || e.indexOf(tyyppi) >= 0) &&
-                    (tyonlaji == '' || e.indexOf(tyonlaji) >= 0)) {
+                if ((tila_ == '' || e.startsWith(tila_)) &&
+                    (tyyppi_ == '' || e.indexOf(tyyppi_) >= 0) &&
+                    (tyonlaji_ == '' || e.indexOf(tyonlaji_) >= 0)) {
                     elems.add(e);
                 }
             }));

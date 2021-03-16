@@ -245,7 +245,7 @@ let featuresOnScreen = map => {
             : []);
 }
 
-let voimassaolot = props => [props.voimassa ? props.voimassa.split('/') : [], props.ensimmainenAktiivisuusaika ? [props.ensimmainenAktiivisuusaika, props.viimeinenAktiivisuusaika] : []]
+let voimassaolot = props => [props.haetunDatanVoimassaoloaika ? props.haetunDatanVoimassaoloaika.split('/') : [], props.ensimmainenAktiivisuusaika ? [props.ensimmainenAktiivisuusaika, props.viimeinenAktiivisuusaika] : []]
     .filter(x => x.length > 0)
     .flat();
 
