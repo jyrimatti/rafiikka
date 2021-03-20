@@ -1,3 +1,7 @@
+
+let luoTilastoPopupKilometrimerkit = () => luoTilastoPopup('Kilometrimerkit', kilometrimerkitUrlTilasto(), am4core.color("black").lighten(-0.5), [''], [''], ['']);
+let luoTilastoPopupRadat = () => luoTilastoPopup('Radat', radatUrlTilasto(), am4core.color("black").lighten(-0.5), [''], [''], ['']);
+let luoTilastoPopupLiikennepaikanOsat = () => luoTilastoPopup('Liikennepaikan osat', liikennepaikanOsatUrlTilasto(), am4core.color("black").lighten(-0.5), [''], [''], ['']);
 let luoTilastoPopupRautatieliikennepaikat = () => luoTilastoPopup('Rautatieliikennepaikat', rautatieliikennepaikatUrlTilasto(), am4core.color("black").lighten(-0.5), [''], ['liikennepaikka','seisake','linjavaihde'], ['']);
 
 var estyypit = ['Rakentaminen', 'Kunnossapito'];
@@ -24,6 +28,10 @@ let paivitaNakyvyydet = (series, nakyvat) => {
 };
 
 let luoTilastoPopup = (nimi, url, vari, tilat, tyypit, tyonlajit) => {
+    if (tilat.concat(tyypit).concat(tyonlajit).every(x => x == '')) {
+        tilat = [nimi];
+    }
+
     let [container, elemHeader] = luoIkkuna(nimi);
     container.setAttribute("class", "popupContainer infoPopup tilastoContainer");
 
@@ -76,7 +84,7 @@ let luoTilastoPopup = (nimi, url, vari, tilat, tyypit, tyonlajit) => {
     buttonContainer.marginTop   = 5;
     buttonContainer.marginRight = 5;
 
-    let togglet = [tilat, tyypit, tyonlajit].find(x => x[0] != '');
+    let togglet = [tilat, tyypit, tyonlajit].find(x => x[0] != '') || [];
     let muut = [tilat, tyypit, tyonlajit].filter(x => x != togglet);
 
     let nakyvat = {};
@@ -87,8 +95,8 @@ let luoTilastoPopup = (nimi, url, vari, tilat, tyypit, tyonlajit) => {
     initDS(ds);
     monitor(ds, "tilasto-" + nimi);
 
-    let voimassaolon = luo(nimi, ds, vari, tilat, tyypit, tyonlajit, false, nakyvat);
-    let luontiajan = luo(nimi, ds, vari, tilat, tyypit, tyonlajit, true, nakyvat);
+    let voimassaolon = luo(nimi, ds, vari, tilat, tyypit, tyonlajit, false, nakyvat, togglet, muut);
+    let luontiajan = luo(nimi, ds, vari, tilat, tyypit, tyonlajit, true, nakyvat, togglet, muut);
 
     on(ds.events, "done", ev => {
         logDiff("Asetetaan data", () => {
@@ -188,7 +196,7 @@ let hide = x => {
     }
 };
 
-let luo = (nimi, ds, vari, tilat, tyypit, tyonlajit, ryhmitteleLuontiajanMukaan, nakyvat) => {
+let luo = (nimi, ds, vari, tilat, tyypit, tyonlajit, ryhmitteleLuontiajanMukaan, nakyvat, togglet, muut) => {
     if (ryhmitteleLuontiajanMukaan) {
         on(ds.events, "parseended", ev => {
             logDiff("Parsitaan", nimi, "luontiajan mukaan", () => {
@@ -197,7 +205,7 @@ let luo = (nimi, ds, vari, tilat, tyypit, tyonlajit, ryhmitteleLuontiajanMukaan,
                 rows.forEach(x => {
                     // grouppaus, koska dataa on muuten liian paljon.
                     let o = {
-                        tila:     (x.tila || '').toLowerCase(),
+                        tila:     (x.tila || (tilat.filter(y => y != '').length == 1 ? tilat[0] : '')).toLowerCase(),
                         tyyppi:   (x.tyyppi || '').toLowerCase(),
                         tyonlaji: (x.tyonlaji || x.asia || '').toLowerCase(), 
                         loppu:    dateFns.dateFns.setMinutes(dateFns.dateFns.roundToNearestMinutes(new Date(x.luontiaika || limitInterval(x.objektinVoimassaoloaika).split('/')[0])), 0),
@@ -224,7 +232,7 @@ let luo = (nimi, ds, vari, tilat, tyypit, tyonlajit, ryhmitteleLuontiajanMukaan,
                         let aikavali = limitInterval(x.voimassa || x.objektinVoimassaoloaika);
                         let voim = aikavali.split('/').map(y => new Date(y));
                         let ret = {
-                            tila:     (x.tila || '').toLowerCase(),
+                            tila:     (x.tila || (tilat.filter(y => y != '').length == 1 ? tilat[0] : '')).toLowerCase(),
                             tunniste: x.tunniste,
                             tyyppi:   (x.tyyppi || '').toLowerCase(),
                             tyonlaji: (x.tyonlaji || x.asia || '').toLowerCase(), 
@@ -273,8 +281,6 @@ let luo = (nimi, ds, vari, tilat, tyypit, tyonlajit, ryhmitteleLuontiajanMukaan,
         });
     }
 
-    let togglet = [tilat, tyypit, tyonlajit].find(x => x[0] != '');
-    let muut = [tilat, tyypit, tyonlajit].filter(x => x != togglet);
     let togglevari = i => vari.lighten(i*(1/togglet.length));
 
     let f = ryhmitteleLuontiajanMukaan ? luontiajanMukaan(ds) : voimassaolonMukaan(ds);

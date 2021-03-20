@@ -38,12 +38,22 @@
     <h1>Rafiikka - Rataverkon reaaliaikagrafiikka, työrakografiikka, karttakäyttöliittymä ja tilastopalvelu</h1>
 
     <div class="palkki" id="palkki">
-        <div>
+        <div class="menu">
             <a style="font-size: 2em;"   href="" title="Avaa kartta"                   onclick="try {kartta()} catch(e) {log(e);}; return false;">🗺</a>
             <a style="font-size: 1.8em;" href="" title="Avaa aikataulu"                onclick="luoJunaPopup();                    return false;">📅</a>
-            <a                           href="" title="Ennakkoilmoitusten tilastoa"   onclick="luoTilastoPopupEI();               return false;"><img src="https://rata.digitraffic.fi/jeti-api/latest/icons/ennakkoilmoitus.svg" /></a>
-            <a                           href="" title="Ennakkosuunnitelmien tilastoa" onclick="luoTilastoPopupES();               return false;"><img src="https://rata.digitraffic.fi/jeti-api/latest/icons/ennakkosuunnitelma.svg" /></a>
-            <a                           href="" title="Vuosisuunnitelmien tilastoa"   onclick="luoTilastoPopupVS();               return false;"><img src="https://rata.digitraffic.fi/jeti-api/latest/icons/vuosisuunnitelma.svg" /></a>
+            <span class="statistics">
+                <span class="trigger" title="Tilastoja">📊</span>
+                <a href="" onclick="luoTilastoPopupEI(); return false;"><img src="https://rata.digitraffic.fi/jeti-api/latest/icons/ennakkoilmoitus.svg" /> Ennakkoilmoitukset</a>
+                <a href="" onclick="luoTilastoPopupES(); return false;"><img src="https://rata.digitraffic.fi/jeti-api/latest/icons/ennakkosuunnitelma.svg" /> Ennakkosuunnitelmat</a>
+                <a href="" onclick="luoTilastoPopupVS(); return false;"><img src="https://rata.digitraffic.fi/jeti-api/latest/icons/vuosisuunnitelma.svg" /> Vuosisuunnitelmat</a>
+                
+                <span class="infra">
+                    <a href="" onclick="luoTilastoPopupKilometrimerkit(); return false;">Kilometrimerkit</a>
+                    <a href="" onclick="luoTilastoPopupRadat(); return false;">Radat</a>
+                    <a href="" onclick="luoTilastoPopupLiikennepaikanOsat(); return false;">Liikennepaikan osat</a>
+                    <a href="" onclick="luoTilastoPopupRautatieliikennepaikat(); return false;">Rautatieliikennepaikat</a>
+                </span>
+            </span>
         </div>
         <div class="hakuohje">
             <span class="trigger">?</span>

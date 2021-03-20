@@ -54,6 +54,9 @@ ul.ikonit li {
 .palkki > * {
     float: left;
 }
+.palkki .menu {
+    width: 6em;
+}
 
 .palkki a {
     min-width: 20px;
@@ -279,37 +282,54 @@ body.fi .en, body.en .fi {
     font-style: italic;
 }
 
-.hakuohje {
+.hakuohje, .statistics {
     position: absolute;
-    left: 9.5em;
-    width: 2em;
-    padding: 0.25em;
+    padding: 0.1em;
     margin-top: 2em;
-    z-index: 2;
+    z-index: 99;
+    width: 2em;
 }
-.hakuohje .trigger {
+.hakuohje {
+    left: 7em;
+}
+.statistics {
+    font-size: 1.8em;
+    margin-top: 1.5em;
+}
+.trigger {
     top: -1.5em;
     position: absolute;
 }
 .hakuohje h5 {
-    display: none;
+    visibility: hidden;
 }
 .hakuohje dl {
     font-size: 0.75em;
     padding: 1em;
     visibility: hidden;
 }
-.hakuohje:hover {
+.statistics a {
+    visibility: hidden;
+    display: block;
+    font-size: 0.4em;
+    text-align: left;
+}
+.statistics img {
+    height: 1.2em;
+}
+.statistics .infra {
+    display: block;
+    padding-top: 0.4em;
+    padding-left: 0.4em;
+}
+.hakuohje:hover, .statistics:hover {
     width: auto;
     height: auto;
     background: White;
     border: 1px solid Gray;
     border-radius: 5px;
 }
-.hakuohje:hover h5 {
-    display: unset;
-}
-.hakuohje:hover dl {
+.hakuohje:hover *, .statistics:hover * {
     visibility: visible;
 }
 

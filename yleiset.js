@@ -95,6 +95,7 @@ let mqttUrl = "rata.digitraffic.fi";
 let mqttPort = 443;
 let mqttTopic = 'train-locations/#';
 
+let ikuisuusAikavali = 'time=2010-01-01T00:00:00Z/2030-01-01T00:00:00Z';
 let infraAikavali = () => 'time=' + pyoristaAjanhetki(aikaParam()) + "/" + pyoristaAjanhetki(aikaParam());
 let etj2Aikavali  = () => 'time=' + laajennaAikavali(rajat()).map(function(x) { return pyoristaAjanhetki(x); }).join("/");
 let rumaAikavali  = () => 'start=' + pyoristaAjanhetki(rajat()[0]) + "&end=" + pyoristaAjanhetki(rajat()[1]);
@@ -127,12 +128,15 @@ let esUrlAikataulupaikka = () => tila => etj2APIUrl + 'ennakkosuunnitelmat.json?
 let vsUrlAikataulupaikka = () => tila => etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila=%27'   + tila + '%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa&' + etj2Aikavali();
 let loUrlAikataulupaikka = () => tila => etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27'       + tila + '%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika&' + etj2Aikavali();
 
-let rautatieliikennepaikatUrlTilasto = () => infraAPIUrl + 'rautatieliikennepaikat.json?propertyName=objektinVoimassaoloaika,tunniste,tyyppi&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+let kilometrimerkitUrlTilasto = () => infraAPIUrl + 'kilometrimerkit.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let radatUrlTilasto = () => infraAPIUrl + 'radat.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let liikennepaikanOsatUrlTilasto = () => infraAPIUrl + 'liikennepaikanosat.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let rautatieliikennepaikatUrlTilasto = () => infraAPIUrl + 'rautatieliikennepaikat.json?propertyName=objektinVoimassaoloaika,tunniste,tyyppi&' + ikuisuusAikavali;
 
 let asiatUrl     = () => etj2APIUrl + 'asiat.json';
-let eiUrlTilasto = () => etj2APIUrl + 'ennakkoilmoitukset.json?propertyName=asia,luontiaika,tila,tunniste,tyyppi,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
-let esUrlTilasto = () => etj2APIUrl + 'ennakkosuunnitelmat.json?propertyName=luontiaika,tila,tunniste,tyyppi,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
-let vsUrlTilasto = () => etj2APIUrl + 'vuosisuunnitelmat.json?propertyName=alustavakapasiteettivaraus,luontiaika,tila,tunniste,tyo,tyonlaji,voimassa&time=2010-01-01T00:00:00Z/2029-01-01T00:00:00Z';
+let eiUrlTilasto = () => etj2APIUrl + 'ennakkoilmoitukset.json?propertyName=asia,luontiaika,tila,tunniste,tyyppi,voimassa&' + ikuisuusAikavali;
+let esUrlTilasto = () => etj2APIUrl + 'ennakkosuunnitelmat.json?propertyName=luontiaika,tila,tunniste,tyyppi,voimassa&' + ikuisuusAikavali;
+let vsUrlTilasto = () => etj2APIUrl + 'vuosisuunnitelmat.json?propertyName=alustavakapasiteettivaraus,luontiaika,tila,tunniste,tyo,tyonlaji,voimassa&' + ikuisuusAikavali;
 
 let junasijainnitUrl        = () => 'https://rata.digitraffic.fi/api/v1/train-locations/latest/';
 let junasijainnitGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/train-locations.geojson/latest/';
