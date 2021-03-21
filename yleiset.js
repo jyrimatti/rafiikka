@@ -74,7 +74,7 @@ let laajennaAikavali = x => [dateFns.dateFns.startOfMonth(x[1]), dateFns.dateFns
 
 let limitInterval = intervalString => {
     let begin = new Date('2010-01-01T00:00:00Z');
-    let end = new Date('2030-01-01T00:00:00Z');
+    let end = new Date('2029-12-31T00:00:00Z');
     let instants = intervalString.split('/');
     if (new Date(instants[0]).getTime() < begin.getTime()) {
         instants[0] = toISOStringNoMillis(begin);
@@ -108,6 +108,8 @@ let ratakmSijaintiUrl         = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 
 let pmSijaintiUrl             = (numero, suunta, etaisyys) => infraAPIUrl + 'paikantamismerkit/' + numero + suunta + etaisyys + '.json?' + infraAikavali();
 let ratakmValiUrl             = (ratanumero, alkuratakm, alkuetaisyys, loppuratakm, loppuetaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + alkuratakm + '+' + alkuetaisyys + '-' + loppuratakm + '+' + loppuetaisyys + '.json?' + infraAikavali();
 let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka,ratakmvalit,objektinVoimassaoloaika&" + infraAikavali();
+let kunnossapitoalueetUrl     = () => infraAPIUrl + "kunnossapitoalueet.json?propertyName=tunniste,nimi,objektinVoimassaoloaika&" + infraAikavali();
+let liikenteenohjausalueetUrl = () => infraAPIUrl + "liikenteenohjausalueet.json?" + infraAikavali();
 let reittiUrl                 = (alku, etapit, loppu) => infraAPIUrl + "reitit/kaikki/" + alku + "/" + (etapit && etapit.length > 0 ? etapit.join(',') + '/' : '') + loppu + ".json?propertyName=geometria,liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet&" + infraAikavali();
 
 let rautatieliikennepaikatUrl = () => infraAPIUrl + "rautatieliikennepaikat.json?propertyName=lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,objektinVoimassaoloaika&srsName=crs:84&" + infraAikavali();
@@ -128,6 +130,10 @@ let esUrlAikataulupaikka = () => tila => etj2APIUrl + 'ennakkosuunnitelmat.json?
 let vsUrlAikataulupaikka = () => tila => etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila=%27'   + tila + '%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa&' + etj2Aikavali();
 let loUrlAikataulupaikka = () => tila => etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27'       + tila + '%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika&' + etj2Aikavali();
 
+let toimialueetUrlTilasto = () => infraAPIUrl + 'toimialueet.json?propertyName=liikenteenohjausalue.,objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let tilirataosatUrlTilasto = () => infraAPIUrl + 'tilirataosat.json?propertyName=kunnossapitoalue.nimi,objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let liikennesuunnittelualueetUrlTilasto = () => infraAPIUrl + 'liikennesuunnittelualueet.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let paikantamismerkitUrlTilasto = () => infraAPIUrl + 'paikantamismerkit.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
 let kilometrimerkitUrlTilasto = () => infraAPIUrl + 'kilometrimerkit.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
 let radatUrlTilasto = () => infraAPIUrl + 'radat.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
 let liikennepaikanOsatUrlTilasto = () => infraAPIUrl + 'liikennepaikanosat.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
@@ -198,7 +204,7 @@ let loTilat = ['aktiivinen', 'poistettu'];
 
 if (params().has("seed")) {
     [ratanumerotUrl(), liikennepaikkavalitUrl(), rautatieliikennepaikatUrl(), liikennepaikanOsatUrl(), raideosuudetUrl(), laituritUrl(),
-     elementitUrl(), lorajatUrl(), infraObjektityypitUrl(),
+     elementitUrl(), lorajatUrl(), infraObjektityypitUrl(), kunnossapitoalueetUrl(), liikenteenohjausalueetUrl(),
      junasijainnitUrl(), junasijainnitGeojsonUrl()]
      .concat(eiTilat.flatMap(tila => [eiUrlRatanumero()(tila), eiUrlAikataulupaikka()(tila)]))
      .concat(esTilat.flatMap(tila => [esUrlRatanumero()(tila), esUrlAikataulupaikka()(tila)]))
