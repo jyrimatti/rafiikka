@@ -1,3 +1,13 @@
+
+var estyypit = [];
+getJson(esTyypitUrl(), data => {
+    estyypit = Object.values(data);
+});
+var asiat = [];
+getJson(asiatUrl(), data => {
+    asiat = data.map(d => d.asia);
+});
+
 let ennakkotietoIntervalComparator = (ennakkotietoA, ennakkotietoB) => {
     return ennakkotietoA.alkuX  < ennakkotietoB.alkuX  ? -1 : ennakkotietoA.alkuX  > ennakkotietoB.alkuX  ? 1 :
            ennakkotietoA.loppuX < ennakkotietoB.loppuX ? -1 : ennakkotietoA.loppuX > ennakkotietoB.loppuX ? 1 :

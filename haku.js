@@ -47,7 +47,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                 <div>
                     <div class="title">
                         <span class="group">${['Linkit', 'Muunnokset', 'Raideosuus', 'Rautatieliikennepaikka tai liikennepaikan osa'].includes(item.ryhma) || item.nimi.startsWith(item.ryhma) ? '' : escape(item.ryhma)}</span>
-                        <span class="name">${item.nimi} (${item.score})</span>
+                        <span class="name">${item.nimi} <span class="score">${item.score}</span></span>
                     </div>
                     ${ lisaaPopuppiin ? '' : luoLinkit('', tunniste, escape(item.nimi)) }
                 </div>
@@ -517,23 +517,37 @@ let osuuko_ = matchers => value => {
     }
 };
 
+let mkSearchElem = objs => objs.filter(x => x !== undefined)
+                               .flatMap(x => Object.entries(x))
+                               .filter(e => e[1] !== undefined && e[1] !== null && e[1] !== '')
+                               .map(e => '<span class="searchElem" title="' + e[0] + '">' + e[1] + '</span>')
+                               .join(' ');
+
 let parsiInfraNimi = (ryhma, row) => {
-    let a = (row.tyyppi && row.tyyppi.toLowerCase() != ryhma.toLowerCase() ? row.tyyppi[0].toUpperCase() + row.tyyppi.slice(1) + ' ' : '');
-    let b = (row.lyhenne || row.numero || row.uicKoodi || row.siltakoodi || (row.ratanumero && row.ratakm ? '(' + row.ratanumero + ') ' + row.ratakm : row.ratanumero ? '(' + row.ratanumero + ')' : undefined) );
-    let c = row.tunnus || row.kuvaus;
-    let d = (row.nimi || row.linjaraidetunnukset || row.turvalaiteNimi || (row.kaukoOhjausTunnisteet ? row.kaukoOhjausTunnisteet.map(x => x.kaukoOhjausPaikka + ' ' + x.kaukoOhjausNimi).join(', ') : undefined));
-    let e = row.turvalaiteRaide ? '(' + row.turvalaiteRaide + ')' : undefined;
-    let f = (b || c || d || e ? undefined : row.tunniste);
-    return [a,b,c,d,e,f].filter(x => x).map(x => '<span class="searchElem">' + x + '</span>').join(' ');
+    let a = {tyyppi: (row.tyyppi && row.tyyppi.toLowerCase() != ryhma.toLowerCase() ? row.tyyppi[0].toUpperCase() + row.tyyppi.slice(1) : undefined)};
+    let b = {lyhenne: row.lyhenne, numero: row.numero, UICkoodi: (row.uicKoodi && row.uicKoodi != 0 ? row.uicKoodi : undefined), siltakoodi: row.siltakoodi, opastintyyppi: row.opastin ? opastintyypit.find(x => x.tyyppi == row.opastin.tyyppi).nimi : undefined, vaihdetyyppi: row.vaihde ? row.vaihde.tyyppi : undefined};
+    let c = row.ratanumero && row.ratakm ? {ratakm: '(' + row.ratanumero + ') ' + row.ratakm} : row.ratanumero ? {ratanumero: '(' + row.ratanumero + ')'} : undefined;
+    let d = {tunnus: row.tunnus, kuvaus: row.kuvaus};
+    let e = {nimi: row.nimi, linjaraidetunnukset: row.linjaraidetunnukset, turvalaitenimi: row.turvalaiteNimi};
+    let f = row.kaukoOhjausTunnisteet ? {'kauko-ohjaustunnisteet': row.kaukoOhjausTunnisteet.map(x => x.kaukoOhjausPaikka + ' ' + x.kaukoOhjausNimi).join(', ')} : undefined;
+    let g = {turvalaiteraide: row.turvalaiteRaide ? '(' + row.turvalaiteRaide + ')' : undefined};
+    let h = {liikennepaikka: row.rautatieliikennepaikka && rautatieliikennepaikatDS.data[row.rautatieliikennepaikka].tyyppi == 'liikennepaikka' ? rautatieliikennepaikatDS.data[row.rautatieliikennepaikka].nimi : undefined};
+    let i = {liikennepaikka: row.liikennepaikka && rautatieliikennepaikatDS.data[row.liikennepaikka].tyyppi == 'liikennepaikka' ? rautatieliikennepaikatDS.data[row.liikennepaikka].nimi : undefined};
+    let j = {liikennepaikat: row.rautatieliikennepaikat ? row.rautatieliikennepaikat.map(x => rautatieliikennepaikatDS.data[x]).filter(x => x.tyyppi == 'liikennepaikka').map(x => x.nimi).join("/") : undefined};
+    let k = {'liikennepaikan osa': row.liikennepaikanOsa ? liikennepaikanOsatDS.data[row.liikennepaikanOsa].nimi : undefined};
+    let l = {'liikennepaikkaväli': row.liikennepaikkavali ? [liikennepaikkavalitDS.data[row.liikennepaikkavali]].flatMap(x => [rautatieliikennepaikatDS.data[x.alkuliikennepaikka].nimi, rautatieliikennepaikatDS.data[x.loppuliikennepaikka].nimi]).join('-') : undefined};
+    let m = {'liikennepaikkaväli': row.liikennepaikkavalit ? row.liikennepaikkavalit.map(x => liikennepaikkavalitDS.data[x]).map(x => [rautatieliikennepaikatDS.data[x.alkuliikennepaikka].nimi, rautatieliikennepaikatDS.data[x.loppuliikennepaikka].nimi].join('-')).join(', ') : undefined};
+    let n = (b || c || d || e || f || g || h || i || j || k || l || m ? undefined : row.tunniste);
+    return mkSearchElem([a,b,c,d,e,f,g,h,i,j,k,l,m,n]);
 }
 
 let parsiJetiNimi = row => {
-    let a = row.sisainenTunniste;
-    let b = row.tila;
-    let c = row.asia || row.tyyppi || row.tyo;
-    let d = row.voimassa ? muotoileAikavali(row.voimassa) : undefined;
-    let e = row.tyonLisatiedot || row.vekSelite || row.eivekSelite || (row.tyonosat ? row.tyonosat.map(x => x.tyyppi + ': ' + x.selite).join('. ') : undefined);
-    return [a,b,c,d,e].filter(x => x).map(x => '<span class="searchElem">' + x + '</span>').join(' ');
+    let a = {'sisainen tunniste': row.sisainenTunniste};
+    let b = {tila: row.tila};
+    let c = {asia: row.asia, tyyppi: row.tyyppi, 'työ': row.tyo};
+    let d = {voimassa: row.voimassa ? muotoileAikavali(row.voimassa) : undefined};
+    let e = {'työn lisätiedot': row.tyonLisatiedot, 'VEK-selite': row.vekSelite, 'ei-VEK-selite': row.eivekSelite, 'työnosat': (row.tyonosat ? row.tyonosat.map(x => x.tyyppi + ': ' + x.selite).join('. ') : undefined)};
+    return mkSearchElem([a,b,c,d,e]);
 };
 
 let parsiInfraRyhma = row => {

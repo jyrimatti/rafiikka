@@ -145,3 +145,33 @@ on(lorajatDS.events,   "done", reHandler);
 
 elementitDS.load();
 lorajatDS.load();
+
+var ratapihapalveluTyypit = [];
+getJson(ratapihapalveluTyypitUrl(), data => {
+    ratapihapalveluTyypit = Object.values(data);
+});
+var opastintyypit = [];
+getJson(opastinTyypitUrl(), data => {
+    opastintyypit = Object.values(data);
+});
+var vaihdetyypit = [];
+getJson(vaihdeTyypitUrl(), data => {
+    vaihdetyypit = Object.values(data);
+});
+
+var kpalueet = {};
+getJson(kunnossapitoalueetMetaUrl(), data => {
+    kpalueet = data;
+});
+var ohjausalueet = {};
+getJson(liikenteenohjausalueetMetaUrl(), data => {
+    ohjausalueet = data;
+});
+var kayttokeskukset = {};
+getJson(kayttokeskuksetMetaUrl(), data => {
+    kayttokeskukset = data;
+});
+var lisualueet = {};
+getJson(liikennesuunnittelualueetMetaUrl(), data => {
+    lisualueet = data;
+});
