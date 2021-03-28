@@ -132,6 +132,9 @@ ul.ikonit li {
     bottom: 0;
     position: absolute;
 }
+.kartta .popup {
+    display: block;
+}
 .junaPopup {
     top: 3em;
 }
@@ -142,6 +145,9 @@ ul.ikonit li {
 .tilastoContainer {
     width: 1200px;
     height: 400px;
+}
+.manualOverflow {
+    overflow: visible;
 }
 .popupContainer.aikatauluPopup .selectize-control {
     margin-left: 0;
@@ -179,6 +185,7 @@ body.fi .en, body.en .fi {
 }
 
 .popup {
+    display: none;
     background-color: white;
     opacity: 0.75;
     border: 1px dotted gray;
@@ -286,7 +293,6 @@ body.fi .en, body.en .fi {
     position: absolute;
     padding: 0.1em;
     margin-top: 2em;
-    z-index: 99;
     width: 2em;
 }
 .hakuohje {
@@ -300,19 +306,34 @@ body.fi .en, body.en .fi {
     top: -1.5em;
     position: absolute;
 }
-.hakuohje h5 {
-    visibility: hidden;
-}
 .hakuohje dl {
     font-size: 0.75em;
     padding: 1em;
-    visibility: hidden;
+}
+.statistics .content {
+    font-size: 0.4em;
+}
+.statistics .infra .row a:first-child {
+    padding-left: 0;
+}
+.statistics .infra .row a {
+    display: inline;
+    background-image: none;
+    padding-left: 0.5em;
+    vertical-align: baseline;
+    font-variant: small-caps;
+}
+.statistics .infra .row a.regular {
+    font-variant: normal;
 }
 .statistics a {
-    visibility: hidden;
     display: block;
-    font-size: 0.4em;
     text-align: left;
+    padding-left: 1.2em;
+    margin-bottom: 0.1em;
+    margin-left: 0.3em;
+    background-repeat: no-repeat;
+    background-size: contain;
 }
 .statistics img {
     height: 1.2em;
@@ -320,7 +341,13 @@ body.fi .en, body.en .fi {
 .statistics .infra {
     display: block;
     padding-top: 0.4em;
-    padding-left: 0.4em;
+}
+.statistics .infra a, .statistics .row {
+    margin-left: 0;
+    padding-left: 1.5em;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url('https://rata.digitraffic.fi/infra-api/r/favicon.ico');
 }
 .hakuohje:hover, .statistics:hover {
     width: auto;
@@ -329,8 +356,11 @@ body.fi .en, body.en .fi {
     border: 1px solid Gray;
     border-radius: 5px;
 }
-.hakuohje:hover *, .statistics:hover * {
-    visibility: visible;
+.hakuohje .content, .statistics .content {
+    display: none;
+}
+.hakuohje:hover .content, .statistics:hover .content {
+    display: inline;
 }
 
 .searchElem {

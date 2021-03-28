@@ -260,7 +260,15 @@ let haeMuutosajankohdat = map =>
         .sort((a,b) => a - b)
         .map(d => new Date(d));
 
-let kartta = (tunniste, title, offsetX, offsetY) => {
+let kartta = (nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari) => {
+    try {
+        return kartta_(nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari);
+    } catch (e) {
+        log(e);
+        return e;
+    }
+};
+let kartta_ = (tunniste, title, offsetX, offsetY) => {
     let [container, elem, haku, kaavioCheck, slider, alkuaika, loppuaika] = luoKarttaElementti(tunniste, title || tunniste, offsetX, offsetY);
     let overlay = new ol.Overlay({
         element: elem.parentElement.getElementsByClassName('popup')[0],
@@ -424,10 +432,14 @@ let kartta = (tunniste, title, offsetX, offsetY) => {
 
 let kurkistaKartta = (elem, tunniste, title, offsetX, offsetY) => {
     let container = kartta(tunniste, title, offsetX, offsetY);
-    elem.onmouseout = () => {
-        container.parentElement.removeChild(container);
-        container.remove();
+    let f = () => {
+        if (container.parentElement) {
+            container.parentElement.removeChild(container);
+            container.remove();
+        }
     };
+    elem.addEventListener("mouseout", f, { once: true });
+    elem.addEventListener("click", f, { once: true });
 };
 
 let poistaKartalta = map => tunniste => {

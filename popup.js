@@ -69,8 +69,12 @@ let avaaInfo = (tunniste, offsetX, offsetY) => {
 
 let kurkistaInfo = (elem, tunniste, offsetX, offsetY) => {
     let container = avaaInfo(tunniste, offsetX, offsetY);
-    elem.onmouseout = () => {
-        container.parentElement.removeChild(container);
-        container.remove();
+    let f = () => {
+        if (container.parentElement) {
+            container.parentElement.removeChild(container);
+            container.remove();
+        }
     };
+    elem.addEventListener("mouseout", f, { once: true });
+    elem.addEventListener("click", f, { once: true });
 };

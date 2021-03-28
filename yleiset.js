@@ -85,6 +85,12 @@ let limitInterval = intervalString => {
     return instants[0] + '/' + instants[1];
 };
 
+let intervalsIntersect = a => b => {
+    let as = a.split('/').map(x => new Date(x).getTime());
+    let bs = b.split('/').map(x => new Date(x).getTime());
+    return as[0] < bs[1] && bs[0] < as[1];
+};
+
 // safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
 let infraAPIUrl = 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/';
 let etj2APIUrl  = 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/';
@@ -107,10 +113,11 @@ let ratanumerotUrl            = () => infraAPIUrl + "radat.json?propertyName=rat
 let ratakmSijaintiUrl         = (ratanumero, ratakm, etaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.json?' + infraAikavali();
 let pmSijaintiUrl             = (numero, suunta, etaisyys) => infraAPIUrl + 'paikantamismerkit/' + numero + suunta + etaisyys + '.json?' + infraAikavali();
 let ratakmValiUrl             = (ratanumero, alkuratakm, alkuetaisyys, loppuratakm, loppuetaisyys) => infraAPIUrl + 'radat/' + ratanumero + '/' + alkuratakm + '+' + alkuetaisyys + '-' + loppuratakm + '+' + loppuetaisyys + '.json?' + infraAikavali();
-let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=tunniste,alkuliikennepaikka,loppuliikennepaikka,ratakmvalit,objektinVoimassaoloaika&" + infraAikavali();
-let kunnossapitoalueetUrl     = () => infraAPIUrl + "kunnossapitoalueet.json?propertyName=tunniste,nimi,objektinVoimassaoloaika&" + infraAikavali();
-let liikenteenohjausalueetUrl = () => infraAPIUrl + "liikenteenohjausalueet.json?" + infraAikavali();
+let liikennepaikkavalitUrl    = () => infraAPIUrl + "liikennepaikkavalit.json?propertyName=alkuliikennepaikka,loppuliikennepaikka,ratakmvalit,objektinVoimassaoloaika,tunniste&" + infraAikavali();
 let reittiUrl                 = (alku, etapit, loppu) => infraAPIUrl + "reitit/kaikki/" + alku + "/" + (etapit && etapit.length > 0 ? etapit.join(',') + '/' : '') + loppu + ".json?propertyName=geometria,liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet&" + infraAikavali();
+let ratapihapalveluTyypitUrl  = () => infraAPIUrl + "ratapihapalvelutyypit.json";
+let opastinTyypitUrl          = () => infraAPIUrl + "opastintyypit.json";
+let vaihdeTyypitUrl           = () => infraAPIUrl + "vaihdetyypit.json";
 
 let rautatieliikennepaikatUrl = () => infraAPIUrl + "rautatieliikennepaikat.json?propertyName=lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,objektinVoimassaoloaika&srsName=crs:84&" + infraAikavali();
 let liikennepaikanOsatUrl     = () => infraAPIUrl + "liikennepaikanosat.json?propertyName=liikennepaikka,lyhenne,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,objektinVoimassaoloaika&srsName=crs:84&" + infraAikavali();
@@ -130,16 +137,61 @@ let esUrlAikataulupaikka = () => tila => etj2APIUrl + 'ennakkosuunnitelmat.json?
 let vsUrlAikataulupaikka = () => tila => etj2APIUrl + 'vuosisuunnitelmat.json?cql_filter=tila=%27'   + tila + '%27&propertyName=ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa&' + etj2Aikavali();
 let loUrlAikataulupaikka = () => tila => etj2APIUrl + 'loilmoitukset.json?cql_filter=tila=%27'       + tila + '%27&propertyName=ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika&' + etj2Aikavali();
 
-let toimialueetUrlTilasto = () => infraAPIUrl + 'toimialueet.json?propertyName=liikenteenohjausalue.,objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
-let tilirataosatUrlTilasto = () => infraAPIUrl + 'tilirataosat.json?propertyName=kunnossapitoalue.nimi,objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let kunnossapitoalueetMetaUrl        = () => infraAPIUrl + "kunnossapitoalueet.json?propertyName=nimi,objektinVoimassaoloaika,tunniste&" + ikuisuusAikavali;
+let liikenteenohjausalueetMetaUrl    = () => infraAPIUrl + "liikenteenohjausalueet.json?propertyName=nimi,objektinVoimassaoloaika,tunniste&" + ikuisuusAikavali;
+let kayttokeskuksetMetaUrl           = () => infraAPIUrl + "kayttokeskukset.json?propertyName=nimi,objektinVoimassaoloaika,tunniste&" + ikuisuusAikavali;
+let liikennesuunnittelualueetMetaUrl = () => infraAPIUrl + "liikennesuunnittelualueet.json?propertyName=nimi,objektinVoimassaoloaika,tunniste&" + ikuisuusAikavali;
+
+let ratapihapalvelutUrlTilasto = () => infraAPIUrl + 'ratapihapalvelut.json?propertyName=objektinVoimassaoloaika,tunniste,tyyppi&' + ikuisuusAikavali;
+let toimialueetUrlTilasto = () => infraAPIUrl + 'toimialueet.json?propertyName=liikenteenohjausalue,objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let tilirataosatUrlTilasto = () => infraAPIUrl + 'tilirataosat.json?propertyName=kunnossapitoalue,objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
 let liikennesuunnittelualueetUrlTilasto = () => infraAPIUrl + 'liikennesuunnittelualueet.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
 let paikantamismerkitUrlTilasto = () => infraAPIUrl + 'paikantamismerkit.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
 let kilometrimerkitUrlTilasto = () => infraAPIUrl + 'kilometrimerkit.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
 let radatUrlTilasto = () => infraAPIUrl + 'radat.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
-let liikennepaikanOsatUrlTilasto = () => infraAPIUrl + 'liikennepaikanosat.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
-let rautatieliikennepaikatUrlTilasto = () => infraAPIUrl + 'rautatieliikennepaikat.json?propertyName=objektinVoimassaoloaika,tunniste,tyyppi&' + ikuisuusAikavali;
+let liikennepaikanOsatUrlTilasto = () => infraAPIUrl + 'liikennepaikanosat.json?propertyName=liikennesuunnittelualueet,objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let rautatieliikennepaikatUrlTilasto = () => infraAPIUrl + 'rautatieliikennepaikat.json?propertyName=liikennesuunnittelualueet,objektinVoimassaoloaika,tunniste,tyyppi&' + ikuisuusAikavali;
+let liikennepaikkavalitUrlTilasto = () => infraAPIUrl + 'liikennepaikkavalit.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let raideosuudetUrlTilasto = () => infraAPIUrl + 'raideosuudet.json?propertyName=objektinVoimassaoloaika,tunniste,tyyppi&' + ikuisuusAikavali;
+
+let akselinlaskijaUrlTilasto                   = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=akselinlaskija&' + ikuisuusAikavali;
+let baliisiUrlTilasto                          = () => infraAPIUrl + 'elementit.json?propertyName=baliisi.tyyppi,kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=baliisi&' + ikuisuusAikavali;
+let kuumakayntiilmaisinUrlTilasto              = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=kuumakayntiilmaisin&' + ikuisuusAikavali;
+let liikennepaikanrajaUrlTilasto               = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=liikennepaikanraja&' + ikuisuusAikavali;
+let opastinUrlTilasto                          = () => infraAPIUrl + 'elementit.json?propertyName=opastin.tyyppi,kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=opastin&' + ikuisuusAikavali;
+let puskinUrlTilasto                           = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=puskin&' + ikuisuusAikavali;
+let pyoravoimailmaisinUrlTilasto               = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=pyoravoimailmaisin&' + ikuisuusAikavali;
+let raideeristysUrlTilasto                     = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=raideeristys&' + ikuisuusAikavali;
+let pysaytyslaiteUrlTilasto                    = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,pysaytyslaite.kasinAsetettava,pysaytyslaite.varmuuslukittu,tunniste&typeNames=pysaytyslaite&' + ikuisuusAikavali;
+let rfidlukijaUrlTilasto                       = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=rfidlukija&' + ikuisuusAikavali;
+let ryhmityseristinUrlTilasto                  = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,ryhmityseristin.nopeastiAjettava,tunniste&typeNames=ryhmityseristin&' + ikuisuusAikavali;
+let sahkoistyspaattyyUrlTilasto                = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=sahkoistyspaattyy&' + ikuisuusAikavali;
+let seislevyUrlTilasto                         = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=seislevy&' + ikuisuusAikavali;
+let vaihdeUrlTilasto                           = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste,vaihde.tyyppi&typeNames=vaihde&' + ikuisuusAikavali;
+let virroitinvalvontakameraUrlTilasto          = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=virroitinvalvontakamera&' + ikuisuusAikavali;
+let erotusjaksoUrlTilasto                      = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=erotusjakso&' + ikuisuusAikavali;
+let erotuskenttaUrlTilasto                     = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=erotuskentta&' + ikuisuusAikavali;
+let maadoitinUrlTilasto                        = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=maadoitin&' + ikuisuusAikavali;
+let tyonaikaineneristinUrlTilasto              = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=tyonaikaineneristin&' + ikuisuusAikavali;
+let kaantopoytaUrlTilasto                      = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=kaantopoyta&' + ikuisuusAikavali;
+let pyoraprofiilimittalaiteUrlTilasto          = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=pyoraprofiilimittalaite&' + ikuisuusAikavali;
+let telivalvontaUrlTilasto                     = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=telivalvonta&' + ikuisuusAikavali;
+let erotinUrlTilasto                           = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=erotin&' + ikuisuusAikavali;
+let tasoristeysvalojenpyoratunnistinUrlTilasto = () => infraAPIUrl + 'elementit.json?propertyName=kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste&typeNames=tasoristeysvalojenpyoratunnistin&' + ikuisuusAikavali;
+
+let raiteensulutUrlTilasto = () => infraAPIUrl + 'raiteensulut.json?propertyName=kasinAsetettava,objektinVoimassaoloaika,tunniste,varmuuslukittu&' + ikuisuusAikavali;
+let raiteetUrlTilasto = () => infraAPIUrl + 'raiteet.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let liikenteenohjauksenrajatUrlTilasto = () => infraAPIUrl + 'liikenteenohjauksenrajat.json?propertyName=ensimmaisenLuokanAlueidenRaja,objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let tunnelitUrlTilasto = () => infraAPIUrl + 'tunnelit.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let sillatUrlTilasto = () => infraAPIUrl + 'sillat.json?propertyName=kayttotarkoitus,objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let laituritUrlTilasto = () => infraAPIUrl + 'laiturit.json?propertyName=korkeus,objektinVoimassaoloaika,tunniste,tyyppi&' + ikuisuusAikavali;
+let tasoristeyksetUrlTilasto = () => infraAPIUrl + 'tasoristeykset.json?propertyName=kayttokeskukset,objektinVoimassaoloaika,tielaji,tunniste,varoituslaitos&' + ikuisuusAikavali;
+let kayttokeskuksetUrlTilasto = () => infraAPIUrl + 'kayttokeskukset.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
+let kytkentaryhmatUrlTilasto = () => infraAPIUrl + 'kytkentaryhmat.json?propertyName=objektinVoimassaoloaika,tunniste&' + ikuisuusAikavali;
 
 let asiatUrl     = () => etj2APIUrl + 'asiat.json';
+let esTyypitUrl  = () => etj2APIUrl + 'ennakkosuunnitelmatyypit.json';
+let loUrlTilasto = () => etj2APIUrl + 'loilmoitukset.json?propertyName=ensimmainenAktiivisuusaika,luontiaika,tila,tunniste,tyyppi,viimeinenAktiivisuusaika&' + ikuisuusAikavali;
 let eiUrlTilasto = () => etj2APIUrl + 'ennakkoilmoitukset.json?propertyName=asia,luontiaika,tila,tunniste,tyyppi,voimassa&' + ikuisuusAikavali;
 let esUrlTilasto = () => etj2APIUrl + 'ennakkosuunnitelmat.json?propertyName=luontiaika,tila,tunniste,tyyppi,voimassa&' + ikuisuusAikavali;
 let vsUrlTilasto = () => etj2APIUrl + 'vuosisuunnitelmat.json?propertyName=alustavakapasiteettivaraus,luontiaika,tila,tunniste,tyo,tyonlaji,voimassa&' + ikuisuusAikavali;
@@ -204,8 +256,9 @@ let loTilat = ['aktiivinen', 'poistettu'];
 
 if (params().has("seed")) {
     [ratanumerotUrl(), liikennepaikkavalitUrl(), rautatieliikennepaikatUrl(), liikennepaikanOsatUrl(), raideosuudetUrl(), laituritUrl(),
-     elementitUrl(), lorajatUrl(), infraObjektityypitUrl(), kunnossapitoalueetUrl(), liikenteenohjausalueetUrl(),
-     junasijainnitUrl(), junasijainnitGeojsonUrl()]
+     elementitUrl(), lorajatUrl(), infraObjektityypitUrl(),
+     junasijainnitUrl(), junasijainnitGeojsonUrl(), kunnossapitoalueetMetaUrl(), liikenteenohjausalueetMetaUrl(), kayttokeskuksetMetaUrl(), liikennesuunnittelualueetMetaUrl(),
+     ratapihapalveluTyypitUrl(), opastinTyypitUrl(), vaihdeTyypitUrl()]
      .concat(eiTilat.flatMap(tila => [eiUrlRatanumero()(tila), eiUrlAikataulupaikka()(tila)]))
      .concat(esTilat.flatMap(tila => [esUrlRatanumero()(tila), esUrlAikataulupaikka()(tila)]))
      .concat(vsTilat.flatMap(tila => [vsUrlRatanumero()(tila), vsUrlAikataulupaikka()(tila)]))
@@ -215,6 +268,15 @@ if (params().has("seed")) {
      .concat(hakuUrlitRT())
      .concat(hakuUrlitLR())
      .concat([asiatUrl(), eiUrlTilasto(), esUrlTilasto(), vsUrlTilasto()])
+     .concat([ratapihapalvelutUrlTilasto(), toimialueetUrlTilasto(), tilirataosatUrlTilasto(), liikennesuunnittelualueetUrlTilasto(), paikantamismerkitUrlTilasto(),
+            kilometrimerkitUrlTilasto(), radatUrlTilasto(), liikennepaikanOsatUrlTilasto(), rautatieliikennepaikatUrlTilasto(), liikennepaikkavalitUrlTilasto(), raideosuudetUrlTilasto(),
+            akselinlaskijaUrlTilasto(), baliisiUrlTilasto(), kuumakayntiilmaisinUrlTilasto(), liikennepaikanrajaUrlTilasto(), opastinUrlTilasto(), puskinUrlTilasto(),
+            pyoravoimailmaisinUrlTilasto(), raideeristysUrlTilasto(), pysaytyslaiteUrlTilasto(), rfidlukijaUrlTilasto(), ryhmityseristinUrlTilasto(), 
+            sahkoistyspaattyyUrlTilasto(), seislevyUrlTilasto(), vaihdeUrlTilasto(), virroitinvalvontakameraUrlTilasto(), erotusjaksoUrlTilasto(), 
+            erotuskenttaUrlTilasto(), maadoitinUrlTilasto(), tyonaikaineneristinUrlTilasto(), kaantopoytaUrlTilasto(), pyoraprofiilimittalaiteUrlTilasto(),
+            telivalvontaUrlTilasto(), erotinUrlTilasto(), tasoristeysvalojenpyoratunnistinUrlTilasto(), raiteensulutUrlTilasto(), raiteetUrlTilasto(),
+            liikenteenohjauksenrajatUrlTilasto(), tunnelitUrlTilasto(), sillatUrlTilasto(), laituritUrlTilasto(), tasoristeyksetUrlTilasto(), kayttokeskuksetUrlTilasto(), 
+            kytkentaryhmatUrlTilasto()])
      .forEach(url => {
         let ds = new am4core.DataSource();
         ds.url = url;

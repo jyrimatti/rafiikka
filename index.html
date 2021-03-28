@@ -39,45 +39,88 @@
 
     <div class="palkki" id="palkki">
         <div class="menu">
-            <a style="font-size: 2em;"   href="" title="Avaa kartta"                   onclick="try {kartta()} catch(e) {log(e);}; return false;">🗺</a>
-            <a style="font-size: 1.8em;" href="" title="Avaa aikataulu"                onclick="luoJunaPopup();                    return false;">📅</a>
+            <a style="font-size: 2em;"   href="" title="Avaa kartta"    onclick="kartta(); return false;">🗺</a>
+            <a style="font-size: 1.8em;" href="" title="Avaa aikataulu" onclick="luoJunaPopup(); return false;">📅</a>
             <span class="statistics">
                 <span class="trigger" title="Tilastoja">📊</span>
-                <a href="" onclick="luoTilastoPopupEI(); return false;"><img src="https://rata.digitraffic.fi/jeti-api/latest/icons/ennakkoilmoitus.svg" /> Ennakkoilmoitukset</a>
-                <a href="" onclick="luoTilastoPopupES(); return false;"><img src="https://rata.digitraffic.fi/jeti-api/latest/icons/ennakkosuunnitelma.svg" /> Ennakkosuunnitelmat</a>
-                <a href="" onclick="luoTilastoPopupVS(); return false;"><img src="https://rata.digitraffic.fi/jeti-api/latest/icons/vuosisuunnitelma.svg" /> Vuosisuunnitelmat</a>
-                
-                <span class="infra">
-                    <a href="" onclick="luoTilastoPopupToimialueet(); return false;">Toimialueet</a>
-                    <a href="" onclick="luoTilastoPopupTilirataosat(); return false;">Tilirataosat</a>
-                    <a href="" onclick="luoTilastoPopupLiikennesuunnittelualueet(); return false;">Liikennesuunnittelualueet</a>
-                    <a href="" onclick="luoTilastoPopupPaikantamismerkit(); return false;">Paikantamismerkit</a>
-                    <a href="" onclick="luoTilastoPopupKilometrimerkit(); return false;">Kilometrimerkit</a>
-                    <a href="" onclick="luoTilastoPopupRadat(); return false;">Radat</a>
-                    <a href="" onclick="luoTilastoPopupLiikennepaikanOsat(); return false;">Liikennepaikan osat</a>
-                    <a href="" onclick="luoTilastoPopupRautatieliikennepaikat(); return false;">Rautatieliikennepaikat</a>
+                <span class="content">
+                    <a style="background-image: url('https://rata.digitraffic.fi/jeti-api/latest/icons/ennakkoilmoitus.svg')"    href="" onclick="luoTilastoPopupEI(); return false;">Ennakkoilmoitukset</a>
+                    <a style="background-image: url('https://rata.digitraffic.fi/jeti-api/latest/icons/ennakkosuunnitelma.svg')" href="" onclick="luoTilastoPopupES(); return false;">Ennakkosuunnitelmat</a>
+                    <a style="background-image: url('https://rata.digitraffic.fi/jeti-api/latest/icons/vuosisuunnitelma.svg')"   href="" onclick="luoTilastoPopupVS(); return false;">Vuosisuunnitelmat</a>
+                    <a style="background-image: url('https://rata.digitraffic.fi/jeti-api/latest/icons/loilmoitus.svg')"         href="" onclick="luoTilastoPopupLO(); return false;">LO-ilmoitukset</a>
+                    
+                    <span class="infra">
+                        <a href="" onclick="luoTilastoPopupRatapihapalvelut();          return false;">Ratapihapalvelut</a>
+                        <a href="" onclick="luoTilastoPopupToimialueet();               return false;">Toimialueet</a>
+                        <a href="" onclick="luoTilastoPopupTilirataosat();              return false;">Tilirataosat</a>
+                        <a href="" onclick="luoTilastoPopupLiikennesuunnittelualueet(); return false;">Liikennesuunnittelualueet</a>
+                        <a href="" onclick="luoTilastoPopupPaikantamismerkit();         return false;">Paikantamismerkit</a>
+                        <a href="" onclick="luoTilastoPopupKilometrimerkit();           return false;">Kilometrimerkit</a>
+                        <a href="" onclick="luoTilastoPopupRadat();                     return false;">Radat</a>
+                        <a href="" onclick="luoTilastoPopupLiikennepaikanOsat();        return false;">Liikennepaikan osat</a>
+                        <div class="row"><a class="regular" href="" onclick="luoTilastoPopupRautatieliikennepaikat(); return false;">Rautatieliikennepaikat</a> <a href="" onclick="luoTilastoPopupRautatieliikennepaikat(false); return false;">lisualueittain</a></div>
+                        <a href="" onclick="luoTilastoPopupLiikennepaikkavalit();       return false;">Liikennepaikkavälit</a>
+                        <a href="" onclick="luoTilastoPopupRaideosuudet();              return false;">Raideosuudet</a>
+
+                        <div class="row">Akselinlaskijat                                                            <a href="" onclick="luoTilastoPopupAkselinlaskija(false);                   return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupAkselinlaskija(true)                  ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row"><a class="regular" href="" onclick="luoTilastoPopupBaliisi(); return false;">Baliisit</a>  <a href="" onclick="luoTilastoPopupBaliisi(false);          return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupBaliisi(true)                         ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Kuumakäynti-ilmaisimet                                                     <a href="" onclick="luoTilastoPopupKuumakayntiilmaisin(false);              return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupKuumakayntiilmaisin(true)             ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Liikennepaikan rajat                                                       <a href="" onclick="luoTilastoPopupLiikennepaikanraja(false);               return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupLiikennepaikanraja(true)              ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row"><a class="regular" href="" onclick="luoTilastoPopupOpastin(); return false;">Opastimet</a> <a href="" onclick="luoTilastoPopupOpastin(false);          return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupOpastin(true)                         ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Puskimet                                                                   <a href="" onclick="luoTilastoPopupPuskin(false);                           return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupPuskin(true)                          ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Pyörävoimailmaisimet                                                       <a href="" onclick="luoTilastoPopupPyoravoimailmaisin(false);               return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupPyoravoimailmaisin(true)              ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Raide-eristykset                                                           <a href="" onclick="luoTilastoPopupRaideeristys(false);                     return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupRaideeristys(true)                    ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Pysäytyslaitteet                                                           <a href="" onclick="luoTilastoPopupPysaytyslaite(false);                    return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupPysaytyslaite(true)                   ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">RFID-lukijat                                                               <a href="" onclick="luoTilastoPopupRfidlukija(false);                       return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupRfidlukija(true)                      ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Ryhmityseristimet                                                          <a href="" onclick="luoTilastoPopupRyhmityseristin(false);                  return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupRyhmityseristin(true)                 ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Sähköistys päättyy                                                         <a href="" onclick="luoTilastoPopupSahkoistyspaattyy(false);                return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupSahkoistyspaattyy(true)               ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Seislevyt                                                                  <a href="" onclick="luoTilastoPopupSeislevy(false);                         return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupSeislevy(true)                        ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row"><a class="regular" href="" onclick="luoTilastoPopupVaihde(); return false;">Vaihteet</a>   <a href="" onclick="luoTilastoPopupVaihde(false);           return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupVaihde(true)                          ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Virroitinvalvontakamerat                                                   <a href="" onclick="luoTilastoPopupVirroitinvalvontakamera(false);          return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupVirroitinvalvontakamera(true)         ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Erotusjaksot                                                               <a href="" onclick="luoTilastoPopupErotusjakso(false);                      return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupErotusjakso(true)                     ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Erotuskentät                                                               <a href="" onclick="luoTilastoPopupErotuskentta(false);                     return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupErotuskentta(true)                    ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Maadoittimet                                                               <a href="" onclick="luoTilastoPopupMaadoitin(false);                        return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupMaadoitin(true)                       ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Työnaikaiset eristimet                                                     <a href="" onclick="luoTilastoPopupTyonaikaineneristin(false);              return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupTyonaikaineneristin(true)             ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Kääntöpöydät                                                               <a href="" onclick="luoTilastoPopupKaantopoyta(false);                      return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupKaantopoyta(true)                     ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Pyöräprofiilin mittalaitteet                                               <a href="" onclick="luoTilastoPopupPyoraprofiilimittalaite(false);          return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupPyoraprofiilimittalaite(true)         ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Telivalvonnat                                                              <a href="" onclick="luoTilastoPopupTelivalvonta(false);                     return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupTelivalvonta(true)                    ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Erottimet                                                                  <a href="" onclick="luoTilastoPopupErotin(false);                           return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupErotin(true)                          ; return false;">käyttökeskuksittain</a></div>
+                        <div class="row">Tasoristeysvalojen pyörätunnistin                                          <a href="" onclick="luoTilastoPopupTasoristeysvalojenpyoratunnistin(false); return false;">lisualueittain</a><a href="" onclick="luoTilastoPopupTasoristeysvalojenpyoratunnistin(true); return false;">käyttökeskuksittain</a></div>
+
+                        <a href="" onclick="luoTilastoPopupRaiteensulut();             return false;">Raiteensulut</a>
+                        <a href="" onclick="luoTilastoPopupRaiteet();                  return false;">Raiteet</a>
+                        <a href="" onclick="luoTilastoPopupLiikenteenohjauksenrajat(); return false;">Liikenteenohjauksen rajat</a>
+                        <a href="" onclick="luoTilastoPopupTunnelit();                 return false;">Tunnelit</a>
+                        <a href="" onclick="luoTilastoPopupSillat();                   return false;">Sillat</a>
+                        <a href="" onclick="luoTilastoPopupLaiturit();                 return false;">Laiturit</a>
+                        <div class="row"><a class="regular" href="" onclick="luoTilastoPopupTasoristeykset(); return false;">Tasoristeykset</a> <a href="" onclick="luoTilastoPopupTasoristeykset(true); return false;">käyttökeskuksittain</a></div>
+                        <a href="" onclick="luoTilastoPopupKayttokeskukset();          return false;">Käyttökeskukset</a>
+                        <div class="row"><a class="regular" href="" onclick="luoTilastoPopupKytkentaryhmat(); return false;">Kytkentäryhmät</a> <a href="" onclick="luoTilastoPopupKytkentaryhmat(true); return false;">käyttökeskuksittain</a></div>
+                    </span>
                 </span>
             </span>
         </div>
         <div class="hakuohje">
             <span class="trigger">?</span>
-            <h5>Hakulaatikon ymmärtämä syntaksi ja esimerkkejä:</h5>
-            <dl>
-                <dt>OID:</dt>                        <dd>1.2.246.586.1.39.81466</dd>
-                <dt>Lyhyt nimi:</dt>                 <dd>EI123</dd>
-                <dt>Koordinaatti:</dt>               <dd>701829,6954463</dd><dd>30.940161,62.66599</dd>
-                <dt>Ratanumero:</dt>                 <dd>003</dd>
-                <dt>Ratakilometrisijainti:</dt>      <dd>(003) 1+0345</dd>
-                <dt>Ratakilometriväli:</dt>          <dd>(003) 1+0345-2+0012</dd>
-                <dt>Paikantamismerkkisijainti:</dt>  <dd>3+120</dd><dd>3-120</dd>
-                <dt>Juna:</dt>                       <dd>2020-10-31 148</dd>
-                <dt>Lähtöpäivän aikataulut:</dt>     <dd>2020-10-31</dd>
-                <dt>Tämän päivän juna:</dt>          <dd>148</dd>
-                <dt>Reitti:</dt>                     <dd>1.2.246.586.1.39.119282 => 1.2.246.586.1.39.82187 => 1.2.246.586.1.39.81523</dd>
-                <dt>Reitti:</dt>                     <dd>Tpe => Ov => Jy</dd>
-                <dt>WKT-geometria:</dt>              <dd>POINT(701829 6954463)</dd>
-                <dt>Vapaasanahaku:</dt>              <dd>Kangasala</dd>
-            </dl>
+            <span class="content">
+                <h5>Hakulaatikon ymmärtämä syntaksi ja esimerkkejä:</h5>
+                <dl>
+                    <dt>OID:</dt>                        <dd>1.2.246.586.1.39.81466</dd>
+                    <dt>Lyhyt nimi:</dt>                 <dd>EI123</dd>
+                    <dt>Koordinaatti:</dt>               <dd>701829,6954463</dd><dd>30.940161,62.66599</dd>
+                    <dt>Ratanumero:</dt>                 <dd>003</dd>
+                    <dt>Ratakilometrisijainti:</dt>      <dd>(003) 1+0345</dd>
+                    <dt>Ratakilometriväli:</dt>          <dd>(003) 1+0345-2+0012</dd>
+                    <dt>Paikantamismerkkisijainti:</dt>  <dd>3+120</dd><dd>3-120</dd>
+                    <dt>Juna:</dt>                       <dd>2020-10-31 148</dd>
+                    <dt>Lähtöpäivän aikataulut:</dt>     <dd>2020-10-31</dd>
+                    <dt>Tämän päivän juna:</dt>          <dd>148</dd>
+                    <dt>Reitti:</dt>                     <dd>1.2.246.586.1.39.119282 => 1.2.246.586.1.39.82187 => 1.2.246.586.1.39.81523</dd>
+                    <dt>Reitti:</dt>                     <dd>Tpe => Ov => Jy</dd>
+                    <dt>WKT-geometria:</dt>              <dd>POINT(701829 6954463)</dd>
+                    <dt>Vapaasanahaku:</dt>              <dd>Kangasala</dd>
+                </dl>
+            </span>
         </div>
         <input style="display: none" id="search" placeholder="hae..." />
     </div>
@@ -98,7 +141,7 @@
         <li>Työrakogafiikkaa voi siirrellä ja zoomailla palkeilla ja painonapeilla. Valintatyökalulla voi piirtää työrakovalintoja.</li>
         <li>Hakulaatikolla voi tehdä myös muunnoksia koordinaattien, ratakilometrisijaintien ja paikantamismerkkisijaintien välillä.</li>
         <li>Hakulaatikossa voi avata korostetun tuloksen kartalle oikealle-nuolella, ja sulkea kartan vasemmalle-nuolella.</li>
-        <li>Klikkaamalla yläpalkin <img class="infoikoni" src="https://rata.digitraffic.fi/jeti-api/latest/icons/ennakkoilmoitus.svg" />, <img class="infoikoni" src="https://rata.digitraffic.fi/jeti-api/latest/icons/ennakkosuunnitelma.svg" /> tai <img class="infoikoni" src="https://rata.digitraffic.fi/jeti-api/latest/icons/vuosisuunnitelma.svg" /> saat auki tilastotietoja ennakkoilmoituksista, ennakkosuunnitelmista tai vuosisuunnitelmista.</li>
+        <li>Klikkaamalla yläpalkin 📊 saat auki tilastotietoja ennakkotiedoista ja ratainfrasta.</li>
     </ul>
 
     <h2>Työkalu on vielä kehityksessä. Muutamia huomioita:</h2>

@@ -99,6 +99,14 @@ let naytetaankoAikataulut = (min, max, seriesShown) => {
 };
 
 let luoJunaPopup = (lahtopaiva, junanumero) => {
+    try {
+        return luoJunaPopup_(lahtopaiva, junanumero);
+    } catch (e) {
+        log(e);
+        return e;
+    }
+};
+let luoJunaPopup_ = (lahtopaiva, junanumero) => {
     let tunniste = !lahtopaiva ? undefined : lahtopaiva + ' (' + junanumero + ')';
 
     let [container, elemHeader] = luoIkkuna(tunniste);
