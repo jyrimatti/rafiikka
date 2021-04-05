@@ -298,7 +298,7 @@ body.fi .en, body.en .fi {
 .hakuohje {
     left: 8em;
 }
-.statistics {
+.statistics, .changes {
     font-size: 1.8em;
     margin-top: 1.5em;
 }
@@ -363,7 +363,7 @@ body.fi .en, body.en .fi {
     display: inline;
 }
 .changes {
-    left: 6em;
+    left: 3.5em;
 }
 .changes div {
     margin: 0.5em;
@@ -372,9 +372,11 @@ body.fi .en, body.en .fi {
     display: block;
     text-align: left;
 }
-.changes .trigger {
-    font-size: 2em;
-    margin-top: 0.4em;
+.changes .content {
+    font-size: 0.5em;
+}
+.changes select {
+    margin: 0.5em;
 }
 
 .searchElem {

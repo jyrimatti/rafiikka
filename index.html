@@ -102,40 +102,47 @@
             <span class="changes">
                 <span class="trigger" title="Muutoksia">±</span>
                 <span class="content">
-                    <h4>Ratainfra</h4>
+                    <select id="delta1">
+                        <option value="-">Edellisen</option>
+                        <option value="" selected="selected">Seuraavan</option>
+                    </select>
+                    <select id="delta2">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                        <option value="17">17</option>
+                        <option value="18">18</option>
+                        <option value="19">19</option>
+                        <option value="20">20</option>
+                    </select>
+                    <select id="delta3">
+                        <option value="D">päivän</option>
+                        <option value="W" selected="selected">viikon</option>
+                        <option value="M">kuukauden</option>
+                    </select>
+                    aikana
+                    <select id="delta4">
+                        <option value="true" selected="selected">ilmaantuvia</option>
+                        <option value="false">poistuvia</option>
+                    </select>
                     <div>
-                        <a href="" onclick="luoMuutoksetPopup(true, 'P1D', 'Seuraavan päivän aikana ilmaantuvia', muutoksetInfra); return false;">Seuraavan päivän aikana ilmaantuvia</a>
-                        <a href="" onclick="luoMuutoksetPopup(false, 'P1D', 'Seuraavan päivän aikana poistuvia', muutoksetInfra); return false;">Seuraavan päivän aikana poistuvia</a>
+                        <a href="" onclick="luoMuutoksetPopup(document.getElementById('delta4').value, document.getElementById('delta1').value + 'P' + document.getElementById('delta2').value + document.getElementById('delta3').value, muutoksetInfra); return false;">ratainfra</a>
                     </div>
                     <div>
-                        <a href="" onclick="luoMuutoksetPopup(true, 'P7D', 'Seuraavan viikon aikana ilmaantuvia', muutoksetInfra); return false;">Seuraavan viikon aikana ilmaantuvia</a>
-                        <a href="" onclick="luoMuutoksetPopup(false, 'P7D', 'Seuraavan viikon aikana poistuvia', muutoksetInfra); return false;">Seuraavan viikon aikana poistuvia</a>
-                    </div>
-                    <div>
-                        <a href="" onclick="luoMuutoksetPopup(true, 'P1M', 'Seuraavan kuukauden aikana ilmaantuvia', muutoksetInfra); return false;">Seuraavan kuukauden aikana ilmaantuvia</a>
-                        <a href="" onclick="luoMuutoksetPopup(false, 'P1M', 'Seuraavan kuukauden aikana poistuvia', muutoksetInfra); return false;">Seuraavan kuukauden aikana poistuvia</a>
-                    </div>
-                    <div>
-                        <a href="" onclick="luoMuutoksetPopup(true, 'P6M', 'Seuraavan puolen vuoden aikana ilmaantuvia', muutoksetInfra); return false;">Seuraavan puolen vuoden aikana ilmaantuvia</a>
-                        <a href="" onclick="luoMuutoksetPopup(false, 'P6M', 'Seuraavan puolen vuoden aikana poistuvia', muutoksetInfra); return false;">Seuraavan puolen vuoden aikana poistuvia</a>
-                    </div>
-
-                    <h4>Ennakkotiedot</h4>
-                    <div>
-                        <a href="" onclick="luoMuutoksetPopup(true, 'P1D', 'Seuraavan päivän aikana ilmaantuvia', muutoksetEtj2); return false;">Seuraavan päivän aikana ilmaantuvia</a>
-                        <a href="" onclick="luoMuutoksetPopup(false, 'P1D', 'Seuraavan päivän aikana poistuvia', muutoksetEtj2); return false;">Seuraavan päivän aikana poistuvia</a>
-                    </div>
-                    <div>
-                        <a href="" onclick="luoMuutoksetPopup(true, 'P7D', 'Seuraavan viikon aikana ilmaantuvia', muutoksetEtj2); return false;">Seuraavan viikon aikana ilmaantuvia</a>
-                        <a href="" onclick="luoMuutoksetPopup(false, 'P7D', 'Seuraavan viikon aikana poistuvia', muutoksetEtj2); return false;">Seuraavan viikon aikana poistuvia</a>
-                    </div>
-                    <div>
-                        <a href="" onclick="luoMuutoksetPopup(true, 'P1M', 'Seuraavan kuukauden aikana ilmaantuvia', muutoksetEtj2); return false;">Seuraavan kuukauden aikana ilmaantuvia</a>
-                        <a href="" onclick="luoMuutoksetPopup(false, 'P1M', 'Seuraavan kuukauden aikana poistuvia', muutoksetEtj2); return false;">Seuraavan kuukauden aikana poistuvia</a>
-                    </div>
-                    <div>
-                        <a href="" onclick="luoMuutoksetPopup(true, 'P6M', 'Seuraavan puolen vuoden aikana ilmaantuvia', muutoksetEtj2); return false;">Seuraavan puolen vuoden aikana ilmaantuvia</a>
-                        <a href="" onclick="luoMuutoksetPopup(false, 'P6M', 'Seuraavan puolen vuoden aikana poistuvia', muutoksetEtj2); return false;">Seuraavan puolen vuoden aikana poistuvia</a>
+                        <a href="" onclick="luoMuutoksetPopup(document.getElementById('delta4').value, document.getElementById('delta1').value + 'P' + document.getElementById('delta2').value + document.getElementById('delta3').value, muutoksetEtj2); return false;">ennakkotiedot</a>
                     </div>
                 </span>
         </div>
@@ -181,6 +188,7 @@
         <li>Hakulaatikolla voi tehdä myös muunnoksia koordinaattien, ratakilometrisijaintien ja paikantamismerkkisijaintien välillä.</li>
         <li>Hakulaatikossa voi avata korostetun tuloksen kartalle oikealle-nuolella, ja sulkea kartan vasemmalle-nuolella.</li>
         <li>Klikkaamalla yläpalkin 📊 saat auki tilastotietoja ennakkotiedoista ja ratainfrasta.</li>
+        <li>Klikkaamalla yläpalkin ± saat auki tietoa tulevista ja poistuvista ennakkotiedoista ja ratainfra objekteista.</li>
     </ul>
 
     <h2>Työkalu on vielä kehityksessä. Muutamia huomioita:</h2>

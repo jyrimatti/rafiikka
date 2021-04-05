@@ -592,6 +592,16 @@ let customPrettyPrinting = obj => {
         return x + (obj.kohtaamissuunta == 'nouseva' ? ' ↑' : obj.kohtaamissuunta == 'laskeva' ? ' ↓' : (obj.kohtaamissuunta || ''));
     } else if (typeof obj == 'string' && obj.startsWith('1.2.246.586.')) {
         return obj;
+    } else if (typeof obj == 'string') {
+        let dur = obj.match(/^(-?)P(\d+)([DWMY])$/);
+        if (dur) {
+            return (dur[1] == '-' ? 'edelliset ' : 'seuraavat ') + dur[2] + (
+                dur[3] == 'D' ? ' päivää' :
+                dur[3] == 'W' ? ' viikkoa' :
+                dur[3] == 'M' ? ' kuukautta' :
+                dur[3] == 'Y' ? ' vuotta' :
+                obj);
+        }
     }
     return obj;
 };

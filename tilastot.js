@@ -100,7 +100,6 @@ let luoTilastoPopup_ = (nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari
 
     chart.legend = new am4charts.Legend();
     chart.dateFormatter.dateFormat = "dd.MM.yyyy HH:mm:ss";
-    chart.preloader.disabled       = true;
 
     chart.scrollbarX = new am4core.Scrollbar();
     chart.scrollbarY = new am4core.Scrollbar();
