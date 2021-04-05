@@ -99,6 +99,45 @@
                     </span>
                 </span>
             </span>
+            <span class="changes">
+                <span class="trigger" title="Muutoksia">±</span>
+                <span class="content">
+                    <h4>Ratainfra</h4>
+                    <div>
+                        <a href="" onclick="luoMuutoksetPopup(true, 'P1D', 'Seuraavan päivän aikana ilmaantuvia', muutoksetInfra); return false;">Seuraavan päivän aikana ilmaantuvia</a>
+                        <a href="" onclick="luoMuutoksetPopup(false, 'P1D', 'Seuraavan päivän aikana poistuvia', muutoksetInfra); return false;">Seuraavan päivän aikana poistuvia</a>
+                    </div>
+                    <div>
+                        <a href="" onclick="luoMuutoksetPopup(true, 'P7D', 'Seuraavan viikon aikana ilmaantuvia', muutoksetInfra); return false;">Seuraavan viikon aikana ilmaantuvia</a>
+                        <a href="" onclick="luoMuutoksetPopup(false, 'P7D', 'Seuraavan viikon aikana poistuvia', muutoksetInfra); return false;">Seuraavan viikon aikana poistuvia</a>
+                    </div>
+                    <div>
+                        <a href="" onclick="luoMuutoksetPopup(true, 'P1M', 'Seuraavan kuukauden aikana ilmaantuvia', muutoksetInfra); return false;">Seuraavan kuukauden aikana ilmaantuvia</a>
+                        <a href="" onclick="luoMuutoksetPopup(false, 'P1M', 'Seuraavan kuukauden aikana poistuvia', muutoksetInfra); return false;">Seuraavan kuukauden aikana poistuvia</a>
+                    </div>
+                    <div>
+                        <a href="" onclick="luoMuutoksetPopup(true, 'P6M', 'Seuraavan puolen vuoden aikana ilmaantuvia', muutoksetInfra); return false;">Seuraavan puolen vuoden aikana ilmaantuvia</a>
+                        <a href="" onclick="luoMuutoksetPopup(false, 'P6M', 'Seuraavan puolen vuoden aikana poistuvia', muutoksetInfra); return false;">Seuraavan puolen vuoden aikana poistuvia</a>
+                    </div>
+
+                    <h4>Ennakkotiedot</h4>
+                    <div>
+                        <a href="" onclick="luoMuutoksetPopup(true, 'P1D', 'Seuraavan päivän aikana ilmaantuvia', muutoksetEtj2); return false;">Seuraavan päivän aikana ilmaantuvia</a>
+                        <a href="" onclick="luoMuutoksetPopup(false, 'P1D', 'Seuraavan päivän aikana poistuvia', muutoksetEtj2); return false;">Seuraavan päivän aikana poistuvia</a>
+                    </div>
+                    <div>
+                        <a href="" onclick="luoMuutoksetPopup(true, 'P7D', 'Seuraavan viikon aikana ilmaantuvia', muutoksetEtj2); return false;">Seuraavan viikon aikana ilmaantuvia</a>
+                        <a href="" onclick="luoMuutoksetPopup(false, 'P7D', 'Seuraavan viikon aikana poistuvia', muutoksetEtj2); return false;">Seuraavan viikon aikana poistuvia</a>
+                    </div>
+                    <div>
+                        <a href="" onclick="luoMuutoksetPopup(true, 'P1M', 'Seuraavan kuukauden aikana ilmaantuvia', muutoksetEtj2); return false;">Seuraavan kuukauden aikana ilmaantuvia</a>
+                        <a href="" onclick="luoMuutoksetPopup(false, 'P1M', 'Seuraavan kuukauden aikana poistuvia', muutoksetEtj2); return false;">Seuraavan kuukauden aikana poistuvia</a>
+                    </div>
+                    <div>
+                        <a href="" onclick="luoMuutoksetPopup(true, 'P6M', 'Seuraavan puolen vuoden aikana ilmaantuvia', muutoksetEtj2); return false;">Seuraavan puolen vuoden aikana ilmaantuvia</a>
+                        <a href="" onclick="luoMuutoksetPopup(false, 'P6M', 'Seuraavan puolen vuoden aikana poistuvia', muutoksetEtj2); return false;">Seuraavan puolen vuoden aikana poistuvia</a>
+                    </div>
+                </span>
         </div>
         <div class="hakuohje">
             <span class="trigger">?</span>
@@ -189,6 +228,7 @@
     <script src="karttaLayers.js"></script>
     <script src="kartta.js"></script>
     <script src="tilastot.js"></script>
+    <script src="muutokset.js"></script>
 
     <script>
         initTooltips(document.getElementById('palkki'));

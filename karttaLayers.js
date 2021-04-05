@@ -5,7 +5,7 @@ let newVectorLayerNoTile =   (url, shortName, title_fi, title_en, opacity, prope
     newVectorLayerImpl(false, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, projection, kaavio, ajanhetki, aikavali);
 
 let applyStyle = (styleOrHandler, ajanhetki, aikavali) => feature => {
-    let voimassa = feature.getProperties().haetunDatanVoimassaoloaika || (feature.getProperties().ensimmainenAktiivisuusaika ? feature.getProperties().ensimmainenAktiivisuusaika + '/' + feature.getProperties().viimeinenAktiivisuusaika : undefined);
+    let voimassa = feature.getProperties().voimassa || feature.getProperties().haetunDatanVoimassaoloaika || (feature.getProperties().ensimmainenAktiivisuusaika ? feature.getProperties().ensimmainenAktiivisuusaika + '/' + feature.getProperties().viimeinenAktiivisuusaika : undefined);
     let vali = !voimassa ? undefined : voimassa.split('/').map(x => new Date(x));
     if (!aikavali()) {
         aikavali(vali[0], vali[1]);

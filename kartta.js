@@ -260,15 +260,15 @@ let haeMuutosajankohdat = map =>
         .sort((a,b) => a - b)
         .map(d => new Date(d));
 
-let kartta = (nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari) => {
+let kartta = (tunniste, title, offsetX, offsetY, time) => {
     try {
-        return kartta_(nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari);
+        return kartta_(tunniste, title, offsetX, offsetY, time);
     } catch (e) {
         log(e);
         return e;
     }
 };
-let kartta_ = (tunniste, title, offsetX, offsetY) => {
+let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
     let [container, elem, haku, kaavioCheck, slider, alkuaika, loppuaika] = luoKarttaElementti(tunniste, title || tunniste, offsetX, offsetY);
     let overlay = new ol.Overlay({
         element: elem.parentElement.getElementsByClassName('popup')[0],
@@ -352,7 +352,8 @@ let kartta_ = (tunniste, title, offsetX, offsetY) => {
 
     // muille kuin Jetille kartta globaaliin kontekstiin
     if (!onkoJeti(tunniste)) {
-        map.aikavali(new Date(pyoristaAjanhetki(aikaParam())), new Date(pyoristaAjanhetki(aikaParam())));
+        map.aikavali(time && new Date(time.split('/')[0]) || new Date(pyoristaAjanhetki(aikaParam())),
+                     time && new Date(time.split('/')[1]) || new Date(pyoristaAjanhetki(aikaParam())));
     }
 
     kaavioCheck.onchange = _ => {
@@ -430,8 +431,8 @@ let kartta_ = (tunniste, title, offsetX, offsetY) => {
     return container;
 }
 
-let kurkistaKartta = (elem, tunniste, title, offsetX, offsetY) => {
-    let container = kartta(tunniste, title, offsetX, offsetY);
+let kurkistaKartta = (elem, tunniste, title, offsetX, offsetY, time) => {
+    let container = kartta(tunniste, title, offsetX, offsetY, time);
     let f = () => {
         if (container.parentElement) {
             container.parentElement.removeChild(container);

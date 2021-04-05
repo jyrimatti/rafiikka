@@ -32,9 +32,9 @@ let luoIkkuna = (title, offsetX, offsetY) => {
     return [container, elemHeader];
 };
 
-let avaaInfo = (tunniste, offsetX, offsetY) => {
-    let url = onkoInfra(tunniste) || onkoTREX(tunniste) ? luoInfraAPIUrl(tunniste) :
-              onkoJeti(tunniste)                        ? luoEtj2APIUrl(tunniste) :
+let avaaInfo = (tunniste, offsetX, offsetY, time) => {
+    let url = onkoInfra(tunniste) || onkoTREX(tunniste) ? luoInfraAPIUrl(tunniste, time) :
+              onkoJeti(tunniste)                        ? luoEtj2APIUrl(tunniste, time) :
               onkoJuna(tunniste)                        ? luoAikatauluUrl(tunniste) :
               onkoRuma(tunniste)                        ? luoRumaUrl(tunniste) :
               undefined;
@@ -67,8 +67,8 @@ let avaaInfo = (tunniste, offsetX, offsetY) => {
     }
 };
 
-let kurkistaInfo = (elem, tunniste, offsetX, offsetY) => {
-    let container = avaaInfo(tunniste, offsetX, offsetY);
+let kurkistaInfo = (elem, tunniste, offsetX, offsetY, time) => {
+    let container = avaaInfo(tunniste, offsetX, offsetY, time);
     let f = () => {
         if (container.parentElement) {
             container.parentElement.removeChild(container);
