@@ -486,7 +486,8 @@ let hover = (overlay, layers) => {
     let hoverInteraction = new ol.interaction.Select({
         hitTolerance: 2,
         condition:    ol.events.condition.click,
-        layers:       flatLayerGroups(layers)
+        layers:       flatLayerGroups(layers),
+        style:        null
     });
     hoverInteraction.on('select', evt => {
         let map = evt.target.getMap();
@@ -496,8 +497,13 @@ let hover = (overlay, layers) => {
                 overlay.getElement().innerHTML = prettyPrint(withoutProp(feature.getProperties(), 'geometry'));
             }
             overlay.setPosition(coordinate);
+            
+            feature._origStyle = feature.getStyle();
+            feature.setStyle(highlightStyle(feature.getStyle()(feature, map.getView().getResolution(map.getView().getZoom()))));
+
             ennakkotiedonTarkennus(map, feature.getProperties().tunniste);
         });
+        evt.deselected.forEach(x => x.setStyle(x._origStyle));
         if (evt.selected.length == 0) {
             overlay.setPosition(undefined);
 
@@ -522,6 +528,23 @@ let cropIfConstrained = (voimassa, kaavio, f, source) => kohteet =>
                 log('Hmm, could not resolve masking geometry for:', JSON.stringify(kohde));
             }
     }));
+
+let cropEnds = (voimassa, kaavio, f, source) => kohteet =>
+    kohteet.filter(kohde => kohde.tunniste == f.getProperties().tunniste)
+           .forEach(kohde => {
+                var original = olParser.read(f.getGeometry());
+                
+                let geometries = original.getNumGeometries();
+                let endpoints = [];
+                for (let i = 0; i < geometries; ++i) {
+                    let geom = original.getGeometryN(i);
+                    endpoints.push(geometryFactory.createPoint(geom.getCoordinateN(0)));
+                    endpoints.push(geometryFactory.createPoint(geom.getCoordinateN(geom.getNumPoints()-1)));
+                }
+                let mask = endpoints.map(x => x.buffer(3 /* meters */, 8, 1 /* round */));
+
+                f.setGeometry(olParser.write(original.difference(buildGeometries(mask))));
+    });
 
 let kohdeProps = ['.raiteet.tunniste.geometria',
                   '.raiteet.tunniste.tunniste',
@@ -598,11 +621,12 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste, kaavio, ajanhetki, aikava
                     // possibly constraint target kinds
                     if (ps._source) {
                         let kohteet = ps._source.indexOf('.raiteet')             > -1 ? [raiteet] :
-                                    ps._source.indexOf('.radat')               > -1 ? [radat] :
-                                    ps._source.indexOf('.liikennepaikkavalit') > -1 ? [lpvalit] :
-                                    [];
+                                      ps._source.indexOf('.radat')               > -1 ? [radat] :
+                                      ps._source.indexOf('.liikennepaikkavalit') > -1 ? [lpvalit] :
+                                      [];
 
                         kohteet.forEach(k => {
+                            cropEnds(voimassa, kaavio, f, newLayer.getSource())(k);
                             cropIfConstrained(voimassa, kaavio, f, newLayer.getSource())(k);
                         });
                     }

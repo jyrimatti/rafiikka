@@ -1,26 +1,73 @@
+let highlightImage = image => {
+    if (image && image.getSrc) {
+        let ret = new ol.style.Icon({
+            src: image.getSrc(),
+            scale: image.getScale(),
+            rotateWithView: image.getRotateWithView(),
+            anchor: image.anchor_,
+            rotation: image.getRotation(),
+            opacity: image.getOpacity(),
+            crossOrigin: '_'+Math.random() // OpenLayers uses src+crossOrigin+color as cache key, and we must separate each icon from each other
+        });
+        fetch(image.getSrc())
+            .then(x => x.text())
+            .then(x => ret.getImage().src = 'data:image/svg+xml;base64,' + btoa(setHighlightStyles('#f00', x))); // need as base64, otherwise doesn't seem to work
+        return ret;
+    }
+    return undefined;
+};
+
+let setHighlightStyles = (color, svg) => svg.replace(/<[^>]+ data-name="[^"]*(StyleStrokefill|StyleStroke|StyleFill)[^"]*"[^>]*>/g, (match, br1) => match + toStyle(color, br1));
+
+let toStyle = (color, clazz) =>
+    clazz == 'StyleStrokefill' ? `<style type="text/css">* {fill: ${color} !important; stroke: ${color} !important;}</style>` :
+    clazz == 'StyleFill'       ? `<style type="text/css">* {fill: ${color} !important;}</style>` :
+    clazz == 'StyleStroke'     ? `<style type="text/css">* {stroke: ${color} !important;}</style>` :
+    undefined;
+
 let styles = {
     // copy-pasted from ol source
     default: [
         new ol.style.Style({
             image: new ol.style.Circle({
+                fill: new ol.style.Fill({
+                    color: 'rgba(255,255,255,0.4)'
+                    }),
+                stroke: new ol.style.Stroke({
+                    color: '#3399CC',
+                    width: 1.25
+                    }),
+                radius: 5
+            }),
             fill: new ol.style.Fill({
                 color: 'rgba(255,255,255,0.4)'
-                }),
+            }),
             stroke: new ol.style.Stroke({
                 color: '#3399CC',
                 width: 1.25
+            })
+        })],
+
+    // from ol source
+    defaultWith: (fillColor, strokeColor, strokeWidth, origStyle) => new ol.style.Style({
+            image: (origStyle ? highlightImage(origStyle instanceof Array ? origStyle.find(x => x.getImage).getImage() : origStyle.getImage()) : new ol.style.Circle({
+                fill: new ol.style.Fill({
+                    color: fillColor
                 }),
-            radius: 5
-            }),
+                stroke: new ol.style.Stroke({
+                    color: strokeColor,
+                    width: strokeWidth
+                }),
+                radius: 5
+            })),
             fill: new ol.style.Fill({
-            color: 'rgba(255,255,255,0.4)'
+                color: fillColor
             }),
             stroke: new ol.style.Stroke({
-            color: '#3399CC',
-            width: 1.25
+                color: strokeColor,
+                width: strokeWidth
             })
-        })
-        ],
+        }),
 
     circle: (radius, color) => {
         var vcolor = ol.color.asArray(color);
@@ -142,7 +189,7 @@ let elemStyle = (feature, resolution) => {
                     elemType == 'pysaytyslaite' ? 'pysaytyslaite' + (feature.getProperties().pysaytyslaite.suojaussuunta === 'molemmat' ? 'Molemmat' : '') + (feature.getProperties().pysaytyslaite.kasinAsetettava === true ? 'Kasin' : '') :
                     elemType == 'vaihde' ? 'vaihde_' + feature.getProperties().vaihde.tyyppi + (feature.getProperties().vaihde.kasikaantoisyys == 'ei' ? '' : '_' + feature.getProperties().vaihde.kasikaantoisyys) + (feature.getProperties().vaihde.risteyssuhde == null || parseFloat(feature.getProperties().vaihde.risteyssuhde.split(':')[1]) <= 10 ? '' : parseFloat(feature.getProperties().vaihde.risteyssuhde.split(':')[1]) <= 18 ? '_keskinopea' : '_nopea' ) :
                     elemType;
-    let style = styles.icon(infraAPIUrl + 'icons/' + icon4elem + '.svg', false, feature.getProperties().rotaatio, anchor, scales[resolutions.indexOf(resolution)]);
+    let style = styles.icon(infraAPIUrl + 'icons/' + icon4elem + '.svg', false, feature.getProperties().rotaatio, anchor, scales[resolutions.findIndex(x => x <= resolution)]);
     if (anchor) {
         style = [style, styles.circle(2.0, 'rgba(0,255,0,0.5)')];
     }
@@ -154,7 +201,7 @@ let ratapihapalveluStyle = (feature, resolution) => {
     let anchor = null;
     let icon4elem = elemType == 'sahkokeskus' ? 'sahkokeskus_' + feature.getProperties().sahkokeskus.sahkokeskustyyppi.replace(/\/.*/,'').toLowerCase() :
                     elemType;
-    return styles.icon(infraAPIUrl + 'icons/' + icon4elem + '.svg', false, feature.getProperties().rotaatio, anchor, scales[resolutions.indexOf(resolution)]);
+    return styles.icon(infraAPIUrl + 'icons/' + icon4elem + '.svg', false, feature.getProperties().rotaatio, anchor, scales[resolutions.findIndex(x => x <= resolution)]);
 };
 
 let pmStyle = styles.onLoad(feature => {
@@ -278,3 +325,5 @@ let mbcStyle = new ol.style.Style({
         color: 'rgb(255, 0, 0)'
     })
 });
+
+let highlightStyle = origStyle => [styles.defaultWith('Red', 'Red', 1, origStyle), styles.defaultWith('rgba(0,0,0,0)', 'Red', 1)];
