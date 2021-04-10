@@ -301,7 +301,7 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
         overlays: [overlay],
         layers: [taustaLayer],
         view: new ol.View({
-            center: [342900, 6820390],//ol.proj.fromLonLat(center || [24.0490989,61.4858273]),
+            center: [342900, 6820390],
             resolution: 2048,
             resolutions: resolutions,
             projection: projection
@@ -359,6 +359,7 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
     kaavioCheck.onchange = _ => {
         log('Moodi vaihtui arvoon', onkoKaavio(), 'päivitetään layer data');
         flatLayerGroups(map.getLayers().getArray()).forEach(l => l.getSource().refresh());
+        Object.values(map.highlightLayers).forEach(x => x.forEach(y => y.getSource().refresh()));
     };
     let paivitaTitle = () => {
         let av = aikavali();
@@ -414,7 +415,9 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
     let search = initSearch(haku, lisaa, poistaKartalta(map));
     search.settings.create = x => ({tunniste: x, nimi: title || x});
     search.disable();
-    search.createItem(tunniste);
+    if (tunniste) {
+        tunniste.split(',').forEach(x => search.createItem(x));
+    }
     search.enable();
     search.close();
     search.settings.create = false;
@@ -456,7 +459,7 @@ let lisaaKartalle = (map, overlay) => tunniste => {
         onkoEI(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, eiStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
         onkoES(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, esStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
         onkoVS(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, vsStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
-        onkoInfra(tunniste) || onkoTREX(tunniste) ? newVectorLayerNoTile(luoInfraAPIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, undefined, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
+        onkoInfra(tunniste) || onkoTREX(tunniste) ? newVectorLayerNoTile(luoInfraAPIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, resolveStyle(tunniste), undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
         wkt ? wktLayer(tunniste, wkt[1]) :
         undefined;
     preselectLayer.setVisible(true);
@@ -499,7 +502,7 @@ let hover = (overlay, layers) => {
             overlay.setPosition(coordinate);
             
             feature._origStyle = feature.getStyle();
-            feature.setStyle(highlightStyle(feature.getStyle()(feature, map.getView().getResolution(map.getView().getZoom()))));
+            feature.setStyle(highlightStyle(feature._origStyle));
 
             ennakkotiedonTarkennus(map, feature.getProperties().tunniste);
         });
@@ -520,8 +523,9 @@ let cropIfConstrained = (voimassa, kaavio, f, source) => kohteet =>
            .filter(kohde => kohde.rajaus) // jos oli rajaus, niin tehdään taiat. Muuten jätetään geometria kokonaiseksi.
            .forEach(kohde => resolveMask(kohde.rajaus, voimassa, kaavio, mask => {
             if (mask) {
+                log('Masking geometry of', f.getProperties().tunniste);
                 var original = olParser.read(f.getGeometry());
-                f.setStyle(null);
+                f.setStyle(highlightStyle(f._origStyle));
                 f.setGeometry(olParser.write(mask.intersection(original)));
                 source.dispatchEvent("geometriesUpdated");
             } else {
@@ -529,39 +533,61 @@ let cropIfConstrained = (voimassa, kaavio, f, source) => kohteet =>
             }
     }));
 
-let cropEnds = (voimassa, kaavio, f, source) => kohteet =>
-    kohteet.filter(kohde => kohde.tunniste == f.getProperties().tunniste)
-           .forEach(kohde => {
-                var original = olParser.read(f.getGeometry());
-                
-                let geometries = original.getNumGeometries();
-                let endpoints = [];
-                for (let i = 0; i < geometries; ++i) {
-                    let geom = original.getGeometryN(i);
-                    endpoints.push(geometryFactory.createPoint(geom.getCoordinateN(0)));
-                    endpoints.push(geometryFactory.createPoint(geom.getCoordinateN(geom.getNumPoints()-1)));
-                }
-                let mask = endpoints.map(x => x.buffer(3 /* meters */, 8, 1 /* round */));
+let cropEnds = f => {
+    var original = olParser.read(f.getGeometry());
+    let allLines = [];
+    if (original.getGeometryType() == 'LineString' || original.getGeometryType() == 'MultiLineString') {
+        let geometries = original.getNumGeometries();
+        for (let i = 0; i < geometries; ++i) {
+            let geom = original.getGeometryN(i);
+            allLines.push(geom);
+        };
+    }
 
-                f.setGeometry(olParser.write(original.difference(buildGeometries(mask))));
-    });
+    let endpoints = allLines.flatMap(x => [
+        geometryFactory.createPoint(x.getCoordinateN(0)),
+        geometryFactory.createPoint(x.getCoordinateN(x.getNumPoints()-1))]);
+    
+    // accept only endpoint, who intersect with all geometries exactly once (that is, is contained in the geometrycollection exactly once). Otherwise it's not an endpoint.
+    let mask = endpoints.filter(x => allLines.filter(y => y.intersects(x)).length == 1)
+                        .map(x => x.buffer(1 /* meters */, 8, 1 /* round */));
+
+    if (mask.length > 0) {
+        log('Cropping ends of the geometry of', f.getProperties().tunniste);
+        f.setGeometry(olParser.write(original.difference(buildGeometries(mask))));
+    }
+};
+
 
 let kohdeProps = ['.raiteet.tunniste.geometria',
                   '.raiteet.tunniste.tunniste',
-                  '.raiteet',
-                  '.elementit.geometria',
-                  '.liikennepaikat.geometria',
-                  '.tilirataosat.geometria',
-                  '.toimialueet.geometria',
-                  '.tasoristeykset.geometria',
-                  '.liikennesuunnittelualueet.geometria',
+                  '.elementit.',
+                  '.liikennepaikat.tunniste.geometria',
+                  '.liikennepaikat.tunniste.tunniste',
+                  '.tilirataosat.tunniste.geometria',
+                  '.tilirataosat.tunniste.tunniste',
+                  '.toimialueet.tunniste.geometria',
+                  '.toimialueet.tunniste.tunniste',
+                  '.toimialueet.tunniste.vari',
+                  '.tasoristeykset.tunniste.geometria',
+                  '.tasoristeykset.tunniste.tunniste',
+                  '.tasoristeykset.tunniste.rotaatio',
+                  '.liikennesuunnittelualueet.tunniste.geometria',
+                  '.liikennesuunnittelualueet.tunniste.tunniste',
                   '.radat.tunniste.geometria',
                   '.radat.tunniste.tunniste',
-                  '.radat',
                   '.liikennepaikkavalit.tunniste.geometria',
                   '.liikennepaikkavalit.tunniste.tunniste',
-                  '.liikennepaikkavalit',
-                  '.paikantamismerkkisijainnit.tunniste.geometria'];
+                  '.paikantamismerkkisijainnit.tunniste.geometria', // pmtunnistetta ei tarvi koska sille ei kuitenkaan piirretä tyyliä
+                  '.kytkentaryhmat.',
+                  '.laiturit.tunniste.geometria',
+                  '.laiturit.tunniste.tunniste',
+                  '.raideosuudet.tunniste.geometria',
+                  '.raideosuudet.tunniste.tunniste',
+                  '.sillat.tunniste.geometria',
+                  '.sillat.tunniste.tunniste',
+                  '.tunnelit.tunniste.geometria',
+                  '.tunnelit.tunniste.tunniste'];
 
 let getAllGeometries = f => {
     // gather all geometries, also inside geometrycollections
@@ -579,7 +605,7 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste, kaavio, ajanhetki, aikava
                  onkoVS(tunniste) ? 'kohde' : undefined;
 
     if (prefix) {
-        let props = '-laskennallinenKarttapiste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
+        let props = '-laskennallinenKarttapiste,tunniste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
         let avain = tunniste + '_' + kaavio() + '-' + ajanhetki();
 
         if (highlightLayers[avain]) {
@@ -595,9 +621,15 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste, kaavio, ajanhetki, aikava
             let mbcFeature = new ol.Feature();
             mbcFeature._mbc = true;
             
-            let newLayer = newVectorLayerNoTile(etj2APIUrl + tunniste + '.geojson', '-', 'Korostus', 'Highlight', undefined, props, f => {
+            let newLayer = newVectorLayerNoTile(etj2APIUrl + tunniste + '.geojson', '-', 'Korostus', 'Highlight', undefined, props, (f,r) => {
                 if (!f._kasitelty) {
                     let ps = f.getProperties();
+
+                    let resolvedStyle = resolveStyleForFeature(f);
+                    if (resolvedStyle) {
+                        f.setStyle(highlightStyle(resolvedStyle));
+                    }
+
                     if (!raiteet) {
                         // yes, this assumes that the first feature is the "original" one containing all the data. Not the most elegant this way...
                         let prefixParts = prefix.split('.');
@@ -611,6 +643,7 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste, kaavio, ajanhetki, aikava
 
                         if ([raiteet, radat, lpvalit].filter(x => x != undefined).find(x => x.rajaus)) {
                             // löytyy ainakin jokin rajaus, joten asetetaan style väliaikaiseksi
+                            f._origStyle = f.getStyle();
                             f.setStyle(loadingIndicatorStyle);
                             mbcFeature.setStyle(() => undefined);
                         } else {
@@ -626,8 +659,8 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste, kaavio, ajanhetki, aikava
                                       [];
 
                         kohteet.forEach(k => {
-                            cropEnds(voimassa, kaavio, f, newLayer.getSource())(k);
                             cropIfConstrained(voimassa, kaavio, f, newLayer.getSource())(k);
+                            cropEnds(f)
                         });
                     }
                 }

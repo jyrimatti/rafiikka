@@ -30,6 +30,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
         optgroupLabelField: 'luokka',
         score: _ => item => item.score,
         render: {
+            item: (item, escape) => '<div class="item">' + item.nimi + '</div>',
             option: (item, escape) => {
                 let tunniste = item.tunniste;
                 let reitti = onkoReitti(item.tunniste);
@@ -110,15 +111,15 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
         search.$control.on('keydown', ev => {
             if (ev.key == "ArrowRight") {
                 if (prev) {
-                    prev.onmouseout();
+                    prev.dispatchEvent(new MouseEvent('mouseout'));
                     prev = undefined;
                 }
                 let opt = search.$activeOption[0];
                 prev = opt.querySelector('.karttaikoni');
                 prev.onmouseover({ pageX: 0, pageY: 0});
-            } else if (ev.key == 'ArrowLeft') {
+            } else {
                 if (prev) {
-                    prev.onmouseout();
+                    prev.dispatchEvent(new MouseEvent('mouseout'));
                     prev = undefined;
                 }
             }

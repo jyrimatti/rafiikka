@@ -1,17 +1,43 @@
+let highlightCache = {};
+let iconCache = {};
+
 let highlightImage = image => {
     if (image && image.getSrc) {
+        // must cache icons because openlayers sucks: https://github.com/openlayers/openlayers/issues/3137
+        let cacheKey = image.getScale() + '_' + image.getRotateWithView() + '_' + image.anchor_ + '_' + image.getRotation() + image.getSrc();
+        if (iconCache[cacheKey]) {
+            return iconCache[cacheKey];
+        }
+
+        log('Creating new icon', cacheKey);
         let ret = new ol.style.Icon({
             src: image.getSrc(),
             scale: image.getScale(),
             rotateWithView: image.getRotateWithView(),
             anchor: image.anchor_,
             rotation: image.getRotation(),
-            opacity: image.getOpacity(),
-            crossOrigin: '_'+Math.random() // OpenLayers uses src+crossOrigin+color as cache key, and we must separate each icon from each other
+            opacity: 0.75,
+            crossOrigin: 'highlight' // OpenLayers uses src+crossOrigin+color as cache key, so we must separate highlighted icons from regular ones
         });
-        fetch(image.getSrc())
-            .then(x => x.text())
-            .then(x => ret.getImage().src = 'data:image/svg+xml;base64,' + btoa(setHighlightStyles('#f00', x))); // need as base64, otherwise doesn't seem to work
+        iconCache[cacheKey] = ret;
+
+        let highlighted = highlightCache[image.getSrc()];
+        if (typeof highlighted == 'string') {
+            ret.getImage().src = highlighted;
+        } else if (highlighted instanceof Array) {
+            highlightCache[image.getSrc()].push(ret);
+        } else {
+            log("Getting svg", image.getSrc());
+            highlightCache[image.getSrc()] = [ret];
+            fetch(image.getSrc())
+                .then(x => x.text())
+                .then(x => {
+                    let result = 'data:image/svg+xml;base64,' + btoa(setHighlightStyles('#f00', x));
+                    // need as base64, otherwise doesn't seem to work    
+                    highlightCache[image.getSrc()].forEach(x => x.getImage().src = result);
+                    highlightCache[image.getSrc()] = result;
+                });
+        }
         return ret;
     }
     return undefined;
@@ -97,8 +123,11 @@ let styles = {
 
     onLoad: func => func,
     
-    icon: (url, flipped, rotation, anchor, scale, opacity) =>
-        new ol.style.Style({
+    icon: (url, flipped, rotation, anchor, scale, opacity) => {
+        if (url.endsWith('undefined.svg')) {
+            throw new Error("Whoops, trying to use invalid icon " + url);
+        }
+        return new ol.style.Style({
             image: new ol.style.Icon({
                 src: url,
                 scale: scale ? scale : 1,
@@ -107,7 +136,8 @@ let styles = {
                 rotation: rotation ? 2*Math.PI*rotation/360 : 0,
                 opacity: opacity ? opacity : 1.0
             })
-        })
+        });
+    }
     ,
     
     text: (color, txt, offsetY) =>
@@ -222,6 +252,40 @@ let pmStyle = styles.onLoad(feature => {
     feature.setStyle([].concat.apply([], styles));
 });
 
+let resolveStyleForFeature = feature => resolveStyle(feature.getProperties().tunniste);
+
+let resolveStyle = tunniste => {
+    let tyyppi = onkoTREX(tunniste);
+    if (tyyppi) {
+        if (tyyppi[1] == 15) {
+            return siltaStyle;
+        } else if (tyyppi[1] == 17) {
+            return tunneliStyle;
+        }
+    }
+    tyyppi = onkoInfra(tunniste);
+    if (tyyppi) {
+        let t = tyyppi[1];
+        return t == 44 ? raideStyle :
+            t == 39 ? lpStyle : // mites tästä erotetaan alityyppi?
+            t == 40 ? lpValiStyle :
+            t == 45 ? rataStyle :
+            t == 41 ? kmStyle :
+            t == 23 ? tasoristeysStyle :
+            t == 69 ? lorajaStyle :
+            t == 18 ? raiteensulkuStyle :
+            t == 38 ? nraStyle :
+            t == 36 ? eristysosuusStyle : // mites alityypit?
+            t == 37 ? laituriStyle :
+            t == 48 ? toimialueStyle :
+            t == 33 ? kytkentaryhmaStyle :
+            t == 43 ? pmStyle :
+            [49,50,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66].includes(t) ? ratapihapalveluStyle :
+            elemStyle;
+    }
+    return undefined;
+}; 
+
 
 let ennakkotietoOpacity = voimassa => {
     let leimat = voimassa.split('/').map(t => new Date(t).getTime());
@@ -322,8 +386,10 @@ let loadingIndicatorStyle = new ol.style.Style({
 let mbcStyle = new ol.style.Style({
     stroke: new ol.style.Stroke({
         width: 2,
-        color: 'rgb(255, 0, 0)'
+        color: 'rgba(255, 0, 0, 0.5)'
     })
 });
 
-let highlightStyle = origStyle => [styles.defaultWith('Red', 'Red', 1, origStyle), styles.defaultWith('rgba(0,0,0,0)', 'Red', 1)];
+let highlightStyle = origStyle => typeof origStyle == 'function'
+    ? (f,r) => [styles.defaultWith('rgba(255,0,0,0.75)', 'rgba(255,0,0,0.75)', 3, origStyle(f,r)), styles.circle(5, 'rgba(255,0,0,0.1)')]
+    : [styles.defaultWith('rgba(255,0,0,0.75)', 'rgba(255,0,0,0.75)', 3, origStyle), styles.circle(5, 'rgba(255,0,0,0.1)')];

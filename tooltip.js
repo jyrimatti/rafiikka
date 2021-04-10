@@ -1,6 +1,8 @@
 let initTooltips = context => {
     tippy(context.querySelectorAll('[title]'), {
         interactive: true,
+        placement: 'top',
+        offset: [0, 20],
         content(reference) {
             const title = reference.getAttribute('title');
             reference.removeAttribute('title');

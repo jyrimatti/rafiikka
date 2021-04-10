@@ -1318,9 +1318,7 @@ window.onload = () => {
     });
 
     let sijainti = sijaintiParam();
-    if (sijainti) {
-        if (onkoJeti(sijainti) || onkoRuma(sijainti) || onkoInfra(sijainti) && !onkoRatanumero(sijainti)) {
-            kartta(sijainti);
-        }
+    if (sijainti.split(',').some(x => onkoJeti(x) || onkoRuma(x) || onkoInfra(x) && !onkoRatanumero(x))) {
+        kartta(sijainti);
     }
 }

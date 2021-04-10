@@ -38,7 +38,7 @@ let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
 
 let params = () => new URLSearchParams(window.location.hash.replace('#', '?'));
 
-let sijaintiParam = () => params().get('sijainti') || (window.location.hash ? '' : '009') ;
+let sijaintiParam = () => params().get('sijainti') || (params().get('aika') ? '' : window.location.hash.substring(1)) || '009';
 let aikaParam     = () => new Date(params().get("aika") || new Date().toISOString());
 let kestoParam    = () => dateFns.durationFns.parse(params().get("kesto") || "P1D");
 let moodiParam    = () => params().get("moodi") || 'kartta';
@@ -683,8 +683,8 @@ let luoKarttaLinkki = (tunniste, title, time) => `
         <a href=""
            title='Avaa kartalla'
            class='infoikoni karttaikoni'
-           onclick='kartta("${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;/g,'')}", event.pageX, event.pageY, "${time}"); return false;'
-           onmouseover='kurkistaKartta(this, "${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;/g,'')}", event.pageX, event.pageY, "${time}"); return false;' />
+           onclick='kartta("${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;/g,'')}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'
+           onmouseover='kurkistaKartta(this, "${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;|\n/g,'')}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;' />
            🗺
         </a>
     </li>
