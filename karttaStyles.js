@@ -263,7 +263,7 @@ let resolveStyle = tunniste => {
             return tunneliStyle;
         }
     }
-    tyyppi = onkoInfra(tunniste);
+    tyyppi = onkoInfraOID(tunniste);
     if (tyyppi) {
         let t = tyyppi[1];
         return t == 44 ? raideStyle :

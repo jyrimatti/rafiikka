@@ -610,7 +610,7 @@ let prettyPrint = obj => {
     if (obj == null) {
         return null;
     } else if (obj instanceof Array && obj.length > 0) {
-        return '<span class="array">' + obj.map(customPrettyPrinting).join('<br />') + '</span>';
+        return '<span class="array">' + obj.map(prettyPrint).join('<br />') + '</span>';
     } else {
         let r = customPrettyPrinting(obj);
         if (typeof r == 'object') {
@@ -648,8 +648,8 @@ let luoInfoLinkki = (tunniste, time) => onkoInfra(tunniste) || onkoJeti(tunniste
         <a href=""
            title='Avaa tietoja'
            class='infoikoni'
-           onclick='avaaInfo("${tunniste}", event.pageX, event.pageY, "${time}"); return false;'
-           onmouseover='kurkistaInfo(this, "${tunniste}", event.pageX, event.pageY, "${time}"); return false;'>
+           onclick='avaaInfo("${tunniste}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'
+           onmouseover='kurkistaInfo(this, "${tunniste}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'>
             ℹ️
         </a>
     </li>` : '';

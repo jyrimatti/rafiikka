@@ -1,4 +1,4 @@
-let luoIkkuna = (title, offsetX, offsetY) => {
+let luoIkkuna = (title, offsetX, offsetY, onClose) => {
     let container = document.createElement("div");
     document.body.appendChild(container);
 
@@ -6,10 +6,6 @@ let luoIkkuna = (title, offsetX, offsetY) => {
         container.style.left = (offsetX + 400 > window.innerWidth ? offsetX - 405 : offsetX + 10) + 'px';
         container.style.top  = (offsetY + 10) + 'px';
     }
-
-    let elemPopup = document.createElement("div");
-    elemPopup.setAttribute("class", "popup");
-    container.appendChild(elemPopup);
 
     let elemHeader = document.createElement("div");
     elemHeader.setAttribute("class", "header");
@@ -23,10 +19,13 @@ let luoIkkuna = (title, offsetX, offsetY) => {
     let close = document.createElement("div");
     close.setAttribute("class", "close");
     close.innerText = "x";
-    close.onclick = () => {
+    close.addEventListener('mousedown', () => {
         container.parentElement.removeChild(container);
         container.remove();
-    };
+        if (onClose) {
+            onClose();
+        }
+    });
     elemHeader.appendChild(close);
 
     return [container, elemHeader];

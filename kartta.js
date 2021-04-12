@@ -1,7 +1,7 @@
 
 let luoKarttaElementti = (tunniste, title, offsetX, offsetY) => {
     let [container, elemHeader] = luoIkkuna(title, offsetX, offsetY);
-    container.setAttribute("class", "popupContainer");
+    container.setAttribute("class", "popupContainer karttaPopup");
 
     let schema = document.createElement("label");
     schema.setAttribute("class", "schema");
@@ -270,9 +270,14 @@ let kartta = (tunniste, title, offsetX, offsetY, time) => {
 };
 let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
     let [container, elem, haku, kaavioCheck, slider, alkuaika, loppuaika] = luoKarttaElementti(tunniste, title || tunniste, offsetX, offsetY);
+
+    let elemPopup = document.createElement("div");
+    elemPopup.setAttribute("class", "popup");
+    container.appendChild(elemPopup);
+    
     let overlay = new ol.Overlay({
         element: elem.parentElement.getElementsByClassName('popup')[0],
-        offset: [5, 5]
+        offset: [5, 0]
     });
 
     kaavioCheck.checked = moodiParam() == 'kaavio';
@@ -345,6 +350,7 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
 
     lrs.forEach(l => map.addLayer(l));
     map.addInteraction(hover(overlay, lrs));
+    map.addInteraction(select(lrs));
 
     map.kaavio = onkoKaavio;
     map.ajanhetki = ajanhetki;
@@ -474,6 +480,7 @@ let lisaaKartalle = (map, overlay) => tunniste => {
 
     map.addLayer(preselectLayer);    
     map.addInteraction(hover(overlay, [preselectLayer]));
+    map.addInteraction(select([preselectLayer]));
 };
 
 let ennakkotiedonTarkennus = (map, tunniste) => {
@@ -488,7 +495,7 @@ let ennakkotiedonTarkennus = (map, tunniste) => {
 let hover = (overlay, layers) => {
     let hoverInteraction = new ol.interaction.Select({
         hitTolerance: 2,
-        condition:    ol.events.condition.click,
+        condition:    ol.events.condition.pointerMove,
         layers:       flatLayerGroups(layers),
         style:        null
     });
@@ -515,7 +522,78 @@ let hover = (overlay, layers) => {
                   .forEach(l => l.setVisible(false));
         }
     });
+
+    let clickInteraction = new ol.interaction.Select({
+        hitTolerance: 2,
+        condition:    ol.events.condition.click,
+        layers:       flatLayerGroups(layers),
+        style:        null
+    });
+
     return hoverInteraction;
+};
+
+let select = layers => {
+    let source = new ol.source.Vector();
+    map.addLayer(new ol.layer.Vector({source: source}));
+
+    let selectInteraction = new ol.interaction.Select({
+        hitTolerance: 2,
+        condition:    ol.events.condition.click,
+        layers:       flatLayerGroups(layers),
+        style:        null
+    });
+    selectInteraction.on('select', evt => {
+        let map = evt.target.getMap();
+        evt.selected.forEach(feature => {
+            let tunniste = feature.getProperties().tunniste;
+
+            var overlay;
+            let coordinate = evt.mapBrowserEvent.coordinate;
+            var line;
+            
+            let onClose = () => {
+                map.removeOverlay(overlay)
+                source.removeFeature(line);
+            };
+            let [container,header] = luoIkkuna(tunniste, undefined, undefined, onClose);
+            container.setAttribute("class", "popupContainer karttaInfoPopup");
+            container.appendChild(document.createTextNode('TODO'));
+
+            overlay = new ol.Overlay({
+                element: container
+            });
+            
+            let centerCoordinate = overlayPosition => {
+                let overlayPixel = map.getPixelFromCoordinate(overlayPosition);
+                let centerPixel = [overlayPixel[0] + overlay.getElement().offsetWidth/2, overlayPixel[1] + overlay.getElement().offsetHeight/2];
+                return map.getCoordinateFromPixel(centerPixel);
+            };
+            onStyleChange(container, () => line.getGeometry().setCoordinates([coordinate, centerCoordinate(overlay.getPosition())]));
+
+            line = new ol.Feature(new ol.geom.LineString([coordinate, centerCoordinate(coordinate)]));
+
+            header.addEventListener('mousedown', () => {
+                let move = evt => {
+                    let coord = map.getEventCoordinate(evt);
+                    overlay.setPosition(coord);
+                    line.getGeometry().setCoordinates([coordinate, centerCoordinate(coord)]);
+                }
+                let end = () => {
+                    window.removeEventListener('mousemove', move);
+                    window.removeEventListener('mouseup', end);
+                }
+                window.addEventListener('mousemove', move);
+                window.addEventListener('mouseup', end);
+            });
+
+            overlay.setPosition(coordinate);
+            map.addOverlay(overlay);
+            source.addFeature(line);
+        });
+    });
+
+    return selectInteraction;
 };
 
 let cropIfConstrained = (voimassa, kaavio, f, source) => kohteet =>
@@ -592,7 +670,7 @@ let kohdeProps = ['.raiteet.tunniste.geometria',
 let getAllGeometries = f => {
     // gather all geometries, also inside geometrycollections
     let geometryOrCollection = f.getGeometry();
-    if (geometryOrCollection.getGeometries) {
+    if (geometryOrCollection && geometryOrCollection.getGeometries) {
         return geometryOrCollection.getGeometries().map(x => olParser.read(x));
     } else {
         return [olParser.read(geometryOrCollection)];
@@ -605,7 +683,8 @@ let tarkennaEnnakkotieto = (highlightLayers, tunniste, kaavio, ajanhetki, aikava
                  onkoVS(tunniste) ? 'kohde' : undefined;
 
     if (prefix) {
-        let props = '-laskennallinenKarttapiste,tunniste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
+        //let props = '-laskennallinenKarttapiste,tunniste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
+        let props = 'tunniste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
         let avain = tunniste + '_' + kaavio() + '-' + ajanhetki();
 
         if (highlightLayers[avain]) {

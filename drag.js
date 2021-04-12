@@ -29,7 +29,7 @@ let dragElement = (elem, onDrop) => {
         header.ondrop = ev => {
             ev.target.classList.remove('over');
             ev.preventDefault();
-            onDrop(document.getElementById(elementDragged[0]), elem);
+            onDrop(document.getElementById(elementDragged[0]), elem, ev);
         };
     }
 };

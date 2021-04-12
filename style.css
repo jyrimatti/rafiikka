@@ -76,6 +76,7 @@ ul.ikonit li {
     resize: both;
     overflow: auto;
     z-index: 3;
+    border-radius: 0.25em;
 }
 .info {
     position: absolute;
@@ -101,6 +102,7 @@ ul.ikonit li {
 .popupContainer .header .title {
     position: absolute;
     cursor: text;
+    user-select: none;
 }
 .popupContainer .header .open {
     position: absolute;
@@ -122,6 +124,20 @@ ul.ikonit li {
     font-size: 0.8em;
     cursor: pointer;
 }
+.karttaPopup {
+    top: 5%;
+    left: 5%;
+    right: 5%;
+    bottom: 5%;
+    width: auto;
+    height: auto;
+}
+.karttaInfoPopup {
+    width: 15em;
+    height: 20em;
+    left: unset;
+    right: unset;
+}
 
 .over {
     background-color: red !important;
@@ -131,9 +147,6 @@ ul.ikonit li {
     top: 1em;
     bottom: 0;
     position: absolute;
-}
-.kartta .popup {
-    display: block;
 }
 .junaPopup {
     top: 3em;
@@ -185,7 +198,7 @@ body.fi .en, body.en .fi {
 }
 
 .popup {
-    display: none;
+    display: block;
     background-color: white;
     opacity: 0.75;
     border: 1px dotted gray;
