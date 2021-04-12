@@ -28,8 +28,27 @@ let applyStyle = (styleOrHandler, ajanhetki, aikavali) => feature => {
     func.getImage = () => undefined;
     func.getGeometryFunction = () => () => undefined;
     feature.setStyle(func);
+    feature._origStyle = func;
     return feature;
 }
+
+let highlightFeature = map => feature => {
+    map.highlighted = map.highlighted || {};
+    feature.setStyle(highlightStyle(feature._origStyle));
+    map.highlighted[feature.getProperties().tunniste] = (map.highlighted[feature.getProperties().tunniste] || 0) + 1;
+    return map.highlighted[feature.getProperties().tunniste] == 1;
+};
+let dehighlightFeature = map => feature => {
+    map.highlighted = map.highlighted || {};
+    if (map.highlighted[feature.getProperties().tunniste]) {
+        map.highlighted[feature.getProperties().tunniste] = Math.max(0, (map.highlighted[feature.getProperties().tunniste] || 1) - 1);
+        if (map.highlighted[feature.getProperties().tunniste] == 0) {
+            feature.setStyle(feature._origStyle);
+            return true;
+        }
+    }
+    return false;
+};
 
 let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, prepareFeatures, kaavio, ajanhetki, aikavali) => {
     let u1 = url.replace(/time=[^&]*&?/, '');

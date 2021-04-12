@@ -1,12 +1,11 @@
-let highlightCache = {};
 let iconCache = {};
-
 let highlightImage = image => {
     if (image && image.getSrc) {
         // must cache icons because openlayers sucks: https://github.com/openlayers/openlayers/issues/3137
         let cacheKey = image.getScale() + '_' + image.getRotateWithView() + '_' + image.anchor_ + '_' + image.getRotation() + image.getSrc();
-        if (iconCache[cacheKey]) {
-            return iconCache[cacheKey];
+        let cached = iconCache[cacheKey];
+        if (cached) {
+            return cached;
         }
 
         log('Creating new icon', cacheKey);
@@ -21,23 +20,16 @@ let highlightImage = image => {
         });
         iconCache[cacheKey] = ret;
 
-        let highlighted = highlightCache[image.getSrc()];
-        if (typeof highlighted == 'string') {
-            ret.getImage().src = highlighted;
-        } else if (highlighted instanceof Array) {
-            highlightCache[image.getSrc()].push(ret);
-        } else {
-            log("Getting svg", image.getSrc());
-            highlightCache[image.getSrc()] = [ret];
-            fetch(image.getSrc())
-                .then(x => x.text())
-                .then(x => {
-                    let result = 'data:image/svg+xml;base64,' + btoa(setHighlightStyles('#f00', x));
-                    // need as base64, otherwise doesn't seem to work    
-                    highlightCache[image.getSrc()].forEach(x => x.getImage().src = result);
-                    highlightCache[image.getSrc()] = result;
-                });
-        }
+        fetch(image.getSrc())
+            .then(x => x.text())
+            .then(x => {
+                // need as base64, otherwise doesn't seem to work
+                let result = 'data:image/svg+xml;base64,' + btoa(setHighlightStyles('#f00', x));
+                // need to go under the API to be able to reload the new src.
+                ret.iconImage_.src_ = result;
+                ret.iconImage_.imageState_ = 0; //ol.ImageState.IDLE
+                ret.load();
+            });
         return ret;
     }
     return undefined;
@@ -76,7 +68,7 @@ let styles = {
 
     // from ol source
     defaultWith: (fillColor, strokeColor, strokeWidth, origStyle) => new ol.style.Style({
-            image: (origStyle ? highlightImage(origStyle instanceof Array ? origStyle.find(x => x.getImage).getImage() : origStyle.getImage()) : new ol.style.Circle({
+            image: (origStyle ? highlightImage(origStyle instanceof Array ? origStyle.find(x => x.getImage && x.getImage().getSrc).getImage() : origStyle.getImage()) : new ol.style.Circle({
                 fill: new ol.style.Fill({
                     color: fillColor
                 }),
