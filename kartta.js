@@ -615,16 +615,18 @@ let cropIfConstrained = (voimassa, kaavio, f, source, map) => kohteet =>
             }
     }));
 
-let cropEnds = f => {
-    var original = olParser.read(f.getGeometry());
+let cropEnds = (tunniste, features) => {
     let allLines = [];
-    if (original.getGeometryType() == 'LineString' || original.getGeometryType() == 'MultiLineString') {
-        let geometries = original.getNumGeometries();
-        for (let i = 0; i < geometries; ++i) {
-            let geom = original.getGeometryN(i);
-            allLines.push(geom);
-        };
-    }
+    features.forEach(f => {
+        let original = olParser.read(f.getGeometry());
+        if (original.getGeometryType() == 'LineString' || original.getGeometryType() == 'MultiLineString') {
+            let geometries = original.getNumGeometries();
+            for (let i = 0; i < geometries; ++i) {
+                let geom = original.getGeometryN(i);
+                allLines.push(geom);
+            };
+        }
+    });
 
     let endpoints = allLines.flatMap(x => [
         geometryFactory.createPoint(x.getCoordinateN(0)),
@@ -635,14 +637,25 @@ let cropEnds = f => {
                         .map(x => x.buffer(1 /* meters */, 8, 1 /* round */));
 
     if (mask.length > 0) {
-        log('Cropping ends of the geometry of', f.getProperties().tunniste);
-        f.setGeometry(olParser.write(original.difference(buildGeometries(mask))));
+        log('Cropping ends of the geometry of', tunniste);
+        let maskGeom = buildGeometries(mask);
+        features.forEach(f => {
+            let geom = olParser.read(f.getGeometry());
+            let diff = geom.difference(maskGeom);
+            let newGeom = diff.getNumPoints() > 0
+                ? olParser.write(diff)
+                : new ol.geom.GeometryCollection([]);
+            f.setGeometry(newGeom);
+        });
+    } else {
+        log('No mask left for cropping', tunniste, 'with', endpoints.length, 'endpoints');
     }
 };
 
 
 let kohdeProps = ['.raiteet.tunniste.geometria',
                   '.raiteet.tunniste.tunniste',
+                  '.raiteet',
                   '.elementit.',
                   '.liikennepaikat.tunniste.geometria',
                   '.liikennepaikat.tunniste.tunniste',
@@ -658,8 +671,10 @@ let kohdeProps = ['.raiteet.tunniste.geometria',
                   '.liikennesuunnittelualueet.tunniste.tunniste',
                   '.radat.tunniste.geometria',
                   '.radat.tunniste.tunniste',
+                  '.radat',
                   '.liikennepaikkavalit.tunniste.geometria',
                   '.liikennepaikkavalit.tunniste.tunniste',
+                  '.liikennepaikkavalit',
                   '.paikantamismerkkisijainnit.tunniste.geometria', // pmtunnistetta ei tarvi koska sille ei kuitenkaan piirretä tyyliä
                   '.kytkentaryhmat.',
                   '.laiturit.tunniste.geometria',
@@ -746,7 +761,21 @@ let korostaEnnakkotieto = (map, tunniste, kaavio, ajanhetki, aikavali) => {
                         lpvalit  = getKohde('liikennepaikkavalit');
                         voimassa = limitInterval(ps.voimassa);
 
-                        if ([raiteet, radat, lpvalit].filter(x => x != undefined).find(x => x.rajaus)) {
+                        let rajattavia = [raiteet, radat, lpvalit].filter(x => x != undefined).flat().filter(x => x.rajaus).length;
+                        var count = 0;
+                        let ff = () => {
+                            count += 1;
+                            // crop ends when all restricted substructures and features have loaded
+                            let features = newLayer.getSource().getFeatures();
+                            log('Endcropping counter', count, rajattavia, features.length);
+                            if (count == rajattavia + 1) {
+                                cropEnds(f.getProperties().tunniste, features);
+                            }
+                        };
+                        newLayer.getSource().on('featuresLoaded', ff);
+                        newLayer.getSource().on('geometriesUpdated', ff);
+
+                        if (rajattavia > 0) {
                             // löytyy ainakin jokin rajaus, joten asetetaan style väliaikaiseksi
                             f.setStyle(loadingIndicatorStyle);
                             mbcFeature.setStyle(() => undefined);
@@ -764,7 +793,6 @@ let korostaEnnakkotieto = (map, tunniste, kaavio, ajanhetki, aikavali) => {
 
                         kohteet.forEach(k => {
                             cropIfConstrained(voimassa, kaavio, f, newLayer.getSource(), map)(k);
-                            cropEnds(f);
                         });
                     }
                 }
