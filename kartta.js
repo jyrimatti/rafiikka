@@ -461,15 +461,17 @@ let lisaaKartalle = (map, overlay) => tunniste => {
     let preselectLayer =
         onkoJuna(tunniste)                   ? junaLayer(map, tunniste) :
         onkoRuma(tunniste)                   ? newVectorLayerNoTile(luoRumaUrl(tunniste)   , tunniste, tunniste, tunniste, undefined, undefined, rtStyle, undefined, rumaPrepareFeatures, map.kaavio, map.ajanhetki, map.aikavali) :
-        onkoLOI(tunniste)                    ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, loStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
-        onkoEI(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, eiStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
-        onkoES(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, esStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
-        onkoVS(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, vsStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
+        onkoLOI(tunniste)                    ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, 'ensimmainenAktiivisuusaika,laskennallinenKarttapiste,tila,tunniste,viimeinenAktiivisuusaika', loStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
+        onkoEI(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, 'laskennallinenKarttapiste,tila,tunniste,voimassa', eiStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
+        onkoES(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, 'laskennallinenKarttapiste,tila,tunniste,voimassa', esStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
+        onkoVS(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, 'laskennallinenKarttapiste,tila,tunniste,voimassa', vsStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
         onkoInfra(tunniste) || onkoTREX(tunniste) ? newVectorLayerNoTile(luoInfraAPIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, resolveStyle(tunniste), undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
         wkt ? wktLayer(tunniste, wkt[1]) :
         undefined;
-    preselectLayer.setVisible(true);
-    preselectLayer.getSource().on('featuresLoaded', fitToView(map));
+    if (preselectLayer) {
+        preselectLayer.setVisible(true);
+        preselectLayer.getSource().on('featuresLoaded', fitToView(map));
+    }
 
     map.addLayer(preselectLayer);    
     map.addInteraction(hover(overlay, [preselectLayer]));
@@ -600,24 +602,32 @@ let createPopupContent = (tunniste, container) => {
     }
 }
 
-let cropIfConstrained = (voimassa, kaavio, f, source, map) => kohteet =>
-    kohteet.filter(kohde => kohde.tunniste == f.getProperties().tunniste)
-           .filter(kohde => kohde.rajaus) // jos oli rajaus, niin tehdään taiat. Muuten jätetään geometria kokonaiseksi.
-           .forEach(kohde => resolveMask(kohde.rajaus, voimassa, kaavio, mask => {
+let cropIfConstrained = (voimassa, kaavio, f, source, kohde) => {
+    if (kohde.rajaus) { // jos oli rajaus, niin tehdään taiat. Muuten jätetään geometria kokonaiseksi.
+        resolveMask(kohde.rajaus, voimassa, kaavio, mask => {
             if (mask) {
                 log('Masking geometry of', f.getProperties().tunniste);
                 var original = olParser.read(f.getGeometry());
                 f.setStyle(highlightStyle(resolveStyleForFeature(f)));
-                f.setGeometry(olParser.write(mask.intersection(original)));
+                let intersection = mask.intersection(original);
+                let newGeom = intersection.getNumPoints() > 0
+                    ? olParser.write(intersection)
+                    : new ol.geom.GeometryCollection([]);
+                f.setGeometry(newGeom);
                 source.dispatchEvent("geometriesUpdated");
             } else {
                 log('Hmm, could not resolve masking geometry for:', JSON.stringify(kohde));
             }
-    }));
+        });
+    }
+};
 
 let cropEnds = (tunniste, features) => {
+    let fs = features.filter(f => f.getGeometry())
+                     .filter(f => !f._mbc);
     let allLines = [];
-    features.forEach(f => {
+    
+    fs.forEach(f => {
         let original = olParser.read(f.getGeometry());
         if (original.getGeometryType() == 'LineString' || original.getGeometryType() == 'MultiLineString') {
             let geometries = original.getNumGeometries();
@@ -639,7 +649,7 @@ let cropEnds = (tunniste, features) => {
     if (mask.length > 0) {
         log('Cropping ends of the geometry of', tunniste);
         let maskGeom = buildGeometries(mask);
-        features.forEach(f => {
+        fs.forEach(f => {
             let geom = olParser.read(f.getGeometry());
             let diff = geom.difference(maskGeom);
             let newGeom = diff.getNumPoints() > 0
@@ -661,9 +671,7 @@ let kohdeProps = ['.raiteet.tunniste.geometria',
                   '.liikennepaikat.tunniste.tunniste',
                   '.tilirataosat.tunniste.geometria',
                   '.tilirataosat.tunniste.tunniste',
-                  '.toimialueet.tunniste.geometria',
-                  '.toimialueet.tunniste.tunniste',
-                  '.toimialueet.tunniste.vari',
+                  '.toimialueet.tunniste.*',
                   '.tasoristeykset.tunniste.geometria',
                   '.tasoristeykset.tunniste.tunniste',
                   '.tasoristeykset.tunniste.rotaatio',
@@ -697,7 +705,6 @@ let getAllGeometries = f => {
 };
 
 let korostus = (map, f) => {
-    log("highlight", f.getProperties().tunniste);
     if (highlightFeature(map)(f)) {
         let layer = korostaEnnakkotieto(map, f.getProperties().tunniste, map.kaavio, map.ajanhetki, map.aikavali);
         if (layer) {
@@ -709,7 +716,6 @@ let korostus = (map, f) => {
 };
 
 let korostusPois = (map, f) => {
-    log("dehighlight", f.getProperties().tunniste);
     if (dehighlightFeature(map)(f)) {
         let avain = f.getProperties().tunniste + '_' + map.kaavio() + '-' + map.ajanhetki();
         if (map.highlightLayers[avain]) {
@@ -740,79 +746,80 @@ let korostaEnnakkotieto = (map, tunniste, kaavio, ajanhetki, aikavali) => {
             // minimum bounding circle for the whole etj2 feature
             let mbcFeature = new ol.Feature();
             mbcFeature._mbc = true;
-            
-            let newLayer = newVectorLayerNoTile(etj2APIUrl + tunniste + '.geojson', '-', 'Korostus', 'Highlight', undefined, props, (f,r) => {
-                if (!f._kasitelty) {
-                    let ps = f.getProperties();
 
+            let prepareFeatures = (fs, layer) => {
+                fs.forEach(f => {
                     let resolvedStyle = resolveStyleForFeature(f);
                     if (resolvedStyle) {
                         f.setStyle(highlightStyle(resolvedStyle));
                     }
-
-                    if (!raiteet) {
-                        // yes, this assumes that the first feature is the "original" one containing all the data. Not the most elegant this way...
-                        let prefixParts = prefix.split('.');
-                        let getKohde = prop => prefixParts[1] ? ps[prefixParts[0]].flatMap(x => x[prefixParts[1]][prop])
-                                                            : ps[prefix][prop];
-
-                        raiteet  = getKohde('raiteet');
-                        radat    = getKohde('radat');
-                        lpvalit  = getKohde('liikennepaikkavalit');
-                        voimassa = limitInterval(ps.voimassa);
-
-                        let rajattavia = [raiteet, radat, lpvalit].filter(x => x != undefined).flat().filter(x => x.rajaus).length;
-                        var count = 0;
-                        let ff = () => {
-                            count += 1;
-                            // crop ends when all restricted substructures and features have loaded
-                            let features = newLayer.getSource().getFeatures();
-                            log('Endcropping counter', count, rajattavia, features.length);
-                            if (count == rajattavia + 1) {
-                                cropEnds(f.getProperties().tunniste, features);
-                            }
-                        };
-                        newLayer.getSource().on('featuresLoaded', ff);
-                        newLayer.getSource().on('geometriesUpdated', ff);
-
-                        if (rajattavia > 0) {
-                            // löytyy ainakin jokin rajaus, joten asetetaan style väliaikaiseksi
-                            f.setStyle(loadingIndicatorStyle);
-                            mbcFeature.setStyle(() => undefined);
-                        } else {
-                            mbcFeature.setStyle(mbcStyle);
-                        }
-                    }
-
-                    // possibly constraint target kinds
-                    if (ps._source) {
-                        let kohteet = ps._source.indexOf('.raiteet')             > -1 ? [raiteet] :
-                                      ps._source.indexOf('.radat')               > -1 ? [radat] :
-                                      ps._source.indexOf('.liikennepaikkavalit') > -1 ? [lpvalit] :
-                                      [];
-
-                        kohteet.forEach(k => {
-                            cropIfConstrained(voimassa, kaavio, f, newLayer.getSource(), map)(k);
-                        });
-                    }
-                }
-                f._kasitelty = true;
-            }, undefined, undefined, kaavio, ajanhetki, aikavali);
-            
-            let updateMBC = () => {
-                logDiff('MBC updated', () => {
-                    let geometries = newLayer.getSource().getFeatures()
-                                             .filter(f => !f._mbc) // exclude mbc feature
-                                             .flatMap(getAllGeometries);
-                    // calculate mbc with jsts
-                    mbcFeature.setGeometry(olMBC(geometries));
-                    mbcFeature.setStyle(mbcStyle);
-                    newLayer.dispatchEvent('mbcUpdated');
                 });
+
+                fs.filter(f => !f.getProperties()._resolved)
+                  .forEach(f => {
+                    let ps = f.getProperties();
+                    let prefixParts = prefix.split('.');
+                    let getKohde = prop => prefixParts[1] ? ps[prefixParts[0]].flatMap(x => x[prefixParts[1]][prop])
+                                                          : ps[prefix][prop];
+
+                    raiteet  = getKohde('raiteet');
+                    radat    = getKohde('radat');
+                    lpvalit  = getKohde('liikennepaikkavalit');
+                    voimassa = limitInterval(ps.voimassa);
+
+                    let rajattavia = [raiteet, radat, lpvalit].filter(x => x != undefined).flat().filter(x => x.rajaus).length;
+                    log("Geometries to restrict:", rajattavia);
+                    var count = 0;
+                    let endCropper = () => {
+                        count += 1;
+                        // crop ends when all restricted substructures and features have loaded
+                        if (count == rajattavia + 1) {
+                            logDiff('Ends cropped', () => {
+                                cropEnds(tunniste, layer.getSource().getFeatures());
+                                layer.getSource().dispatchEvent('endsCropped');
+                            });
+                        }
+                    };
+
+                    let updateMBC = () => {
+                        logDiff('MBC updated', () => {
+                            let geometries = layer.getSource().getFeatures()
+                                                    .filter(f => !f._mbc) // exclude mbc feature
+                                                    .filter(f => f.getGeometry()) // exclude the main feature (no geometry)
+                                                    .flatMap(getAllGeometries);
+                            // calculate mbc with jsts
+                            mbcFeature.setGeometry(olMBC(geometries));
+                            mbcFeature.setStyle(mbcStyle);
+                            layer.dispatchEvent('mbcUpdated');
+                        });
+                    };
+
+                    layer.getSource().on('featuresLoaded', endCropper);
+                    layer.getSource().on('geometriesUpdated', endCropper);
+                    layer.getSource().on('endsCropped', updateMBC);
+
+                    if (rajattavia > 0) {
+                        // löytyy ainakin jokin rajaus, joten asetetaan style väliaikaiseksi
+                        f.setStyle(loadingIndicatorStyle);
+                        mbcFeature.setStyle(() => undefined);
+                    } else {
+                        mbcFeature.setStyle(mbcStyle);
+                    }
+                });
+                return fs;
             };
 
-            newLayer.getSource().on('featuresLoaded', updateMBC);
-            newLayer.getSource().on('geometriesUpdated', updateMBC);
+            let newLayer = newVectorLayerNoTile(etj2APIUrl + tunniste + '.geojson', '-', 'Korostus', 'Highlight', undefined, props, undefined, undefined, prepareFeatures, kaavio, ajanhetki, aikavali);
+
+            let doCroppingOfConstrained = () => {
+                let fs = newLayer.getSource().getFeatures()
+                                 .filter(f => f.getProperties()._source);
+
+                raiteet.concat(radat).concat(lpvalit)
+                       .forEach(k => cropIfConstrained(voimassa, kaavio, removeItemOnce(fs, x => k.tunniste == x.getProperties().tunniste), newLayer.getSource(), k));
+            }
+
+            newLayer.getSource().on('featuresLoaded', doCroppingOfConstrained);            
             newLayer.getSource().addFeature(mbcFeature);
 
             highlightLayers[avain] = newLayer;
@@ -820,4 +827,12 @@ let korostaEnnakkotieto = (map, tunniste, kaavio, ajanhetki, aikavali) => {
             return newLayer;
         }
     }
+};
+
+let removeItemOnce = (arr, pred) => {
+    var index = arr.findIndex(pred);
+    if (index > -1) {
+      return arr.splice(index, 1)[0];
+    }
+    return undefined;
 };
