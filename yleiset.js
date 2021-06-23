@@ -36,40 +36,22 @@ let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
                navigator.userAgent.indexOf('CriOS') == -1 &&
                navigator.userAgent.indexOf('FxiOS') == -1;
 
-let params = () => new URLSearchParams(window.location.hash.replace('#', '?'));
-
-let sijaintiParam = () => params().get('sijainti') || (params().get('aika') ? '' : window.location.hash.substring(1)) || '009';
-let aikaParam     = () => new Date(params().get("aika") || new Date().toISOString());
-let kestoParam    = () => dateFns.durationFns.parse(params().get("kesto") || "P1D");
-let moodiParam    = () => params().get("moodi") || 'kartta';
-
-log("Parametri Sijainti", sijaintiParam());
-log("Parametri Aika", aikaParam());
-log("Parametri Kesto", kestoParam());
-
-var koneellisestiAsetettuHash = undefined;
-let paivitaUrl = (sijainti, aika, kesto) => {
-    log("Päivitetään urlia");    
-    let hash = '#aika=' + toISOStringNoMillis(aika) +
-               '&kesto=' + dateFns.durationFns.toString(dateFns.durationFns.normalize(kesto)) +
-               '&sijainti=' + (sijainti instanceof Array ? sijainti.join("-") : sijainti) +
-               (moodiParam() == 'kaavio' ? '&moodi=kaavio' : '');
-    if (window.location.hash != hash) {
-        log("Päivitetään hash arvoon", hash);
-        koneellisestiAsetettuHash = hash;
-        window.location.hash = hash;
-    }
-}
-
-window.ikkuna = () => {
-    let kesto = Math.floor(dateFns.durationFns.toMilliseconds(kestoParam()) / 2);
-    let k = dateFns.durationFns.normalize({milliseconds: kesto});
-    let ret = [dateFns.dateFns.sub(aikaParam(), k), dateFns.dateFns.add(aikaParam(), k)];
-    return ret;
+let toISOStringNoMillis = (d) => {
+    let pad = n => n < 10 ? '0' + n : n;
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + 'T' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()) + 'Z';
 };
+
+window.ikkuna = () => getMainState('aika');
 window.rajat  = () => [dateFns.dateFns.addDays(ikkuna()[0], -3), dateFns.dateFns.addDays(ikkuna()[1], 3)];
 
-let pyoristaAjanhetki = x => dateFns.dateFns.format(x, "yyy-MM-dd'T00:00:00Z'");
+let pyoristaAjanhetki = x => {
+    let y = new Date(x.getTime());
+    y.setHours(0);
+    y.setMinutes(0);
+    y.setSeconds(0);
+    y.setMilliseconds(0);
+    return toISOStringNoMillis(y);
+};
 let laajennaAikavali = x => [dateFns.dateFns.startOfMonth(x[1]), dateFns.dateFns.endOfMonth(x[1])];
 
 let limitInterval = intervalString => {
@@ -102,7 +84,7 @@ let mqttPort = 443;
 let mqttTopic = 'train-locations/#';
 
 let ikuisuusAikavali = 'time=2010-01-01T00:00:00Z/2030-01-01T00:00:00Z';
-let infraAikavali = () => 'time=' + pyoristaAjanhetki(aikaParam()) + "/" + pyoristaAjanhetki(aikaParam());
+let infraAikavali = () => 'time=' + pyoristaAjanhetki(getMainState('aika')[0]) + "/" + pyoristaAjanhetki(getMainState('aika')[1]);
 let etj2Aikavali  = () => 'time=' + laajennaAikavali(rajat()).map(function(x) { return pyoristaAjanhetki(x); }).join("/");
 let rumaAikavali  = () => 'start=' + pyoristaAjanhetki(rajat()[0]) + "&end=" + pyoristaAjanhetki(rajat()[1]);
 
@@ -345,7 +327,7 @@ let esTilat = ['hyväksytty', 'lähetetty', 'lisätietopyyntö', 'luonnos', 'per
 let vsTilat = ['alustava', 'toteutuu', 'tehty', 'poistettu', 'vuosiohjelmissa (tila poistunut käytöstä)', 'käynnissä (tila poistunut käytöstä)'];
 let loTilat = ['aktiivinen', 'poistettu'];
 
-if (params().has("seed")) {
+if (new URLSearchParams(window.location.hash.replace('#', '?')).has("seed")) {
     [ratanumerotUrl(), liikennepaikkavalitUrl(), rautatieliikennepaikatUrl(), liikennepaikanOsatUrl(), raideosuudetUrl(), laituritUrl(),
      elementitUrl(), lorajatUrl(), infraObjektityypitUrl(),
      junasijainnitUrl(), junasijainnitGeojsonUrl(), kunnossapitoalueetMetaUrl(), liikenteenohjausalueetMetaUrl(), kayttokeskuksetMetaUrl(), liikennesuunnittelualueetMetaUrl(),
@@ -631,11 +613,6 @@ let prettyPrint = obj => {
     }
 };
 
-let toISOStringNoMillis = (d) => {
-    let pad = n => n < 10 ? '0' + n : n;
-    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + 'T' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()) + 'Z';
-};
-
 let escapeRegex = str => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
 let splitString = str => {
@@ -763,22 +740,30 @@ let luoGrafiikkaLinkkiJunalle = (lahtopaiva, junanumero) => `
     </li>
 `;
 
-let dataJetille = tunniste => 
-    onkoEI(tunniste)  ? seriesEI.data :
-    onkoES(tunniste)  ? seriesES.data :
-    onkoVS(tunniste)  ? seriesVS.data :
-    onkoLOI(tunniste) ? seriesLOI.data :
-    undefined;
+window.asetaEnnakkotietoGrafiikalle = tunniste => {
+    let existingData = seriesEI.data.length > 0 && onkoEI(tunniste)  ? seriesEI.data :
+                       seriesES.data.length > 0 && onkoES(tunniste)  ? seriesES.data :
+                       seriesVS.data.length > 0 && onkoVS(tunniste)  ? seriesVS.data :
+                       seriesLO.data.length > 0 && onkoLOI(tunniste) ? seriesLO.data : undefined;
+    if (existingData) {
+        ratanumeroChanged(existingData.filter(x => x.tunniste == tunniste || x.sisainenTunniste == tunniste)
+                                      .map(x => x.ratakmvali)
+                                      .sort(ratakmvaliComparator)
+                                      .map(x => x.ratanumero)[0]);
+    } else {
+        haeEnnakkotiedonRatanumerotJaVoimassaolo(tunniste, (ratanumero, voimassa) => {
+            ratanumeroChanged(ratanumero);
+            asetaAikavali(voimassa);
+        });
+    }
+};
 
-let luoGrafiikkaLinkkiJetille = tunniste => !dataJetille(tunniste) || dataJetille(tunniste).length == 0 ? '' : `
+let luoGrafiikkaLinkkiJetille = tunniste => !onkoJeti(tunniste) ? '' : `
 <li>
     <a href=""
        title='Avaa työrakografiikalla'
        class='infoikoni'
-       onclick='ratanumeroChanged("${dataJetille(tunniste).filter(x => x.tunniste == tunniste || x.sisainenTunniste == tunniste)
-                                                          .map(x => x.ratakmvali)
-                                                          .sort(ratakmvaliComparator)
-                                                          .map(x => x.ratanumero)[0]}"); return false;' />
+       onclick='asetaEnnakkotietoGrafiikalle("${tunniste}"); return false;' />
        📈
     </a>
 </li>

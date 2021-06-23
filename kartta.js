@@ -280,7 +280,7 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
         offset: [5, 0]
     });
 
-    kaavioCheck.checked = moodiParam() == 'kaavio';
+    kaavioCheck.checked = getMainState('moodi') == 'kaavio';
     let onkoKaavio = () => kaavioCheck.checked;
     let ajanhetki = () => slider.disabled || slider.value === undefined || slider.value == 0 ? undefined : new Date(parseInt(slider.value));
     let aikavali = (alku, loppu) => {
@@ -358,8 +358,8 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
 
     // muille kuin Jetille kartta globaaliin kontekstiin
     if (!onkoJeti(tunniste)) {
-        map.aikavali(time && new Date(time.split('/')[0]) || new Date(pyoristaAjanhetki(aikaParam())),
-                     time && new Date(time.split('/')[1]) || new Date(pyoristaAjanhetki(aikaParam())));
+        map.aikavali(time && new Date(time.split('/')[0]) || new Date(pyoristaAjanhetki(getMainState('aika')[0])),
+                     time && new Date(time.split('/')[1]) || new Date(pyoristaAjanhetki(getMainState('aika')[1])));
     }
 
     kaavioCheck.onchange = _ => {
@@ -726,13 +726,9 @@ let korostusPois = (map, f) => {
 
 let korostaEnnakkotieto = (map, tunniste, kaavio, ajanhetki, aikavali) => {
     let highlightLayers = map.highlightLayers;
-    let prefix = onkoEI(tunniste) ? 'liikennevaikutusalue' :
-                 onkoES(tunniste) ? 'tyonosat.tekopaikka' :
-                 onkoVS(tunniste) ? 'kohde' : undefined;
-
+    let prefix = jetiKohdePrefix(tunniste);
     if (prefix) {
-        //let props = '-laskennallinenKarttapiste,tunniste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
-        let props = 'tunniste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
+        let props = '-laskennallinenKarttapiste,tunniste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
         let avain = tunniste + '_' + kaavio() + '-' + ajanhetki();
 
         if (highlightLayers[avain]) {

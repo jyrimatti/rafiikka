@@ -154,3 +154,22 @@ let parsiVS = vs =>
     vs.ajankohdat.flatMap(ajankohtaAikavaleiksi)
                  .flatMap(xs => joinRatakmvalit(vs.kohde.laskennallisetRatakmvalit).flatMap(luoEnnakkotieto(vs, xs)))
                  .map(fixPoints);
+
+let jetiKohdePrefix = tunniste =>
+    onkoEI(tunniste) ? 'liikennevaikutusalue' :
+    onkoES(tunniste) ? 'tyonosat.tekopaikka' :
+    onkoVS(tunniste) ? 'kohde'
+                     : undefined;
+
+let haeEnnakkotiedonRatanumerotJaVoimassaolo = (tunniste, callback) => {
+    getJson(luoEtj2APIUrl(tunniste), data => {
+        // valitaan pisin ratakmväli
+        let kohde = onkoEI(tunniste) ? data.liikennevaikutusalue :
+                    onkoES(tunniste) ? data.tyonosat[0].tekopaikka :
+                    onkoVS(tunniste) ? data.kohde :
+                    undefined;
+        let ratanumero = kohde.laskennallisetRatakmvalit.sort( (a,b) => ratakmvalinPituus(b) - ratakmvalinPituus(a))[0].ratanumero;
+        let voimassa = (data.voimassa || data.ensimmainenAktiivisuusaika + '/' + data.viimeinenAktiivisuusaika).split('/').map(x => new Date(x));
+        callback(ratanumero, voimassa);
+    });
+};

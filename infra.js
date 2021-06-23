@@ -29,6 +29,8 @@ let ratakmvaliComparator = (a,b) => {
     return 0;
 };
 
+let ratakmvalinPituus = rkmv => (rkmv.loppuratakm*10000+rkmv.loppuetaisyys) - (rkmv.alkuratakm*10000+rkmv.alkuetaisyys);
+
 let joinRatakmvalit = rkmvs => rkmvs.sort(ratakmvaliComparator)
                                     .reduce( (prev, cur) => {
     if (prev.length == 0) {
