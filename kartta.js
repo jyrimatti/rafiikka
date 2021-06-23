@@ -457,7 +457,26 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time, persistState) => {
     search.settings.create = x => ({tunniste: x, nimi: title || x});
     search.disable();
     if (tunniste) {
-        tunniste.split(',').forEach(x => search.createItem(x));
+        tunniste.split(',').forEach(x => {
+            search.createItem(x);
+            if (!lisaa(x)) {
+                log("Odotellaan", x);
+                let handler = () => {
+                    let loading = window.loadingIndicator.values.count.value;
+                    if (loading <= 1) {
+                        // ei enää paljon latauksia jäljellä -> voidaan etsiä osumaa
+                        let found = Object.entries(search.options).sort((a,b) => b[1].score - a[1].score).find(x => x[1].score >= (loading > 0 ? 500 : 0));
+                        if (found) {
+                            search.off('load', handler);
+                            log("Saatiin riittävän hyvä osuma", found);
+                            lisaa(found[0]);
+                        }
+                    }
+                };
+                search.on('load', handler);
+                search.onSearchChange(x);
+            }
+        });
     }
     search.enable();
     search.close();
@@ -506,11 +525,13 @@ let lisaaKartalle = (map, overlay) => tunniste => {
     if (preselectLayer) {
         preselectLayer.setVisible(true);
         preselectLayer.getSource().on('featuresLoaded', fitToView(map));
+
+        map.addLayer(preselectLayer);    
+        map.addInteraction(hover(overlay, [preselectLayer]));
+        map.addInteraction(select([preselectLayer]));
     }
 
-    map.addLayer(preselectLayer);    
-    map.addInteraction(hover(overlay, [preselectLayer]));
-    map.addInteraction(select([preselectLayer]));
+    return preselectLayer !== undefined;
 };
 
 let hover = (overlay, layers) => {

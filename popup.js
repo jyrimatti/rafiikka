@@ -3,8 +3,8 @@ let luoIkkuna = (title, offsetX, offsetY, onClose) => {
     document.body.appendChild(container);
 
     if (offsetX) {
-        container.style.left = (offsetX + 400 > window.innerWidth ? offsetX - 405 : offsetX + 10) + 'px';
-        container.style.top  = (offsetY + 10) + 'px';
+        container.style.left = offsetX;
+        container.style.top  = offsetY;
     }
 
     let elemHeader = document.createElement("div");

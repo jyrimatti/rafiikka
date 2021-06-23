@@ -125,12 +125,8 @@ ul.ikonit li {
     cursor: pointer;
 }
 .karttaPopup {
-    top: 5%;
-    left: 20%;
-    right: 5%;
-    bottom: 5%;
-    width: auto;
-    height: auto;
+    width: 33%;
+    height: 33%;
 }
 .karttaInfoPopup {
     width: 15em;

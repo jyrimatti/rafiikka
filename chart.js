@@ -1314,7 +1314,7 @@ window.onload = () => {
     });
 
     for (let i = 1; i < getStates().length; ++i) {
-        kartta(getSubState(i)('sijainti'));
+        kartta(getSubState(i)('sijainti'), undefined, (1 + ((i-1)%2)*60 + Math.random()*5) + '%', (1 + ((i-1)%4)*20 + Math.random()*5) + '%');
     }
 
     window.asetaAikavali = voimassa => {

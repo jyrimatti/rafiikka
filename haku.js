@@ -55,9 +55,19 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
             `}
         },
         load: (query, callback) => {
-            let cb = x => callback(x.map(y => { return {...y, query: query}; }));
-            hakuMuodosta(query, cb, vainJunat);
-            hakuDatasta(query, cb, vainJunat);
+            let f = () => {
+                let cb = x => callback(x.map(y => { return {...y, query: query}; }));
+                if (window.loadingIndicator.values.count.value > 0) {
+                    setTimeout(() => {
+                        log("Viivytetään hakua...");
+                        f();
+                    }, 1000);
+                } else {
+                    hakuMuodosta(query, cb, vainJunat);
+                    hakuDatasta(query, cb, vainJunat);
+                }
+            };
+            f();
         },
         onItemAdd: value => {
             if (lisaaPopuppiin) {
@@ -89,9 +99,14 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                 lukot += 1;
                 search.settings.placeholder = 'ladataan pohjadataa...';
                 search.updatePlaceholder();
-                x.load();
-                on(x.events, "done", vapautaLukko);
-                on(x.events, "error", vapautaLukko);
+                if (x.ladataan) {
+                    vapautaLukko();
+                } else {
+                    on(x.events, "done", vapautaLukko);
+                    on(x.events, "error", vapautaLukko);
+                    x.ladataan = true;
+                    x.load();
+                }
             }
 
             if (!window.objektityypitDS.data) {

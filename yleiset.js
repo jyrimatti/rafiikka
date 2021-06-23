@@ -91,9 +91,9 @@ let mqttPort = 443;
 let mqttTopic = 'train-locations/#';
 
 let ikuisuusAikavali = 'time=2010-01-01T00:00:00Z/2030-01-01T00:00:00Z';
-let infraAikavali = () => 'time=' + toISOStringNoMillis(pyoristaAjanhetki(getMainState('aika')[0])) + "/" + toISOStringNoMillis(pyoristaAjanhetki(getMainState('aika')[1]));
-let etj2Aikavali  = () => 'time=' + laajennaAikavali(rajat()).map(function(x) { return toISOStringNoMillis(pyoristaAjanhetki(x)); }).join("/");
-let rumaAikavali  = () => 'start=' + toISOStringNoMillis(pyoristaAjanhetki(rajat()[0])) + "&end=" + toISOStringNoMillis(pyoristaAjanhetki(rajat()[1]));
+let infraAikavali = () => 'time=' + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[0])) + "/" + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[1]));
+let etj2Aikavali  = () => 'time=' + laajennaAikavali(rajat()).map(function(x) { return toISOStringNoMillis(startOfDayUTC(x)); }).join("/");
+let rumaAikavali  = () => 'start=' + toISOStringNoMillis(startOfDayUTC(rajat()[0])) + "&end=" + toISOStringNoMillis(startOfDayUTC(rajat()[1]));
 
 let junienEsitysaikavali = 1000*60*60*24*5;
 
@@ -438,7 +438,7 @@ let onkoKoordinaatti   = str => str && str.match && str.match(/^(\d+)(?:\.\d+)?,
 let onkoRatakmSijainti = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)$/);
 let onkoPmSijainti     = str => str && str.match && str.match(/^(\d+)([+-])(\d+)$/);
 let onkoRatakmVali     = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)\s*-\s*(\d+)[+](\d+)$/);
-let onkoRatanumero     = str => str && str.match && !onkoJeti(str) && !onkoRuma(str) && !onkoWKT(str) && str.match(/^\(?([a-zA-Z0-9 ]+|[^a-zA-Z0-9 ]{1,6}(?: [^a-zA-Z0-9 ]{1,3})?)\)?$/);
+let onkoRatanumero     = str => str && str.match && !onkoJeti(str) && !onkoRuma(str) && !onkoWKT(str) && str.match(/^\(([a-zA-Z0-9 ]+|[^a-zA-Z0-9 ]{1,6}(?: [^a-zA-Z0-9 ]{1,3})?)\)$/);
 let onkoReitti         = str => str && str.match && str.match(/^(.*?)\s*((?:=>.*?)*\s*)(?:=>)\s*(.*?)$/);
 
 let onkoInfra = str => onkoInfraOID(str) ||
