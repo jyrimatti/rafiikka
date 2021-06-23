@@ -4,7 +4,12 @@ let parseInterval = str => {
         return [instant, instant, undefined, undefined];
     }
     let parts = str.split('/');
-    if (parts.length == 2) {
+    if (parts.length == 1) {
+        let instant = dateFns.dateFns.parse(parts[0], "yyyy-MM-dd'T'HH:mm:ssX", new Date(0));
+        if (!isNaN(instant.getTime())) {
+            return [instant, instant, undefined, undefined];
+        }
+    } else if (parts.length == 2) {
         let beginInstant  = dateFns.dateFns.parse(parts[0], "yyyy-MM-dd'T'HH:mm:ssX", new Date(0));
         let endInstant    = dateFns.dateFns.parse(parts[1], "yyyy-MM-dd'T'HH:mm:ssX", new Date(0));
         let beginDuration;
@@ -29,7 +34,9 @@ let parseInterval = str => {
 }
 
 let parseStatePart = str => {
-    if (str == 'kartta' || str == 'map') {
+    if (str == hashPlaceholder.substring(1)) {
+        return {};
+    } else if (str == 'kartta' || str == 'map') {
         return {moodi: 'kartta'};
     } else if (str == 'kaavio' || str == 'diagram') {
         return {moodi: 'kaavio'};
@@ -44,19 +51,26 @@ let parseStatePart = str => {
 };
 
 let defaultAika = () => {
-    let now = new Date();
-    return [dateFns.dateFns.sub(now, {hours: 1}), dateFns.dateFns.add(now, {hours: 3}), undefined, {hours: 4}];
+    let now = pyoristaAjanhetki(dateFns.dateFns.sub(new Date(), {hours: 1}));
+    return [now, dateFns.dateFns.add(now, {hours: 4}), undefined, {hours: 4}];
 };
 
 let defaultState = () => ({moodi:'kartta', aika: defaultAika(), sijainti: '009'});
 
-let getStates = () => window.location.hash.substring(1).split('#').map(x => new URLSearchParams('?' + x));
+let parseState = state => {
+    let st = {};
+    state.forEach((_,key) => Object.entries(parseStatePart(key)).forEach(kv => st[kv[0]] = kv[1]));
+    return st;
+}
+
+let getStates = () => window.location.hash.substring(1).split('#').map(x => new URLSearchParams('?' + x)).map(parseState);
 
 let getState = index => key => {
     let state = getStates()[index];
-    let st = defaultState();
-    state.forEach((_,key) => Object.entries(parseStatePart(key)).forEach(kv => st[kv[0]] = kv[1]));
-    return st[key];
+    if (!state) {
+        return undefined;
+    }
+    return state[key];
 };
 
 let printDuration = dur => {
@@ -64,25 +78,33 @@ let printDuration = dur => {
     return dur === undefined ? undefined : dateFns.durationFns.toString(dateFns.durationFns.normalize(rounded));
 };
 
-let printState = state => state.moodi + '&' +
-                          (printDuration(state.aika[2]) || toISOStringNoMillis(state.aika[0])) + '/' + (printDuration(state.aika[3]) || toISOStringNoMillis(state.aika[1])) +
-                          (state.sijainti ? '&' + (state.sijainti instanceof Array ? state.sijainti.join("-") : state.sijainti) : '');
+let printState = state => ((state.moodi ? '&' + state.moodi : '') +
+                           (state.aika ? '&' + (state.aika[0].getTime() == state.aika[1].getTime() ? toISOStringNoMillis(state.aika[0]) : (printDuration(state.aika[2]) || toISOStringNoMillis(state.aika[0])) + '/' + (printDuration(state.aika[3]) || toISOStringNoMillis(state.aika[1]))) : '') +
+                           (state.sijainti ? '&' + (state.sijainti instanceof Array ? state.sijainti.join("-") : state.sijainti) : '')
+                          ).substring(1);
 
 let hashPlaceholder = '&loading...';
 
 let setState = index => (key, val) => {
+    log('Setting state', key, 'for', index, 'to', val);
     let states = getStates();
-    states[index][key] = states[index][key] || defaultState()[key];
-    if (key == 'aika') {
-        if (states[index][key][2]) {
-            val[2] = dateFns.durationFns.between(val[0], val[1]);
+    if (!key) {
+        states.splice(index, 1);
+    } else {
+        if (states.length <= index) {
+            states.push({});
         }
-        if (states[index][key][3]) {
-            val[3] = dateFns.durationFns.between(val[0], val[1]);
+        if (key == 'aika') {
+            if (states[index][key] && states[index][key][2]) {
+                val[2] = dateFns.durationFns.between(val[0], val[1]);
+            }
+            if (states[index][key] && states[index][key][3]) {
+                val[3] = dateFns.durationFns.between(val[0], val[1]);
+            }
         }
+        states[index][key] = val;
     }
-    states[index][key] = val;
-    window.location.hash = '#' + states.map(s => printState({...defaultState(), ...s})).join('#') + hashPlaceholder;
+    window.location.hash = '#' + states.map(s => printState(s)).join('#') + hashPlaceholder;
 };
 
 window.addEventListener('hashchange', e => {
@@ -93,5 +115,22 @@ window.addEventListener('hashchange', e => {
   }, false);
 
 
-let getMainState = getState(0);
+let getMainState = key => getState(0)(key) || defaultState()[key];
 let setMainState = setState(0);
+
+let getSubState = index => {
+    let state = getState(index);
+    if (state) {
+        return key => state(key) || (key == 'aika' ? getMainState(key).map((x,i) => i <= 1 ? startOfDayUTC(x) : x) : getMainState(key));
+    }
+    return undefined;
+};
+let setSubState = index => (key, val) => {
+    if (val instanceof Array && getMainState(key).every( (x,i) => x === val[i] ) ||
+       !(val instanceof Array) && getMainState(key) === val) {
+        setState(index)(key, undefined);
+    } else {
+        setState(index)(key, val);
+    }
+};
+let clearSubState = index => setState(index)(undefined, undefined);

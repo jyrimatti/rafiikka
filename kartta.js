@@ -1,6 +1,6 @@
 
-let luoKarttaElementti = (tunniste, title, offsetX, offsetY) => {
-    let [container, elemHeader] = luoIkkuna(title, offsetX, offsetY);
+let luoKarttaElementti = (tunniste, title, offsetX, offsetY, onClose) => {
+    let [container, elemHeader] = luoIkkuna(title, offsetX, offsetY, onClose);
     container.setAttribute("class", "popupContainer karttaPopup");
 
     let schema = document.createElement("label");
@@ -61,17 +61,10 @@ let luoKarttaElementti = (tunniste, title, offsetX, offsetY) => {
     let [aa,la] = [alkuaika, loppuaika].map(x => flatpickr(x, { enableTime: true }));
     alkuaika.onchange = () => aa.setDate(new Date(alkuaika.value));
     loppuaika.onchange = () => la.setDate(new Date(loppuaika.value));
-    aa.config.onChange.push( () => {
-        if (aa.selectedDates[0] > la.selectedDates[0]) {
-            la.setDate(aa.selectedDates[0]);
-        }
-    });
-    la.config.onChange.push( () => {
-        if (aa.selectedDates[0] > la.selectedDates[0]) {
-            la.setDate(aa.selectedDates[0]);
-        }
-    });
     [aa, la].forEach(x => x.config.onChange.push( () => {
+        if (aa.selectedDates[0] > la.selectedDates[0]) {
+            la.setDate(aa.selectedDates[0]);
+        }
         slider.min = aa.selectedDates[0].getTime();
         slider.max = la.selectedDates[0].getTime();
         if (aa.selectedDates[0] == la.selectedDates[0]) {
@@ -260,16 +253,38 @@ let haeMuutosajankohdat = map =>
         .sort((a,b) => a - b)
         .map(d => new Date(d));
 
-let kartta = (tunniste, title, offsetX, offsetY, time) => {
+let kartta = (tunniste, title, offsetX, offsetY, time, persistState) => {
     try {
-        return kartta_(tunniste, title, offsetX, offsetY, time);
+        return kartta_(tunniste, title, offsetX, offsetY, time, persistState);
     } catch (e) {
         log(e);
         return e;
     }
 };
-let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
-    let [container, elem, haku, kaavioCheck, slider, alkuaika, loppuaika] = luoKarttaElementti(tunniste, title || tunniste, offsetX, offsetY);
+
+let kartanIndeksi = map => {
+    let kartat = [...document.body.querySelectorAll('.persistent.kartta')];
+    let ret = kartat.findIndex(x => x.kartta == map);
+    if (ret == -1) {
+        throw new "Map not found!";
+    }
+    return ret + 1;
+};
+
+let kartta_ = (tunniste, title, offsetX, offsetY, time, persistState) => {
+    persistState = persistState === undefined ? true : false;
+    var elem;
+    let onClose = () => {
+        if (persistState) {
+            clearSubState(kartanIndeksi(elem.kartta));
+        }
+    };
+    let [container, elem_, haku, kaavioCheck, slider, alkuaika, loppuaika] = luoKarttaElementti(tunniste, title || tunniste, offsetX, offsetY, onClose);
+    elem = elem_;
+
+    if (persistState) {
+        elem.classList.add('persistent');
+    }
 
     let elemPopup = document.createElement("div");
     elemPopup.setAttribute("class", "popup");
@@ -280,9 +295,10 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
         offset: [5, 0]
     });
 
-    kaavioCheck.checked = getMainState('moodi') == 'kaavio';
     let onkoKaavio = () => kaavioCheck.checked;
-    let ajanhetki = () => slider.disabled || slider.value === undefined || slider.value == 0 ? undefined : new Date(parseInt(slider.value));
+    let ajanhetki = () => slider.min == slider.max                                             ? new Date(parseInt(slider.min)) :
+                          (slider.disabled || slider.value === undefined || slider.value == 0) ? undefined 
+                                                                                               : new Date(parseInt(slider.value));
     let aikavali = (alku, loppu) => {
         if (alku) {
             alkuaika.value = muotoileAjanhetki(alku);
@@ -291,6 +307,9 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
             slider.max = loppu.getTime();
             alkuaika.onchange();
             loppuaika.onchange();
+            if (persistState) {
+                setSubState(kartanIndeksi(elem.kartta))('aika', [alku, loppu]);
+            }
         } else {
             return slider.min === undefined || slider.min == 0 ? undefined : [new Date(parseInt(slider.min)), new Date(parseInt(slider.max))];
         }
@@ -301,7 +320,7 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
     if (onkoKaavio()) {
         taustaLayer.setVisible(false);
     }
-    window.map = new ol.Map({
+    let map = new ol.Map({
         target: elem,
         overlays: [overlay],
         layers: [taustaLayer],
@@ -322,7 +341,14 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
             new ol.control.LayerSwitcher()
         ]
     });
+    window.map = map;
     elem.kartta = map;
+
+    kaavioCheck.checked = persistState && getSubState(kartanIndeksi(elem.kartta))('moodi') == 'kaavio';
+
+    if (persistState) {
+        setSubState(kartanIndeksi(elem.kartta))('sijainti', tunniste);
+    }
 
     initTooltips(container);
 
@@ -358,11 +384,14 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
 
     // muille kuin Jetille kartta globaaliin kontekstiin
     if (!onkoJeti(tunniste)) {
-        map.aikavali(time && new Date(time.split('/')[0]) || new Date(pyoristaAjanhetki(getMainState('aika')[0])),
-                     time && new Date(time.split('/')[1]) || new Date(pyoristaAjanhetki(getMainState('aika')[1])));
+        map.aikavali(time && new Date(time.split('/')[0]) || persistState && pyoristaAjanhetki(getSubState(kartanIndeksi(map))('aika')[0]),
+                     time && new Date(time.split('/')[1]) || persistState && pyoristaAjanhetki(getSubState(kartanIndeksi(map))('aika')[1]));
     }
 
     kaavioCheck.onchange = _ => {
+        if (persistState) {
+            setSubState(kartanIndeksi(elem.kartta))('moodi', onkoKaavio() ? 'kaavio' : 'kartta');
+        }
         log('Moodi vaihtui arvoon', onkoKaavio(), 'päivitetään layer data');
         flatLayerGroups(map.getLayers().getArray()).forEach(l => l.getSource().refresh());
         Object.values(map.highlightLayers).forEach(x => x.getSource().refresh());
@@ -388,6 +417,9 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
             if (orig) {
                 orig(ev);
             }
+            if (persistState) {
+                setSubState(kartanIndeksi(elem.kartta))('aika', aikavali());
+            }
             logDiff('Aikaväli vaihtui arvoon', aikavali(), 'päivitetään layer data', () => {
                 paivitaTitle();
                 flatLayerGroups(map.getLayers().getArray()).forEach(l => l.getSource().refresh());
@@ -404,6 +436,9 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
             let lahin = ajankohdat.map(x => [Math.abs(x.getTime() - sliderValue), x])
                                   .sort((a,b) => a[0]-b[0])[0][1];
             slider.value = lahin.getTime();
+        }
+        if (persistState) {
+            setSubState(kartanIndeksi(elem.kartta))('aika', aikavali());
         }
         logDiff('Aikavalinta vaihtui, renderöidään kartta', () => {
             paivitaTitle();
@@ -441,7 +476,7 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time) => {
 }
 
 let kurkistaKartta = (elem, tunniste, title, offsetX, offsetY, time) => {
-    let container = kartta(tunniste, title, offsetX, offsetY, time);
+    let container = kartta(tunniste, title, offsetX, offsetY, time, false);
     let f = () => {
         if (container.parentElement) {
             container.parentElement.removeChild(container);

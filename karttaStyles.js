@@ -204,6 +204,10 @@ let kytkentaryhmaStyle = styles.onLoad(feature => {
 
 let elemStyle = (feature, resolution) => {
     let elemType = feature.getProperties().tyyppi;
+    if (!elemType) {
+        log('Yritettiin saada tyyliä ei-elementille', feature.getProperties());
+        return undefined;
+    }
     let anchor = elemType == 'opastin' ? (feature.getProperties().opastin.puoli === 'vasen' ? [0,1.5] : [0,-0.5]) : null;
     let icon4elem = elemType == 'opastin' ? 'opastin_' + feature.getProperties().opastin.tyyppi :
                     elemType == 'baliisi' ? 'baliisi' + (feature.getProperties().baliisi.toistopiste === true ? 'toistopiste' : '') :
@@ -272,6 +276,9 @@ let resolveStyle = tunniste => {
             t == 48 ? toimialueStyle :
             t == 33 ? kytkentaryhmaStyle :
             t == 43 ? pmStyle :
+            t == 32 ? undefined : // tilirataosalla default-tyyli
+            t == 29 ? undefined : // lisualueilla default-tyyli
+            t == 72 ? undefined : // käyttökeskuksella default-tyyli
             [49,50,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66].includes(t) ? ratapihapalveluStyle :
             elemStyle;
     }

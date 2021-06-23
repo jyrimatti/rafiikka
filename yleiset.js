@@ -46,11 +46,18 @@ window.rajat  = () => [dateFns.dateFns.addDays(ikkuna()[0], -3), dateFns.dateFns
 
 let pyoristaAjanhetki = x => {
     let y = new Date(x.getTime());
-    y.setHours(0);
     y.setMinutes(0);
     y.setSeconds(0);
     y.setMilliseconds(0);
-    return toISOStringNoMillis(y);
+    return y;
+};
+let startOfDayUTC = x => {
+    let y = new Date(x.getTime());
+    y.setUTCHours(0);
+    y.setUTCMinutes(0);
+    y.setUTCSeconds(0);
+    y.setUTCMilliseconds(0);
+    return y;
 };
 let laajennaAikavali = x => [dateFns.dateFns.startOfMonth(x[1]), dateFns.dateFns.endOfMonth(x[1])];
 
@@ -84,9 +91,9 @@ let mqttPort = 443;
 let mqttTopic = 'train-locations/#';
 
 let ikuisuusAikavali = 'time=2010-01-01T00:00:00Z/2030-01-01T00:00:00Z';
-let infraAikavali = () => 'time=' + pyoristaAjanhetki(getMainState('aika')[0]) + "/" + pyoristaAjanhetki(getMainState('aika')[1]);
-let etj2Aikavali  = () => 'time=' + laajennaAikavali(rajat()).map(function(x) { return pyoristaAjanhetki(x); }).join("/");
-let rumaAikavali  = () => 'start=' + pyoristaAjanhetki(rajat()[0]) + "&end=" + pyoristaAjanhetki(rajat()[1]);
+let infraAikavali = () => 'time=' + toISOStringNoMillis(pyoristaAjanhetki(getMainState('aika')[0])) + "/" + toISOStringNoMillis(pyoristaAjanhetki(getMainState('aika')[1]));
+let etj2Aikavali  = () => 'time=' + laajennaAikavali(rajat()).map(function(x) { return toISOStringNoMillis(pyoristaAjanhetki(x)); }).join("/");
+let rumaAikavali  = () => 'start=' + toISOStringNoMillis(pyoristaAjanhetki(rajat()[0])) + "&end=" + toISOStringNoMillis(pyoristaAjanhetki(rajat()[1]));
 
 let junienEsitysaikavali = 1000*60*60*24*5;
 

@@ -20,11 +20,11 @@ let luoIkkuna = (title, offsetX, offsetY, onClose) => {
     close.setAttribute("class", "close");
     close.innerText = "x";
     close.addEventListener('mousedown', () => {
-        container.parentElement.removeChild(container);
-        container.remove();
         if (onClose) {
             onClose();
         }
+        container.parentElement.removeChild(container);
+        container.remove();
     });
     elemHeader.appendChild(close);
 

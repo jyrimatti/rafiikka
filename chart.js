@@ -239,6 +239,7 @@ window.onload = () => {
         xAxis.showOnInit       = false;
         xAxis.snapTooltip      = false;
         xAxis.keepSelection    = true;
+        xAxis.minZoomCount     = 60*15;
         xAxis.baseInterval     = { timeUnit: "second" }; // automatiikka tuntuu asettavan joksikin muuksi
         xAxis.mainBaseInterval = { timeUnit: "second" };
         xAxis.strictMinMax     = true;
@@ -1312,17 +1313,17 @@ window.onload = () => {
         log("Grafiikka valmis");
     });
 
-    let sijainti = getMainState('sijainti').split(',');
-    let karttaanSopivat = sijainti.filter(x => onkoJeti(x) || onkoRuma(x) || onkoInfra(x) && !onkoRatanumero(x));
-    if (karttaanSopivat.length > 0) {
-        kartta(karttaanSopivat.join(','));
-    }    
+    for (let i = 1; i < getStates().length; ++i) {
+        kartta(getSubState(i)('sijainti'));
+    }
 
     window.asetaAikavali = voimassa => {
         xAxis.zoomToDates(voimassa[0], voimassa[1]);
     };
 
-    sijainti.filter(onkoJeti)
+    getMainState('sijainti')
+            .split(',')
+            .filter(onkoJeti)
             .slice(0,1)
             .forEach(tunniste => {
         haeEnnakkotiedonRatanumerotJaVoimassaolo(tunniste, (ratanumero, voimassa) => {
