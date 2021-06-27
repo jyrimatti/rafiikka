@@ -861,7 +861,7 @@ let korostaEnnakkotieto = (map, tunniste, kaavio, ajanhetki, aikavali) => {
                 return fs;
             };
 
-            let newLayer = newVectorLayerNoTile(etj2APIUrl + tunniste + '.geojson', '-', 'Korostus', 'Highlight', undefined, props, undefined, undefined, prepareFeatures, kaavio, ajanhetki, aikavali);
+            let newLayer = newVectorLayerNoTile(etj2APIUrl() + tunniste + '.geojson', '-', 'Korostus', 'Highlight', undefined, props, undefined, undefined, prepareFeatures, kaavio, ajanhetki, aikavali);
 
             let doCroppingOfConstrained = () => {
                 let fs = newLayer.getSource().getFeatures()
