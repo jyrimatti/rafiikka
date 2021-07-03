@@ -128,8 +128,9 @@ let parseLocation = yleiset => location => {
 
     if (location.identifierRanges.length == 0) {
         if (vali) {
-            if (valittunaRatanumero()) {
-                return lpvali.ratakmvalit.filter(x => x.ratanumero == valittuDS.data)
+            let ratanumero = valittunaRatanumero();
+            if (ratanumero) {
+                return lpvali.ratakmvalit.filter(x => x.ratanumero == ratanumero)
                                          .map(rkmv => {
                     let sij = {
                         ratanumero: rkmv.ratanumero,
@@ -156,8 +157,9 @@ let parseLocation = yleiset => location => {
                 });
             }
         } else if (paikka) {
-            if (valittunaRatanumero()) {
-                return lpaikka.ratakmvalit.filter(x => x.ratanumero == valittuDS.data)
+            let ratanumero = valittunaRatanumero();
+            if (ratanumero) {
+                return lpaikka.ratakmvalit.filter(x => x.ratanumero == ratanumero)
                                           .map(rkmv => {
                     let sij = {
                         ratanumero: rkmv.ratanumero,
@@ -216,10 +218,11 @@ let parseLocation = yleiset => location => {
                                     paikkaText ? '(' + paikkaText + ')' : '');
                     let sijaintiText = e1.nimi + " - " + e2.nimi;
 
-                    if (valittunaRatanumero()) {
-                        return e1.ratakmsijainnit.filter(x => x.ratanumero == valittuDS.data)
+                    let ratanumero = valittunaRatanumero();
+                    if (ratanumero) {
+                        return e1.ratakmsijainnit.filter(x => x.ratanumero == ratanumero)
                                                  .flatMap(rkm1 =>
-                            e2.ratakmsijainnit.filter(x => x.ratanumero == valittuDS.data)
+                            e2.ratakmsijainnit.filter(x => x.ratanumero == ratanumero)
                                               .map(rkm2 => {
                                 let sij = {
                                     ratanumero: rkm1.ratanumero,
@@ -277,8 +280,9 @@ let parseLocation = yleiset => location => {
                                 paikkaText ? '(' + paikkaText + ')' : '');
                 let sijaintiText = e1.nimi;
                                                
-                if (valittunaRatanumero()) {
-                    return e1.ratakmsijainnit.filter(x => x.ratanumero == valittuDS.data).map(rkm => {
+                let ratanumero = valittunaRatanumero();
+                if (ratanumero) {
+                    return e1.ratakmsijainnit.filter(x => x.ratanumero == ratanumero).map(rkm => {
                         let sij = {
                             ratanumero: rkm.ratanumero,
                             alkuY:      rkm.ratakm*1000+rkm.etaisyys,

@@ -50,12 +50,29 @@ let parseStatePart = str => {
     }
 };
 
+let pyoristaAjanhetki = x => {
+    let y = new Date(x.getTime());
+    y.setMinutes(0);
+    y.setSeconds(0);
+    y.setMilliseconds(0);
+    return y;
+};
+
+let startOfDayUTC = x => {
+    let y = new Date(x.getTime());
+    y.setUTCHours(0);
+    y.setUTCMinutes(0);
+    y.setUTCSeconds(0);
+    y.setUTCMilliseconds(0);
+    return y;
+};
+
 let defaultAika = () => {
     let now = pyoristaAjanhetki(dateFns.dateFns.sub(new Date(), {hours: 1}));
     return [now, dateFns.dateFns.add(now, {hours: 4}), undefined, {hours: 4}];
 };
 
-let defaultState = () => ({moodi:'kartta', aika: defaultAika(), sijainti: '009'});
+let defaultState = () => ({moodi:'kartta', aika: defaultAika(), sijainti: '(009)'});
 
 let parseState = state => {
     let st = {};

@@ -45,6 +45,10 @@ ul.ikonit li {
     font-size: 0.6em;
 }
 
+.ol-overlaycontainer-stopevent {
+    z-index: unset !important;
+}
+
 .palkki {
     z-index: 2;
     margin-left: 2em;
@@ -103,10 +107,20 @@ ul.ikonit li {
     position: absolute;
     cursor: text;
     user-select: none;
+    font-size: 0.9em;
+    vertical-align: top;
 }
 .popupContainer .header .open {
     position: absolute;
     right: 1em;
+}
+.objectfocus {
+    position: absolute;
+    right: 1.5em;
+    width: 1em;
+    height: 1em;
+    font-size: 0.65em;
+    cursor: alias;
 }
 .popupContainer .header .open img {
     width: 1em;
@@ -123,6 +137,9 @@ ul.ikonit li {
     text-align: center;
     font-size: 0.8em;
     cursor: pointer;
+}
+.infoPopup {
+    z-index: 5;
 }
 .karttaPopup {
     width: 33%;
@@ -180,6 +197,7 @@ body.fi .en, body.en .fi {
 .layer-switcher {
     font-size: 0.5em;
     font-family: Verdana;
+    z-index: 10;
 }
 .layer-switcher ul {
     padding-left: 1em;
@@ -448,6 +466,9 @@ body.fi .en, body.en .fi {
     }
 }
 
+.muutoksetContainer {
+    right: 20%;
+}
 .muutoksetContainer ul {
     padding-left: 1em;
     vertical-align: top;
@@ -463,4 +484,72 @@ body.fi .en, body.en .fi {
 }
 .muutoksetContainer h5 {
     margin: 0.5em;
+}
+
+.listview {
+    width: 20%;
+    height: 50%;
+    right: 0;
+    bottom: 3em;
+    position: absolute;
+    border: 1px solid gray;
+    background: rgba(255,255,255,0.5);
+    overflow: scroll;
+    resize: both;
+}
+.listview .header {
+    position: sticky;
+    top: 0;
+}
+.listview .header input {
+    padding: 0;
+    border-width: 0 0 0 1px;
+    float: right;
+    max-width: 5em;
+    margin-right: 2em;
+}
+.listviewcontents {
+    height: 100%;
+}
+.listview ul {
+    line-height: 1em;
+    font-size: 0.75em;
+    padding-left: 1em;
+}
+.listview ul li {
+    white-space: nowrap;
+}
+.listview ul li .objectfocus {
+    display: none;
+}
+.listview ul li:hover .objectfocus {
+    display: inline;
+    left: 1px;
+    font-size: 0.75em;
+    font-weight: normal;
+}
+.listview ul li:hover {
+    font-weight: bold;
+}
+h4 {
+    margin: 0 0 0.2em 0;
+    background: linear-gradient(180deg, lightgray, transparent);
+    font-family: sans-serif;
+    font-variant: all-small-caps;
+    font-weight: lighter;
+}
+h4.hidden {
+    color: #aaa;
+}
+.collapseExpand {
+    position: absolute;
+    right: 0;
+    cursor: default;
+}
+.collapseExpand * {
+    padding: 0 0.25em;
+    vertical-align: sub;
+}
+.collapseExpand *:hover {
+    font-weight: bold;
 }

@@ -106,12 +106,13 @@ let luoEnnakkotieto = (ennakkotieto, aikavali) => rkmv => {
         zIndex:           -1 * (loppuRkm - alkuRkm) - 0.001*(aikavali[1].getTime() - aikavali[0].getTime())
     };
 
-    if (valittunaRatanumero()) {
-        if (rkmv.ratanumero != valittuDS.data) {
+    let ratanumero = valittunaRatanumero();
+    if (ratanumero) {
+        if (rkmv.ratanumero != ratanumero) {
             return [];
         }
-        yAxisMin = ratanumerotDS.data[valittuDS.data][0];
-        yAxisMax = ratanumerotDS.data[valittuDS.data][1];
+        yAxisMin = ratanumerotDS.data[ratanumero][0];
+        yAxisMax = ratanumerotDS.data[ratanumero][1];
         let ratakmvalille = {
             alkuY:    Math.max(alkuRkm, yAxisMin),
             loppuY:   Math.min(loppuRkm, yAxisMax),

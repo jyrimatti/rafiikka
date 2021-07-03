@@ -10,7 +10,7 @@ let resolutions = [ /*8192, 4096,*/ 2048,  1024,   512,   256,   128,    64,    
 let tileSizes   = [ /* 128,  256,*/  128, 256*1, 256*2, 256*4, 256*1, 256*2, 256*4, 256*8, 256*1, 256*2, 256*4, 256*8, 256*16, 256*32, 256*64, 256*128, 256*256,  256*512];
     
 // corresponding "good guesses" to svg-icon scalings
-let scales      = [ /*0.25, 0.25,*/ 0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.25,    0.5,   0.75,      1,    1.25,       2.25,  4.25];
+let scales      = [ /*0.25, 0.25,*/ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,    0.5,   0.75,      1,    1.25,       2.25,  4.25];
 
 let format = new ol.format.GeoJSON();
 
@@ -38,3 +38,8 @@ let buildGeometry = geojson => buildGeometries([geojsonReader.read(geojson)]);
 let mkPoint = coordinates => new ol.geom.Point(coordinates).transform(ol.proj.get('EPSG:4326'), projection);
 
 let olMBC = geometries => olParser.write(new jsts.algorithm.MinimumBoundingCircle(buildGeometries(geometries)).getCircle());
+
+let olCentroid = geometries => {
+    let centroid = new jsts.algorithm.Centroid(buildGeometries(geometries)).getCentroid();
+    return [centroid.x, centroid.y];
+};

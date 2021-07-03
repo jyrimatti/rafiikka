@@ -2,6 +2,8 @@
 window.objektityypitDS = luoDatasource("Objektityypit", infraObjektityypitUrl, (ret, x) => {
     ret[x.tyyppinumero] = {fi: x.nimi, en: x.name};
 });
+objektityypitDS.load();
+
 let hakudataHandler = (ret, x) => {
     ret.hakudata = ret.hakudata || [];
     if (x instanceof Array) {
@@ -57,7 +59,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
         load: (query, callback) => {
             let f = () => {
                 let cb = x => callback(x.map(y => { return {...y, query: query}; }));
-                if (window.loadingIndicator.values.count.value > 0) {
+                if (window.loadingIndicator.categories.aktiiviset.indexOf(' Haku-') >= 0) {
                     setTimeout(() => {
                         log("Viivytetään hakua...");
                         f();
@@ -109,12 +111,9 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                 }
             }
 
-            if (!window.objektityypitDS.data) {
-                initHaku(window.objektityypitDS);
-                window.hakuUrlitInfraDS.forEach(initHaku);
-                window.hakuUrlitEtj2DS .forEach(initHaku);
-                window.hakuUrlitRumaDS .forEach(initHaku);
-            }
+            window.hakuUrlitInfraDS.forEach(initHaku);
+            window.hakuUrlitEtj2DS .forEach(initHaku);
+            window.hakuUrlitRumaDS .forEach(initHaku);
         }
     })[0].selectize;
 
@@ -149,7 +148,7 @@ setTimeout(() => {
     search.focus();
 
     document.addEventListener('keydown', ev => {
-        if (!ev.target.parentNode.classList.contains('selectize-input')) {
+        if (!ev.target.parentNode.classList.contains('selectize-input') && !ev.target.classList.contains('filter')) {
             search.focus();
         }
     });
@@ -491,6 +490,9 @@ let osuuko_ = matchers => value => {
         let scores = row.map(osuuko_(matchers));
         return scores.length == 1 && scores[0] > 0 ? scores[0] + 100 // tarkempi match
                                                    : scores.reduce((a,b) => a+b, 0);
+    } else if (typeof row == "object" && row.ratanumero !== undefined && row.ratakm !== undefined) {
+        // ei matchata ratanumero-kenttään, jos löytyy jotakin tarkempaakin
+        return Object.entries(row).filter(e => e[0] !== 'ratanumero').map(osuuko_(matchers)).reduce((a,b) => a+b, 0);
     } else if (typeof row == "object") {
         if (row.ratanumero !== undefined && (row.ratakm !== undefined && row.etaisyys !== undefined || row.alku !== undefined && row.loppu !== undefined)) {
             // ei matchata ratakmsijainti/ratakmvali -objekteihin
@@ -511,6 +513,10 @@ let osuuko_ = matchers => value => {
                 // numeroihin vaaditaan exact match
                 let m = r.match(matcher);
                 return m && m[0] == m.input ? 200 : 0;
+            } else if (fieldName && fieldName.toLowerCase() == 'ratanumero') {
+                // ratanumeroihin vaaditaan exact match
+                let m = r.match(matcher);
+                return m && m[0] == m.input ? 1000 : 0;
             } else if (oid) {
                 // oid vaaditaan exact match
                 let m = oid[1].match(matcher);
@@ -539,11 +545,13 @@ let mkSearchElem = objs => objs.filter(x => x !== undefined)
                                .map(e => '<span class="searchElem" title="' + e[0] + '">' + e[1] + '</span>')
                                .join(' ');
 
+let normalisoiRyhma = ryhma => ryhma.toLowerCase().replaceAll(' ', '').replaceAll('ä', 'a').replaceAll('ö', 'o');
+
 let parsiInfraNimi = (ryhma, row) => {
-    let a = {tyyppi: (row.tyyppi && row.tyyppi.toLowerCase() != ryhma.toLowerCase() ? row.tyyppi[0].toUpperCase() + row.tyyppi.slice(1) : undefined)};
+    let a = {tyyppi: (row.tyyppi && normalisoiRyhma(row.tyyppi) != normalisoiRyhma(ryhma) ? row.tyyppi[0].toUpperCase() + row.tyyppi.slice(1) : undefined)};
     let b = {lyhenne: row.lyhenne, numero: row.numero, UICkoodi: (row.uicKoodi && row.uicKoodi != 0 ? row.uicKoodi : undefined), siltakoodi: row.siltakoodi, opastintyyppi: row.opastin ? opastintyypit.find(x => x.tyyppi == row.opastin.tyyppi).nimi : undefined, vaihdetyyppi: row.vaihde ? row.vaihde.tyyppi : undefined};
     let c = row.ratanumero && row.ratakm ? {ratakm: '(' + row.ratanumero + ') ' + row.ratakm} : row.ratanumero ? {ratanumero: '(' + row.ratanumero + ')'} : undefined;
-    let d = {tunnus: row.tunnus, kuvaus: row.kuvaus};
+    let d = {tunnus: row.tunnus, kuvaus: row.kuvaus, tyyppi: row.baliisi ? row.baliisi.tyyppi : row.opastin ? row.opastin.tyyppi : row.vaihde ? row.vaihde.tyyppi : undefined };
     let e = {nimi: row.nimi, linjaraidetunnukset: row.linjaraidetunnukset, turvalaitenimi: row.turvalaiteNimi};
     let f = row.kaukoOhjausTunnisteet ? {'kauko-ohjaustunnisteet': row.kaukoOhjausTunnisteet.map(x => x.kaukoOhjausPaikka + ' ' + x.kaukoOhjausNimi).join(', ')} : undefined;
     let g = {turvalaiteraide: row.turvalaiteRaide ? '(' + row.turvalaiteRaide + ')' : undefined};
@@ -553,8 +561,7 @@ let parsiInfraNimi = (ryhma, row) => {
     let k = {'liikennepaikan osa': row.liikennepaikanOsa ? liikennepaikanOsatDS.data[row.liikennepaikanOsa].nimi : undefined};
     let l = {'liikennepaikkaväli': row.liikennepaikkavali ? [liikennepaikkavalitDS.data[row.liikennepaikkavali]].flatMap(x => [rautatieliikennepaikatDS.data[x.alkuliikennepaikka].nimi, rautatieliikennepaikatDS.data[x.loppuliikennepaikka].nimi]).join('-') : undefined};
     let m = {'liikennepaikkaväli': row.liikennepaikkavalit ? row.liikennepaikkavalit.map(x => liikennepaikkavalitDS.data[x]).map(x => [rautatieliikennepaikatDS.data[x.alkuliikennepaikka].nimi, rautatieliikennepaikatDS.data[x.loppuliikennepaikka].nimi].join('-')).join(', ') : undefined};
-    let n = (b || c || d || e || f || g || h || i || j || k || l || m ? undefined : row.tunniste);
-    return mkSearchElem([a,b,c,d,e,f,g,h,i,j,k,l,m,n]);
+    return mkSearchElem([a,b,c,d,e,f,g,h,i,j,k,l,m]) || row.tunniste;
 }
 
 let parsiJetiNimi = row => {

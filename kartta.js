@@ -1,6 +1,6 @@
 
-let luoKarttaElementti = (tunniste, title, offsetX, offsetY, onClose) => {
-    let [container, elemHeader] = luoIkkuna(title, offsetX, offsetY, onClose);
+let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY2, onClose) => {
+    let [container, elemHeader] = luoIkkuna(title, offsetX1, offsetY1, offsetX2, offsetY2, onClose);
     container.setAttribute("class", "popupContainer karttaPopup");
 
     let schema = document.createElement("label");
@@ -27,6 +27,10 @@ let luoKarttaElementti = (tunniste, title, offsetX, offsetY, onClose) => {
     let kartta = document.createElement("div");
     kartta.setAttribute("class", "kartta");
     container.appendChild(kartta);
+
+    let listview = document.createElement('div');
+    listview.setAttribute('class', 'listview');
+    container.appendChild(listview);
 
     let aikavalinta = document.createElement('div');
     aikavalinta.setAttribute('class', 'aikavalinta');
@@ -110,7 +114,7 @@ let luoKarttaElementti = (tunniste, title, offsetX, offsetY, onClose) => {
             } , 10);
     };
 
-    return [container, kartta, haku, check, slider, alkuaika, loppuaika];
+    return [container, kartta, haku, check, slider, alkuaika, loppuaika, listview];
 };
 
 let onDrop = lisaa => (source, target) => {
@@ -204,8 +208,8 @@ let junaLayer = (map, tunniste) => {
     return layer;
 }
 
-let fitToView = map => ev => {
-    let extent = ev.target.getExtent() || (ev.target.getSource ? ev.target.getSource().getExtent() : undefined);
+let fitToView = map => x => {
+    let extent = x.getExtent ? x.getExtent() : x.getSource ? x.getSource().getExtent() : x.getGeometry ? x.getGeometry().getExtent() : undefined;
     if (extent && !ol.extent.isEmpty(extent)) {
         log('Fitting map to extent', extent);
         map.getView().cancelAnimations();
@@ -215,7 +219,7 @@ let fitToView = map => ev => {
             duration: 1000
         });
     }
-}
+};
 
 let wktLayer = (tunniste, nimi) => {
     let src = new ol.source.Vector({
@@ -231,11 +235,12 @@ let flatLayerGroups = layers => [].concat.apply([], layers.map(l => (l instanceo
 
 let featuresOnScreen = map => {
     let mapExtent = map.getView().calculateExtent(map.getSize());
-    return flatLayerGroups(map.getLayers().getArray()).filter(l => l.getVisible())
-                        .flatMap( layer =>
+    return flatLayerGroups(map.getLayers().getArray())
+            .filter(l => l.getVisible())
+            .map( layer =>
         layer.getSource && layer.getSource().getFeaturesInExtent
-            ? layer.getSource().getFeaturesInExtent(mapExtent)
-            : []);
+            ? [layer, layer.getSource().getFeaturesInExtent(mapExtent)]
+            : [layer, []]);
 }
 
 let voimassaolot = props => [props.haetunDatanVoimassaoloaika ? props.haetunDatanVoimassaoloaika.split('/') : [], props.ensimmainenAktiivisuusaika ? [props.ensimmainenAktiivisuusaika, props.viimeinenAktiivisuusaika] : []]
@@ -243,7 +248,7 @@ let voimassaolot = props => [props.haetunDatanVoimassaoloaika ? props.haetunData
     .flat();
 
 let haeMuutosajankohdat = map =>
-    [...new Set(featuresOnScreen(map).flatMap(f => voimassaolot(f.getProperties())))]
+    [...new Set(featuresOnScreen(map).flatMap(x => x[1]).flatMap(f => voimassaolot(f.getProperties())))]
         .map(d => new Date(d).getTime())
         .filter(d => {
             let av = map.aikavali();
@@ -253,9 +258,9 @@ let haeMuutosajankohdat = map =>
         .sort((a,b) => a - b)
         .map(d => new Date(d));
 
-let kartta = (tunniste, title, offsetX, offsetY, time, persistState) => {
+let kartta = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2, offsetY2) => {
     try {
-        return kartta_(tunniste, title, offsetX, offsetY, time, persistState);
+        return kartta_(tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2, offsetY2);
     } catch (e) {
         log(e);
         return e;
@@ -271,15 +276,15 @@ let kartanIndeksi = map => {
     return ret + 1;
 };
 
-let kartta_ = (tunniste, title, offsetX, offsetY, time, persistState) => {
-    persistState = persistState === undefined ? true : false;
+let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2, offsetY2) => {
+    persistState = persistState === undefined ? true : persistState;
     var elem;
     let onClose = () => {
         if (persistState) {
             clearSubState(kartanIndeksi(elem.kartta));
         }
     };
-    let [container, elem_, haku, kaavioCheck, slider, alkuaika, loppuaika] = luoKarttaElementti(tunniste, title || tunniste, offsetX, offsetY, onClose);
+    let [container, elem_, haku, kaavioCheck, slider, alkuaika, loppuaika, listview] = luoKarttaElementti(tunniste, title || tunniste, offsetX1, offsetY1, offsetX2, offsetY2, onClose);
     elem = elem_;
 
     if (persistState) {
@@ -296,7 +301,7 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time, persistState) => {
     });
 
     let onkoKaavio = () => kaavioCheck.checked;
-    let ajanhetki = () => slider.min == slider.max                                             ? new Date(parseInt(slider.min)) :
+    let ajanhetki = () => slider.min && slider.min == slider.max                               ? new Date(parseInt(slider.min)) :
                           (slider.disabled || slider.value === undefined || slider.value == 0) ? undefined 
                                                                                                : new Date(parseInt(slider.value));
     let aikavali = (alku, loppu) => {
@@ -371,12 +376,16 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time, persistState) => {
         x.on('loadSuccess', () => update(-1));
         x.on('loadFail', () => update(-1));
         x.on('loadAbort', () => update(-1));
+
+        let updateListView = () => updateListviewContents(listview, map);
+        x.on('loadSuccess', updateListView);
+        x.on('change:visible', updateListView);
+        x.getSource().on('featuresLoaded', updateListView);
+        map.on('moveend', updateListView);
     }));
     map.getView().on('change', paivitaMuutosajankohdat);
 
     lrs.forEach(l => map.addLayer(l));
-    map.addInteraction(hover(overlay, lrs));
-    map.addInteraction(select(lrs));
 
     map.kaavio = onkoKaavio;
     map.ajanhetki = ajanhetki;
@@ -384,8 +393,8 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time, persistState) => {
 
     // muille kuin Jetille kartta globaaliin kontekstiin
     if (!onkoJeti(tunniste)) {
-        map.aikavali(time && new Date(time.split('/')[0]) || persistState && pyoristaAjanhetki(getSubState(kartanIndeksi(map))('aika')[0]),
-                     time && new Date(time.split('/')[1]) || persistState && pyoristaAjanhetki(getSubState(kartanIndeksi(map))('aika')[1]));
+        map.aikavali(time && new Date(time.split('/')[0]) || persistState && getSubState(kartanIndeksi(map))('aika')[0] || startOfDayUTC(getMainState('aika')[0]),
+                     time && new Date(time.split('/')[1]) || persistState && getSubState(kartanIndeksi(map))('aika')[1] || startOfDayUTC(getMainState('aika')[0])); // mainState ajanhetkeen
     }
 
     kaavioCheck.onchange = _ => {
@@ -452,13 +461,63 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time, persistState) => {
 
     map.highlightLayers = {};
 
-    let lisaa = lisaaKartalle(map, overlay);
+    let hoverInteraction = hover(overlay);
+    map.addInteraction(hoverInteraction);
+
+    let selectInteraction = select(map);
+    map.addInteraction(selectInteraction);
+
+    let onHover = (feature, ev) => {
+        var found = false;
+        hoverInteraction.getFeatures().forEach(x => {
+            if (x == feature) {
+                found = true;
+            }
+        });
+        if (found) {
+            hoverInteraction.getFeatures().remove(feature);
+            hoverInteraction.dispatchEvent({
+                type: 'select',
+                selected: [],
+                deselected: [feature],
+                mapBrowserEvent: ev
+            });
+        } else {
+            hoverInteraction.getFeatures().push(feature);
+            hoverInteraction.dispatchEvent({
+                type: 'select',
+                selected: [feature],
+                deselected: [],
+                mapBrowserEvent: ev
+            });
+        }
+    };
+    let onSelect = (feature, ev) => {
+        var found = false;
+        selectInteraction.getFeatures().forEach(x => {
+            if (x == feature) {
+                found = true;
+            }
+        });
+        if (!found) {
+            selectInteraction.getFeatures().push(feature);
+            selectInteraction.dispatchEvent({
+                type: 'select',
+                selected: [feature],
+                deselected: [],
+                mapBrowserEvent: ev
+            });
+        }
+    };
+
+    createListview(listview, onHover, onSelect);
+
+    let lisaa = lisaaKartalle(map);
     let search = initSearch(haku, lisaa, poistaKartalta(map));
     search.settings.create = x => ({tunniste: x, nimi: title || x});
     search.disable();
     if (tunniste) {
         tunniste.split(',').forEach(x => {
-            search.createItem(x);
             if (!lisaa(x)) {
                 log("Odotellaan", x);
                 let handler = () => {
@@ -494,23 +553,15 @@ let kartta_ = (tunniste, title, offsetX, offsetY, time, persistState) => {
     return container;
 }
 
-let kurkistaKartta = (elem, tunniste, title, offsetX, offsetY, time) => {
-    let container = kartta(tunniste, title, offsetX, offsetY, time, false);
-    let f = () => {
-        if (container.parentElement) {
-            container.parentElement.removeChild(container);
-            container.remove();
-        }
-    };
-    elem.addEventListener("mouseout", f, { once: true });
-    elem.addEventListener("click", f, { once: true });
+let kurkistaKartta = (elem, tunniste, title, time, offsetX, offsetY) => {
+    kurkista(elem, () => kartta(tunniste, title, time, false, offsetX, offsetY));
 };
 
 let poistaKartalta = map => tunniste => {
     map.removeLayer(flatLayerGroups(map.getLayers().getArray()).find(l => l.get('shortName') == tunniste));
 }
 
-let lisaaKartalle = (map, overlay) => tunniste => {
+let lisaaKartalle = map => tunniste => {
     let wkt = onkoWKT(tunniste);
     let preselectLayer =
         onkoJuna(tunniste)                   ? junaLayer(map, tunniste) :
@@ -524,27 +575,24 @@ let lisaaKartalle = (map, overlay) => tunniste => {
         undefined;
     if (preselectLayer) {
         preselectLayer.setVisible(true);
-        preselectLayer.getSource().on('featuresLoaded', fitToView(map));
+        preselectLayer.getSource().on('featuresLoaded', ev => fitToView(map)(ev.target));
 
         map.addLayer(preselectLayer);    
-        map.addInteraction(hover(overlay, [preselectLayer]));
-        map.addInteraction(select([preselectLayer]));
     }
 
     return preselectLayer !== undefined;
 };
 
-let hover = (overlay, layers) => {
+let hover = overlay => {
     let hoverInteraction = new ol.interaction.Select({
         hitTolerance: 2,
         condition:    ol.events.condition.pointerMove,
-        layers:       flatLayerGroups(layers),
         style:        null
     });
     hoverInteraction.on('select', evt => {
         let map = evt.target.getMap();
         evt.selected.forEach(feature => {
-            var coordinate = evt.mapBrowserEvent.coordinate;
+            let coordinate = olCentroid(getAllGeometries(feature));
             if (overlay.getElement()) {
                 overlay.getElement().innerHTML = prettyPrint(withoutProp(feature.getProperties(), 'geometry'));
             }
@@ -560,44 +608,43 @@ let hover = (overlay, layers) => {
             overlay.setPosition(undefined);
         }
     });
-
-    let clickInteraction = new ol.interaction.Select({
-        hitTolerance: 2,
-        condition:    ol.events.condition.click,
-        layers:       flatLayerGroups(layers),
-        style:        null
-    });
-
     return hoverInteraction;
 };
 
-let select = layers => {
+let select = map => {
     let source = new ol.source.Vector();
-    map.addLayer(new ol.layer.Vector({source: source}));
+    let viivaLayer = new ol.layer.Vector({source: source});
+    map.addLayer(viivaLayer);
 
     let selectInteraction = new ol.interaction.Select({
         hitTolerance: 2,
         condition:    ol.events.condition.click,
-        layers:       flatLayerGroups(layers),
-        style:        null
+        style:        null,
+        layers:       x => x !== viivaLayer && Object.values(map.highlightLayers).indexOf(x) < 0
     });
     selectInteraction.on('select', evt => {
-        let map = evt.target.getMap();
         evt.selected.forEach(feature => {
-            let tunniste = feature.getProperties().tunniste;
+            let tunniste = lueTunniste(feature.getProperties());
 
             var overlay;
-            let coordinate = evt.mapBrowserEvent.coordinate;
+            let coordinate = olCentroid(getAllGeometries(feature));
             var line;
             
             let onClose = () => {
                 map.removeOverlay(overlay)
                 source.removeFeature(line);
                 korostusPois(map, feature);
+                selectInteraction.getFeatures().remove(feature);
             };
-            let [container,header] = luoIkkuna(tunniste, undefined, undefined, onClose);
+            let [container,header] = luoIkkuna(tunniste, undefined, undefined, undefined, undefined, onClose);
             container.setAttribute("class", "popupContainer karttaInfoPopup");
             createPopupContent(tunniste, container);
+
+            let focus = document.createElement("div");
+            focus.setAttribute("class", "objectfocus");
+            focus.innerText = '⌖';
+            focus.addEventListener('click', () => fitToView(map)(feature));
+            header.appendChild(focus);
 
             overlay = new ol.Overlay({
                 element: container
@@ -630,7 +677,7 @@ let select = layers => {
             map.addOverlay(overlay);
             source.addFeature(line);
 
-            korostus(map, feature);
+            korostus(map, feature, true);
         });
     });
 
@@ -662,7 +709,7 @@ let cropIfConstrained = (voimassa, kaavio, f, source, kohde) => {
     if (kohde.rajaus) { // jos oli rajaus, niin tehdään taiat. Muuten jätetään geometria kokonaiseksi.
         resolveMask(kohde.rajaus, voimassa, kaavio, mask => {
             if (mask) {
-                log('Masking geometry of', f.getProperties().tunniste);
+                log('Masking geometry of', lueTunniste(f.getProperties()));
                 var original = olParser.read(f.getGeometry());
                 f.setStyle(highlightStyle(resolveStyleForFeature(f)));
                 let intersection = mask.intersection(original);
@@ -707,7 +754,11 @@ let cropEnds = (tunniste, features) => {
         let maskGeom = buildGeometries(mask);
         fs.forEach(f => {
             let geom = olParser.read(f.getGeometry());
-            let diff = geom.difference(maskGeom);
+            let diff = geom.union();
+            for (let i = 0; i < maskGeom.getNumGeometries(); ++i) {
+                let g = maskGeom.getGeometryN(i);
+                diff = diff.difference(g);
+            }
             let newGeom = diff.getNumPoints() > 0
                 ? olParser.write(diff)
                 : new ol.geom.GeometryCollection([]);
@@ -760,20 +811,22 @@ let getAllGeometries = f => {
     }
 };
 
-let korostus = (map, f) => {
+let korostus = (map, f, kohdistaKartta) => {
     if (highlightFeature(map)(f)) {
-        let layer = korostaEnnakkotieto(map, f.getProperties().tunniste, map.kaavio, map.ajanhetki, map.aikavali);
+        let layer = korostaEnnakkotieto(map, lueTunniste(f.getProperties()), map.kaavio, map.ajanhetki, map.aikavali);
         if (layer) {
             layer.setMap(map);
-            layer.getSource().on('featuresLoaded', fitToView(map));
-            layer.on('mbcUpdated', fitToView(map));
+            if (kohdistaKartta) {
+                layer.getSource().on('featuresLoaded', ev => fitToView(map)(ev.target));
+                layer.on('mbcUpdated', ev => fitToView(map)(ev.target));
+            }
         }
     }
 };
 
 let korostusPois = (map, f) => {
     if (dehighlightFeature(map)(f)) {
-        let avain = f.getProperties().tunniste + '_' + map.kaavio() + '-' + map.ajanhetki();
+        let avain = lueTunniste(f.getProperties()) + '_' + map.kaavio() + '-' + map.ajanhetki();
         if (map.highlightLayers[avain]) {
             map.highlightLayers[avain].setVisible(false);
         }
@@ -868,7 +921,7 @@ let korostaEnnakkotieto = (map, tunniste, kaavio, ajanhetki, aikavali) => {
                                  .filter(f => f.getProperties()._source);
 
                 raiteet.concat(radat).concat(lpvalit)
-                       .forEach(k => cropIfConstrained(voimassa, kaavio, removeItemOnce(fs, x => k.tunniste == x.getProperties().tunniste), newLayer.getSource(), k));
+                       .forEach(k => cropIfConstrained(voimassa, kaavio, removeItemOnce(fs, x => k.tunniste == lueTunniste(x.getProperties())), newLayer.getSource(), k));
             }
 
             newLayer.getSource().on('featuresLoaded', doCroppingOfConstrained);            

@@ -64,7 +64,7 @@ window.raideosuudetDS = luoDatasource("Raideosuudet", raideosuudetUrl, (ret, x) 
         lyhenne:         x.tunniste[0].turvalaiteNimi,
         nimi:            x.tunniste[0].turvalaiteNimi,
         tyyppi:          x.tyyppi,
-        uicKoodi:        x.uickoodi,
+        uicKoodi:        x.uicKoodi,
         geometria:       buildGeometry({
                             type: "MultiLineString",
                             coordinates: x.geometria
@@ -81,7 +81,7 @@ window.laituritDS = luoDatasource("Laiturit", laituritUrl, (ret, x) => {
         lyhenne:         x.tunniste[0].tunnus,
         nimi:            x.tunniste[0].kuvaus,
         tyyppi:          x.tyyppi,
-        uicKoodi:        x.uickoodi,
+        uicKoodi:        x.uicKoodi,
         geometria:       buildGeometry({
                             type: "MultiLineString",
                             coordinates: x.geometria

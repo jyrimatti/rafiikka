@@ -163,6 +163,7 @@ let lataaSijainti = coord => {
 };
 
 let koordinaatti2sijainti = koordinaatti => {
+    let ratanumero = valittunaRatanumero();
     if (valittunaAikataulupaikka()) {
         let coord = buildGeometry(koordinaatti);
 
@@ -194,10 +195,10 @@ let koordinaatti2sijainti = koordinaatti => {
             return valittuDS.data.indexOf(edellinen.uicKoodi) + suht;
         }).find(_ => true);
         return sijainti;
-    } else if (valittunaRatanumero()) {
+    } else if (ratanumero) {
         let cachetettu = sijainnitMap[koordinaatti.coordinates];
         if (cachetettu) {
-            let ratakmsijainti = cachetettu.find(r => r.ratanumero == valittuDS.data);
+            let ratakmsijainti = cachetettu.find(r => r.ratanumero == ratanumero);
             if (ratakmsijainti) {
                 return ratakmsijainti.ratakm*1000+ratakmsijainti.etaisyys;
             }

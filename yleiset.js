@@ -44,21 +44,6 @@ let toISOStringNoMillis = (d) => {
 window.ikkuna = () => getMainState('aika');
 window.rajat  = () => [dateFns.dateFns.addDays(ikkuna()[0], -3), dateFns.dateFns.addDays(ikkuna()[1], 3)];
 
-let pyoristaAjanhetki = x => {
-    let y = new Date(x.getTime());
-    y.setMinutes(0);
-    y.setSeconds(0);
-    y.setMilliseconds(0);
-    return y;
-};
-let startOfDayUTC = x => {
-    let y = new Date(x.getTime());
-    y.setUTCHours(0);
-    y.setUTCMinutes(0);
-    y.setUTCSeconds(0);
-    y.setUTCMilliseconds(0);
-    return y;
-};
 let laajennaAikavali = x => [dateFns.dateFns.startOfMonth(x[1]), dateFns.dateFns.endOfMonth(x[1])];
 
 let limitInterval = intervalString => {
@@ -86,14 +71,48 @@ window.revisions = {
 };
 
 // safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
-let infraAPIUrl = skipRevision => 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/' + (skipRevision ? '' : window.revisions.infra);
-let etj2APIUrl  = skipRevision => 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/' + (skipRevision ? '' : window.revisions.etj2);
+let infraAPIUrl = skipRevision => 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/' + (skipRevision === true ? '' : window.revisions.infra);
+let etj2APIUrl  = skipRevision => 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/' + (skipRevision === true ? '' : window.revisions.etj2);
 let aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
 let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
 
 let mqttUrl = "rata.digitraffic.fi";
 let mqttPort = 443;
 let mqttTopic = 'train-locations/#';
+
+let errorHandler = error => log("Virhe!", error, error.stack, new Error().stack);
+
+let loggingDelegate = f => (a, b, c) => {
+    try {
+        return f(a, b, c);
+    } catch (e) {
+        errorHandler(e);
+        throw e;
+    }
+};
+
+let fetchJson = (url, opts, callback, errorCallback) =>
+    fetch(url, {
+        ...opts,
+        headers: {
+            'Content-Type': 'application/json',
+            'Digitraffic-User': 'Rafiikka'
+        }
+    }).then(response => response.json())
+      .then(callback)
+      .catch(errorCallback || errorHandler);
+
+let getJson  = (url,       callback, signal, errorCallback) => fetchJson(url, {method: 'GET', signal: signal}             , callback, errorCallback);
+let postJson = (url, body, callback, signal, errorCallback) => fetchJson(url, {method: 'POST', signal: signal, body: body}, callback, errorCallback);
+
+getJson(infraAPIUrl() + 'revisions.json?count=1', data => {
+    window.revisions.infra = data[0].revisio + '/';
+    log("Saatiin infra-revisioksi", window.revisions.infra);
+});
+getJson(etj2APIUrl() + 'revisions.json?count=1', data => {
+    window.revisions.etj2 = data[0].revisio + '/';
+    log("Saatiin etj2-revisioksi", window.revisions.etj2);
+});
 
 let ikuisuusAikavali = 'time=2010-01-01T00:00:00Z/2030-01-01T00:00:00Z';
 let infraAikavali = () => 'time=' + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[0])) + "/" + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[1]));
@@ -190,16 +209,16 @@ let eiUrlTilasto = () => etj2APIUrl() + 'ennakkoilmoitukset.json?propertyName=as
 let esUrlTilasto = () => etj2APIUrl() + 'ennakkosuunnitelmat.json?propertyName=luontiaika,tila,tunniste,tyyppi,voimassa&' + ikuisuusAikavali;
 let vsUrlTilasto = () => etj2APIUrl() + 'vuosisuunnitelmat.json?propertyName=alustavakapasiteettivaraus,luontiaika,tila,tunniste,tyo,tyonlaji,voimassa&' + ikuisuusAikavali;
 
-let luotujaInfraUrl = (path, duration, typeNames) => infraAPIUrl() + path + '.json?cql_filter=start(objektinVoimassaoloaika)>=start(time)+AND+start(objektinVoimassaoloaika)<end(time)&propertyName=objektinVoimassaoloaika,tunniste&' + (typeNames ? 'typeNames=' + typeNames + '&' : '') + 'duration=' + duration;
-let poistuneitaInfraUrl = (path, duration, typeNames) => infraAPIUrl() + path + '.json?cql_filter=end(objektinVoimassaoloaika)>=start(time)+AND+end(objektinVoimassaoloaika)<end(time)&propertyName=objektinVoimassaoloaika,tunniste&' + (typeNames ? 'typeNames=' + typeNames + '&' : '') + 'duration=' + duration;
+let luotujaInfraUrl = (path, duration, typeNames) => infraAPIUrl(true) + path + '.json?cql_filter=start(objektinVoimassaoloaika)>=start(time)+AND+start(objektinVoimassaoloaika)<end(time)&propertyName=objektinVoimassaoloaika,tunniste&' + (typeNames ? 'typeNames=' + typeNames + '&' : '') + 'duration=' + duration;
+let poistuneitaInfraUrl = (path, duration, typeNames) => infraAPIUrl(true) + path + '.json?cql_filter=end(objektinVoimassaoloaika)>=start(time)+AND+end(objektinVoimassaoloaika)<end(time)&propertyName=objektinVoimassaoloaika,tunniste&' + (typeNames ? 'typeNames=' + typeNames + '&' : '') + 'duration=' + duration;
 let infraMuutoksetUrl = (name, path, typeNames) => duration => ({
     nimi:        name,
     luotuja:     luotujaInfraUrl(path, duration, typeNames),
     poistuneita: poistuneitaInfraUrl(path, duration, typeNames)
 });
 
-let luotujaEtj2Url = (path, duration) => etj2APIUrl() + path + '.json?cql_filter=start(voimassa)>=start(time)+AND+start(voimassa)<end(time)&propertyName=sisainenTunniste,tunniste,voimassa&duration=' + duration;
-let poistuneitaEtj2Url = (path, duration) => etj2APIUrl() + path + '.json?cql_filter=end(voimassa)>=start(time)+AND+end(voimassa)<end(time)&propertyName=sisainenTunniste,tunniste,voimassa&duration=' + duration;
+let luotujaEtj2Url = (path, duration) => etj2APIUrl(true) + path + '.json?cql_filter=start(voimassa)>=start(time)+AND+start(voimassa)<end(time)&propertyName=sisainenTunniste,tunniste,voimassa&duration=' + duration;
+let poistuneitaEtj2Url = (path, duration) => etj2APIUrl(true) + path + '.json?cql_filter=end(voimassa)>=start(time)+AND+end(voimassa)<end(time)&propertyName=sisainenTunniste,tunniste,voimassa&duration=' + duration;
 let etj2MuutoksetUrl = (name, path) => duration => ({
     nimi:        name,
     luotuja:     luotujaEtj2Url(path, duration),
@@ -339,8 +358,22 @@ let esTilat = ['hyväksytty', 'lähetetty', 'lisätietopyyntö', 'luonnos', 'per
 let vsTilat = ['alustava', 'toteutuu', 'tehty', 'poistettu', 'vuosiohjelmissa (tila poistunut käytöstä)', 'käynnissä (tila poistunut käytöstä)'];
 let loTilat = ['aktiivinen', 'poistettu'];
 
-if (new URLSearchParams(window.location.hash.replace('#', '?')).has("seed")) {
-    [ratanumerotUrl(), liikennepaikkavalitUrl(), rautatieliikennepaikatUrl(), liikennepaikanOsatUrl(), raideosuudetUrl(), laituritUrl(),
+if (window.location.hash == '#seed') {
+    let seed = urls => {
+        if (urls.length > 0) {
+            log("seedataan", urls[0]);
+            fetch(urls[0], {
+                headers: {
+                    'Digitraffic-User': 'Rafiikka'
+                }
+            }).then(() => seed(urls.slice(1)))
+              .catch(() => seed(urls.slice(1)));
+        } else {
+            log("seedattu");
+        }
+    };
+
+    seed([ratanumerotUrl(), liikennepaikkavalitUrl(), rautatieliikennepaikatUrl(), liikennepaikanOsatUrl(), raideosuudetUrl(), laituritUrl(),
      elementitUrl(), lorajatUrl(), infraObjektityypitUrl(),
      junasijainnitUrl(), junasijainnitGeojsonUrl(), kunnossapitoalueetMetaUrl(), liikenteenohjausalueetMetaUrl(), kayttokeskuksetMetaUrl(), liikennesuunnittelualueetMetaUrl(),
      ratapihapalveluTyypitUrl(), opastinTyypitUrl(), vaihdeTyypitUrl()]
@@ -361,25 +394,7 @@ if (new URLSearchParams(window.location.hash.replace('#', '?')).has("seed")) {
             erotuskenttaUrlTilasto(), maadoitinUrlTilasto(), tyonaikaineneristinUrlTilasto(), kaantopoytaUrlTilasto(), pyoraprofiilimittalaiteUrlTilasto(),
             telivalvontaUrlTilasto(), erotinUrlTilasto(), tasoristeysvalojenpyoratunnistinUrlTilasto(), raiteensulutUrlTilasto(), raiteetUrlTilasto(),
             liikenteenohjauksenrajatUrlTilasto(), tunnelitUrlTilasto(), sillatUrlTilasto(), laituritUrlTilasto(), tasoristeyksetUrlTilasto(), kayttokeskuksetUrlTilasto(), 
-            kytkentaryhmatUrlTilasto()])
-     .forEach(url => {
-        let ds = new am4core.DataSource();
-        ds.url = url;
-        initDS(ds);
-        ds.load();
-    });
-    log("seedattu");
-}
-
-let errorHandler = ev => log("Virhe!", ev);
-
-let loggingDelegate = f => (a, b, c) => {
-    try {
-        return f(a, b, c);
-    } catch (e) {
-        errorHandler(e);
-        throw e;
-    }
+            kytkentaryhmatUrlTilasto()]));
 };
 
 let on   = (obj, event, f) => obj.on(event,   loggingDelegate(f));
@@ -402,20 +417,6 @@ let monitor = (ds, type) => {
         loadingIndicator.setValue("count", loadingIndicator.values.count.value - 1);
     });
 }
-
-let getJson  = (url,       callback, signal, errorCallback) => fetchJson(url, {method: 'GET', signal: signal}             , callback, errorCallback);
-let postJson = (url, body, callback, signal, errorCallback) => fetchJson(url, {method: 'POST', signal: signal, body: body}, callback, errorCallback);
-
-let fetchJson = (url, opts, callback, errorCallback) =>
-    fetch(url, {
-        ...opts,
-        headers: {
-            'Content-Type': 'application/json',
-            'Digitraffic-User': 'Rafiikka'
-        }
-    }).then(response => response.json())
-      .then(callback)
-      .catch(errorCallback || errorHandler);
 
 let luoDatasource = (type, urlF, f) => {
     let ds = new am4core.DataSource();
@@ -517,9 +518,13 @@ let luoInfraAPIUrl = (str, time) => {
 }
 
 let luoEtj2APIUrl = (str, time) => {
-    let m = onkoJeti(str);
+    let m = onkoJetiOID(str)
     if (m) {
         return etj2APIUrl() + m[0] + '.json?' + (time ? 'time=' + time : etj2Aikavali());
+    }
+    m = onkoJeti(str);
+    if (m) {
+        return etj2APIUrl(true) + m[0] + '.json?' + (time ? 'time=' + time : etj2Aikavali());
     }
 }
 
@@ -649,7 +654,7 @@ let luoInfraAPILinkki = (tunniste, time) => onkoInfra(tunniste) ? `
            title='Avaa Infra-API:ssa'
            class='infoikoni'
            onclick='window.open(this.getAttribute("href"),"_blank"); return false;'>
-           <img src='${infraAPIUrl().replaceAll(/[/][^/]+[/]$/g, '/r/favicon.ico')}'
+           <img src='https://rata.digitraffic.fi/infra-api/r/favicon.ico'
                 alt='Avaa Infra-API:ssa' />
         </a>
     </li>
@@ -661,23 +666,23 @@ let luoEtj2APILinkki = (tunniste, time) => onkoJeti(tunniste) ? `
            title='Avaa Jeti-API:ssa'
            class='infoikoni'
            onclick='window.open(this.getAttribute("href"),"_blank"); return false;'>
-            <img src='${etj2APIUrl().replaceAll(/[/][^/]+[/]$/g, '/r/favicon.ico')}'
+            <img src='https://rata.digitraffic.fi/jeti-api/r/favicon.ico'
                  alt='Avaa Jeti-API:ssa' />
         </a>
     </li>
 ` : '';
 
-let luoKarttaLinkki = (tunniste, title, time) => `
+let luoKarttaLinkki = (tunniste, title, time) => onkoInfra(tunniste) || onkoTREX(tunniste) || onkoJeti(tunniste) || onkoRuma(tunniste) || onkoJuna(tunniste) ? `
     <li>
         <a href=""
            title='Avaa kartalla'
            class='infoikoni karttaikoni'
            onclick='kartta("${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;/g,'')}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'
-           onmouseover='kurkistaKartta(this, "${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;|\n/g,'')}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;' />
+           onmouseover='kurkistaKartta(this, "${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;|\n/g,'')}", ${time ? '"' + time + '"' : time}, event.pageX, event.pageY); return false;' />
            🗺
         </a>
     </li>
-`;
+` : '';
 
 let luoAikatauluLinkki = (tunniste) => onkoJuna(tunniste) ? `
     <li>
@@ -791,11 +796,4 @@ let luoLinkit = (tyyppi, tunniste, karttaTitle, time) => `
     luoEtj2APILinkki(tunniste, time)
 }</ul>`
 
-getJson(infraAPIUrl() + 'revisions.json?count=1', data => {
-    window.revisions.infra = data[0].revisio + '/';
-    log("Saatiin infra-revisioksi", window.revisions.infra);
-});
-getJson(etj2APIUrl() + 'revisions.json?count=1', data => {
-    window.revisions.etj2 = data[0].revisio + '/';
-    log("Saatiin etj2-revisioksi", window.revisions.etj2);
-});
+let lueTunniste = obj => obj.tunniste || (obj.trainNumber ? obj.departureDate + '(' + obj.trainNumber + ')' : undefined) || obj.id;

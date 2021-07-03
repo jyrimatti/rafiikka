@@ -16,9 +16,6 @@ let applyStyle = (styleOrHandler, ajanhetki, aikavali) => feature => {
         if (vali && hetki && !osuu(vali)) {
             // voimassaolo ei osu kartan ajanhetkeen -> piilotetaan feature
             return undefined;
-        } else if (styleOrHandler instanceof Function && styleOrHandler.length == 1) {
-            styleOrHandler(feature);
-            return feature.getStyle();
         } else if (styleOrHandler instanceof Function) {
             return styleOrHandler(a,b,c,d,e,f);
         } else {
@@ -35,14 +32,16 @@ let applyStyle = (styleOrHandler, ajanhetki, aikavali) => feature => {
 let highlightFeature = map => feature => {
     map.highlighted = map.highlighted || {};
     feature.setStyle(highlightStyle(feature._origStyle));
-    map.highlighted[feature.getProperties().tunniste] = (map.highlighted[feature.getProperties().tunniste] || 0) + 1;
-    return map.highlighted[feature.getProperties().tunniste] == 1;
+    let tunniste = lueTunniste(feature.getProperties());
+    map.highlighted[tunniste] = (map.highlighted[tunniste] || 0) + 1;
+    return map.highlighted[tunniste] == 1;
 };
 let dehighlightFeature = map => feature => {
     map.highlighted = map.highlighted || {};
-    if (map.highlighted[feature.getProperties().tunniste]) {
-        map.highlighted[feature.getProperties().tunniste] = Math.max(0, (map.highlighted[feature.getProperties().tunniste] || 1) - 1);
-        if (map.highlighted[feature.getProperties().tunniste] == 0) {
+    let tunniste = lueTunniste(feature.getProperties());
+    if (map.highlighted[tunniste]) {
+        map.highlighted[tunniste] = Math.max(0, (map.highlighted[tunniste] || 1) - 1);
+        if (map.highlighted[tunniste] == 0) {
             feature.setStyle(feature._origStyle);
             return true;
         }
@@ -52,8 +51,10 @@ let dehighlightFeature = map => feature => {
 
 let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, propertyName, styleOrHandler, typeNames, prepareFeatures, kaavio, ajanhetki, aikavali) => {
     let u1 = url.replace(/time=[^&]*&?/, '');
-    u1 = u1 + (u1.indexOf('?') < 0 ? '?' : '&');
-    u1 = u1.indexOf('.json') >= 0 ? u1.replace('.json', '.geojson') : u1.indexOf('.geojson') < 0 ? u1.replace('?', '.geojson?') : u1; 
+    u1 = u1 + (u1.indexOf('?') < 0 ? '?' : '');
+    u1 = u1.indexOf('.json') >= 0   ? u1.replace('.json', '.geojson') :
+         u1.indexOf('.geojson') < 0 ? u1.replace('?', '.geojson?') :
+                                      u1; 
 
     var layer;
     let paivitetaanAjankohtamuutoksessa = url.indexOf('/jeti-api/') >= 0;
@@ -63,19 +64,29 @@ let newVectorLayerImpl = (tiling, url, shortName, title_fi, title_en, opacity, p
         projection: projection,
         strategy:   tiling ? ol.loadingstrategy.tile(tileGrid) : ol.loadingstrategy.all,
         loader:     extent => {
-            let u2 = (kaavio() && url.indexOf('-notifications') == -1 ? '&presentation=diagram' : '') +
-                     (kaavio() && url.indexOf('-notifications') >= 0  ? '&schema=true' : '');
-            let time = paivitetaanAjankohtamuutoksessa && ajanhetki() ? limitInterval(toISOStringNoMillis(ajanhetki()) + '/' + toISOStringNoMillis(ajanhetki()))
-                                                                      : aikavali() ? limitInterval(toISOStringNoMillis(aikavali()[0]) + '/' + toISOStringNoMillis(aikavali()[1]))
-                                                                      : undefined;
-            let u3 = (!propertyName                                           ? '' : '&propertyName=' + propertyName) +
-             (u1.indexOf('time=') >= 0 || u1.indexOf('start=') >= 0 || u1.indexOf('train-locations') >= 0 || u1.indexOf('-notifications') >= 0 || aikavali() == undefined ? '' : '&time=' + time) +
-             (!typeNames                                              ? '' : '&typeNames=' + typeNames);
+            let u2 = [tiling ? ['bbox=' + extent.join(',')] : [],
+                      kaavio() && url.indexOf('-notifications') == -1 ? ['presentation=diagram'] : [],
+                      kaavio() && url.indexOf('-notifications') >= 0  ? ['schema=true'] : []].flat();
+            let time_ = ajanhetki() ? [ajanhetki(), ajanhetki()] :
+                        aikavali()  ? aikavali() : undefined;
+            let time = time_ ? limitInterval(time_.map(toISOStringNoMillis).join('/')) : time_;
+
+            let u3 = [!propertyName                                           ? [] : ['propertyName=' + propertyName],
+                      u1.indexOf('time=') >= 0 || u1.indexOf('start=') >= 0 || u1.indexOf('train-locations') >= 0 || u1.indexOf('-notifications') >= 0 || time == undefined ? [] : ['time=' + time],
+                      !typeNames                                              ? [] : ['typeNames=' + typeNames]].flat();
 
             layer.dispatchEvent("loadStart");
-            getJson((u1 + (tiling ? '&bbox=' + extent.join(',') : '') + u2 + u3).replaceAll('?&','?'), data => {
+            getJson([u1, u2, u3].flat().join('&').replace('?&','?'), data => {
                 layer.dispatchEvent("loadSuccess");
                 let features = format.readFeatures(data);
+                features.forEach(x => {
+                    let tunniste = lueTunniste(x.getProperties());
+                    if (tunniste) {
+                        x.setId(tunniste);
+                    } else if (x.getProperties().id) {
+                        x.setId(x.getProperties().id);
+                    }
+                });
                 features.forEach(applyStyle(styleOrHandler, ajanhetki, aikavali));
                 if (prepareFeatures) {
                     source.addFeatures(prepareFeatures(features, layer));
@@ -187,7 +198,7 @@ let layers = (kaavio, ajanhetki, aikavali) => [
     new ol.layer.Group({
         title: mkLayerTitle('Paikat','Locations'),
         layers: [
-            newVectorLayer(infraAPIUrl() + 'aikataulupaikat'       , 'aik', 'Aikataulupaikat'       , 'Timetable locations'     , opacity, 'geometria,tunniste,uickoodi,haetunDatanVoimassaoloaika'    , apStyle, undefined, undefined, kaavio, ajanhetki, aikavali),
+            newVectorLayer(infraAPIUrl() + 'aikataulupaikat'       , 'aik', 'Aikataulupaikat'       , 'Timetable locations'     , opacity, 'geometria,tunniste,uicKoodi,haetunDatanVoimassaoloaika'    , apStyle, undefined, undefined, kaavio, ajanhetki, aikavali),
             newVectorLayer(infraAPIUrl() + 'liikennepaikanosat'    , 'osa', 'Liikennepaikan osat'   , 'Parts of station'        , opacity, 'geometria,lyhenne,nimi,tunniste,haetunDatanVoimassaoloaika', lpOsaStyle, undefined, undefined, kaavio, ajanhetki, aikavali),
             newVectorLayer(infraAPIUrl() + 'rautatieliikennepaikat', 'rlv', 'Linjavaihteet'         , 'Line switches'           , opacity, 'geometria,lyhenne,nimi,tunniste,haetunDatanVoimassaoloaika', lvStyle    , 'linjavaihde', undefined, kaavio, ajanhetki, aikavali),
             newVectorLayer(infraAPIUrl() + 'rautatieliikennepaikat', 'rse', 'Seisakkeet'            , 'Stops'                   , opacity, 'geometria,lyhenne,nimi,tunniste,haetunDatanVoimassaoloaika', seStyle    , 'seisake', undefined, kaavio, ajanhetki, aikavali),
@@ -232,19 +243,19 @@ let layers = (kaavio, ajanhetki, aikavali) => [
     new ol.layer.Group({
         title: mkLayerTitle('Valvonta','Supervision'),
         layers: [].concat(
-            newVectorLayer(infraAPIUrl() + 'elementit', 'vir', 'Virroitinvalvontakamerat', 'Pantograph monitoring cameras', opacity, 'geometria,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika', elemStyle, 'virroitinvalvontakamera', undefined, kaavio, ajanhetki, aikavali),
-            newVectorLayer(infraAPIUrl() + 'elementit', 'rfi', 'RFID-lukijat'            , 'RFID-readers'                 , opacity, 'geometria,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika', elemStyle, 'rfidlukija', undefined, kaavio, ajanhetki, aikavali),
-            newVectorLayer(infraAPIUrl() + 'elementit', 'pyo', 'Pyörävoimailmaisimet'    , 'Wheel force indicators'       , opacity, 'geometria,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika', elemStyle, 'pyoravoimailmaisin', undefined, kaavio, ajanhetki, aikavali),
-            newVectorLayer(infraAPIUrl() + 'elementit', 'kuu', 'Kuumakäynti-ilmaisimet'  , 'Hotbox detectors'             , opacity, 'geometria,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika', elemStyle, 'kuumakayntiilmaisin', undefined, kaavio, ajanhetki, aikavali)
+            newVectorLayer(infraAPIUrl() + 'elementit', 'vir', 'Virroitinvalvontakamerat', 'Pantograph monitoring cameras', opacity, 'geometria,kuvaus,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika', elemStyle, 'virroitinvalvontakamera', undefined, kaavio, ajanhetki, aikavali),
+            newVectorLayer(infraAPIUrl() + 'elementit', 'rfi', 'RFID-lukijat'            , 'RFID-readers'                 , opacity, 'geometria,kuvaus,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika', elemStyle, 'rfidlukija', undefined, kaavio, ajanhetki, aikavali),
+            newVectorLayer(infraAPIUrl() + 'elementit', 'pyo', 'Pyörävoimailmaisimet'    , 'Wheel force indicators'       , opacity, 'geometria,kuvaus,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika', elemStyle, 'pyoravoimailmaisin', undefined, kaavio, ajanhetki, aikavali),
+            newVectorLayer(infraAPIUrl() + 'elementit', 'kuu', 'Kuumakäynti-ilmaisimet'  , 'Hotbox detectors'             , opacity, 'geometria,kuvaus,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika', elemStyle, 'kuumakayntiilmaisin', undefined, kaavio, ajanhetki, aikavali)
         )
     }),
     new ol.layer.Group({
         title: mkLayerTitle('Elementit','Elements'),
         layers: [
             newVectorLayer(infraAPIUrl() + 'elementit', 'sei', 'Seislevyt'                , 'Stop boards'           , opacity, 'geometria,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika'                                                         , elemStyle, 'seislevy', undefined, kaavio, ajanhetki, aikavali),
-            newVectorLayer(infraAPIUrl() + 'elementit', 'pys', 'Pysäytyslaitteet'         , 'Stop devices'          , opacity, 'geometria,nimi,pysaytyslaite.kasinAsetettava,pysaytyslaite.suojaussuunta,pysaytyslaite.varmuuslukittu,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika'                            , elemStyle, 'raiteensulku', undefined, kaavio, ajanhetki, aikavali),
+            newVectorLayer(infraAPIUrl() + 'elementit', 'pys', 'Pysäytyslaitteet'         , 'Stop devices'          , opacity, 'geometria,nimi,pysaytyslaite.kasinAsetettava,pysaytyslaite.suojaussuunta,pysaytyslaite.varmuuslukittu,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika', elemStyle, 'pysaytyslaite', undefined, kaavio, ajanhetki, aikavali),
             newVectorLayer(infraAPIUrl() + 'elementit', 'lir', 'Liikennepaikan rajamerkit', 'Station boundary marks', opacity, 'geometria,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika'                                                         , elemStyle, 'liikennepaikanraja', undefined, kaavio, ajanhetki, aikavali),
-            newVectorLayer(infraAPIUrl() + 'elementit', 'bal', 'Baliisit'                 , 'Balises'               , opacity, 'baliisi.toistopiste,geometria,nimi,rotaatio,baliisi.suunta,tunniste,tyyppi,haetunDatanVoimassaoloaika'                      , elemStyle, 'baliisi', undefined, kaavio, ajanhetki, aikavali),
+            newVectorLayer(infraAPIUrl() + 'elementit', 'bal', 'Baliisit'                 , 'Balises'               , opacity, 'geometria,nimi,rotaatio,baliisi.suunta,baliisi.tyyppi,tunniste,tyyppi,haetunDatanVoimassaoloaika'                      , elemStyle, 'baliisi', undefined, kaavio, ajanhetki, aikavali),
             newVectorLayer(infraAPIUrl() + 'elementit', 'opa', 'Opastimet'                , 'Signals'               , opacity, 'geometria,nimi,opastin.puoli,opastin.suunta,opastin.tyyppi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika'             , elemStyle, 'opastin', undefined, kaavio, ajanhetki, aikavali),
             newVectorLayer(infraAPIUrl() + 'elementit', 'pus', 'Puskimet'                 , 'Buffers'               , opacity, 'geometria,nimi,rotaatio,tunniste,tyyppi,haetunDatanVoimassaoloaika'                                                         , elemStyle, 'puskin', undefined, kaavio, ajanhetki, aikavali),
             newVectorLayer(infraAPIUrl() + 'elementit', 'vai', 'Vaihteet'                 , 'Switches'              , opacity, 'geometria,nimi,rotaatio,tunniste,tyyppi,vaihde.kasikaantoisyys,vaihde.risteyssuhde,vaihde.tyyppi,haetunDatanVoimassaoloaika', elemStyle, 'vaihde', undefined, kaavio, ajanhetki, aikavali),
@@ -255,10 +266,10 @@ let layers = (kaavio, ajanhetki, aikavali) => [
     new ol.layer.Group({
         title: mkLayerTitle('Ennakkotiedot','Plans & announcements'),
         layers: [
-            newVectorLayer(etj2APIUrl() + 'vuosisuunnitelmat'  , 'vs' , 'Vuosisuunnitelmat'  , 'Yearly plans'                    , opacity, 'laskennallinenKarttapiste,tila,tunniste,voimassa', vsStyle, undefined, undefined, kaavio, ajanhetki, aikavali),
-            newVectorLayer(etj2APIUrl() + 'ennakkosuunnitelmat', 'es' , 'Ennakkosuunnitelmat', 'Preliminary plans'               , opacity, 'laskennallinenKarttapiste,tila,tunniste,voimassa', esStyle, undefined, undefined, kaavio, ajanhetki, aikavali),
-            newVectorLayer(etj2APIUrl() + 'ennakkoilmoitukset' , 'ei' , 'Ennakkoilmoitukset' , 'Route announcements'             , opacity, 'laskennallinenKarttapiste,tila,tunniste,voimassa', eiStyle, undefined, undefined, kaavio, ajanhetki, aikavali),
-            newVectorLayer(etj2APIUrl() + 'loilmoitukset'      , 'loi', 'LOilmoitukset'      , 'Traffic controller announcements', opacity, 'ensimmainenAktiivisuusaika,laskennallinenKarttapiste,tila,tunniste,viimeinenAktiivisuusaika', loStyle, undefined, undefined, kaavio, ajanhetki, aikavali)
+            newVectorLayer(etj2APIUrl() + 'vuosisuunnitelmat'  , 'vs' , 'Vuosisuunnitelmat'  , 'Yearly plans'                    , opacity, 'laskennallinenKarttapiste,sisainenTunniste,tila,tunniste,voimassa', vsStyle, undefined, undefined, kaavio, ajanhetki, aikavali),
+            newVectorLayer(etj2APIUrl() + 'ennakkosuunnitelmat', 'es' , 'Ennakkosuunnitelmat', 'Preliminary plans'               , opacity, 'laskennallinenKarttapiste,sisainenTunniste,tila,tunniste,voimassa', esStyle, undefined, undefined, kaavio, ajanhetki, aikavali),
+            newVectorLayer(etj2APIUrl() + 'ennakkoilmoitukset' , 'ei' , 'Ennakkoilmoitukset' , 'Route announcements'             , opacity, 'laskennallinenKarttapiste,sisainenTunniste,tila,tunniste,voimassa', eiStyle, undefined, undefined, kaavio, ajanhetki, aikavali),
+            newVectorLayer(etj2APIUrl() + 'loilmoitukset'      , 'loi', 'LOilmoitukset'      , 'Traffic controller announcements', opacity, 'ensimmainenAktiivisuusaika,laskennallinenKarttapiste,sisainenTunniste,tila,tunniste,viimeinenAktiivisuusaika', loStyle, undefined, undefined, kaavio, ajanhetki, aikavali)
         ]
     }),
 

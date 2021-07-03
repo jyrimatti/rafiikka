@@ -19,7 +19,10 @@ on(ratanumerotDS.events, "done", () => {
     }
 });
 
-let valittunaRatanumero      = () => onkoRatanumero(valittuDS.data);
+let valittunaRatanumero = () => {
+    let x = onkoRatanumero(valittuDS.data);
+    return !x ? x : x[1];
+};
 let valittunaAikataulupaikka = () => valittuDS.data instanceof Array && valittuDS.data.length > 0;
 
 window.aktiivisetJunatDS = new am4core.DataSource();
@@ -46,6 +49,7 @@ window.ratanumeroChanged = val => {
         log("odotellaan ratanumeroiden latautumista...");
         return false;
     }
+    val = '(' + val + ')';
     if (val != valittuDS.data) {
         log("Valittiin ratanumero: " + val);
         valittuDS.data = val;
@@ -288,7 +292,7 @@ window.onload = () => {
         add(yAxis.renderer.labels.template.adapter, "text",           renderLabel);
         on(yAxis.renderer.labels.template.events, "doublehit", ev => {
             if (valittunaRatanumero() && ev.target.currentText) {
-                let rkmsijainti = '(' + valittuDS.data + ') ' + ev.target.currentText;
+                let rkmsijainti = valittuDS.data + ' ' + ev.target.currentText;
                 if (onkoRatakmSijainti(rkmsijainti)) {
                     kartta(rkmsijainti);
                 }
@@ -303,15 +307,16 @@ window.onload = () => {
 
 
         on(valittuDS.events, "done", ev => {
-            if (valittunaRatanumero()) {
+            let ratanumero = valittunaRatanumero();
+            if (ratanumero) {
                 if (!ratanumerotDS.data || ratanumerotDS.data.length == 0) {
                     log('odotellaan ratanumeroiden latautumista...');
                     return;
                 }
-                yAxis.title.text = "(" + ev.target.data + ")";
+                yAxis.title.text = "(" + ratanumero + ")";
                 on(yAxis.title.events, 'doublehit', () => kartta(yAxis.title.text));
-                yAxis.min = ratanumerotDS.data[ev.target.data][0];
-                yAxis.max = ratanumerotDS.data[ev.target.data][1];
+                yAxis.min = ratanumerotDS.data[ratanumero][0];
+                yAxis.max = ratanumerotDS.data[ratanumero][1];
             } else if (valittunaAikataulupaikka()) {
                 if (!aikataulupaikatDS.data || aikataulupaikatDS.data.length == 0) {
                     log('odotellaan aikataulupaikkojen latautumista...');
@@ -347,7 +352,7 @@ window.onload = () => {
             }
             let ratanumerot = Object.keys(ev.target.data).sort();
             ratanumeroSelect.html = "<label for='ratanumeroRadio'><select id='ratanumero' onchange='window.ratanumeroChanged(this.value)'>{}</select></label>";
-            ratanumeroSelect.html = ratanumeroSelect.html.replace("{}", ratanumerot.map(x => "<option " + (getMainState('sijainti') == x ? "selected='selected'" : "") + ">" + x + "</option>").join(""));
+            ratanumeroSelect.html = ratanumeroSelect.html.replace("{}", ratanumerot.map(x => "<option " + (getMainState('sijainti') === '(' + x + ')' ? "selected='selected'" : "") + ">" + x + "</option>").join(""));
         });
 
         let aikataulupaikkaContainer = yAkseliValintaContainer.createChild(am4core.Container);
@@ -514,7 +519,7 @@ window.onload = () => {
                 let fromY = yAxis.positionToValue(yAxis.toAxisPosition(y.start));
                 let toY   = yAxis.positionToValue(yAxis.toAxisPosition(y.end));
                 let ratakmvali = {
-                    ratanumero: valittunaRatanumero() ? valittuDS.data : 'TODO: ?',
+                    ratanumero: valittunaRatanumero() || 'TODO: ?',
                     alku: {
                         ratakm: Math.floor(fromY/1000),
                         etaisyys: Math.floor(fromY % 1000)
@@ -598,7 +603,7 @@ window.onload = () => {
         let luoRangetJaBreakit = ev => {
             logDiff("Luodaan rangeja ja breakkeja", () => {
                 Object.values(ev.target.data).flat().forEach(x => {
-                    x.ratakmvalit.filter(x => x.ratanumero == valittuDS.data)
+                    x.ratakmvalit.filter(x => '(' + x.ratanumero + ')' == valittuDS.data)
                                     .forEach(function(r) {
                         let range                        = new am4charts.ValueAxisDataItem();
                         yAxis.axisRanges.push(range);
@@ -747,7 +752,7 @@ window.onload = () => {
                                 .forEach(y => y.isActive = isActive);
                         });
                 });
-                on(series.columns.template.events, 'doublehit', ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.sisainenTunniste, ev.target.dataItem.dataContext.location));
+                on(series.columns.template.events, 'doublehit', ev => kartta(ev.target.dataItem.dataContext.tunniste, ev.target.dataItem.dataContext.sisainenTunniste));
             });
 
             on(series.events, "datavalidated", ev => {
@@ -1314,7 +1319,20 @@ window.onload = () => {
     });
 
     for (let i = 1; i < getStates().length; ++i) {
-        kartta(getSubState(i)('sijainti'), undefined, (1 + ((i-1)%2)*60 + Math.random()*5) + '%', (1 + ((i-1)%4)*20 + Math.random()*5) + '%');
+        let offsetX1;
+        let offsetY1;
+        let offsetX2;
+        let offsetY2;
+        if (getStates().length == 2) {
+            offsetX1 = '4em';
+            offsetY1 = '10em';
+            offsetX2 = '4em';
+            offsetY2 = '4em';
+        } else {
+            offsetX1 = (1 + ((i-1)%2)*60 + Math.random()*5) + '%';
+            offsetY1 = (1 + ((i-1)%4)*20 + Math.random()*5) + '%';
+        }
+        kartta(getSubState(i)('sijainti'), undefined, getSubState(i)('time'), true, offsetX1, offsetY1, offsetX2, offsetY2);
     }
 
     window.asetaAikavali = voimassa => {
@@ -1326,9 +1344,9 @@ window.onload = () => {
             .filter(onkoJeti)
             .slice(0,1)
             .forEach(tunniste => {
-        haeEnnakkotiedonRatanumerotJaVoimassaolo(tunniste, (ratanumero, voimassa) => {
-            ratanumeroChanged(ratanumero);
-            asetaAikavali(voimassa);
-        });
+                haeEnnakkotiedonRatanumerotJaVoimassaolo(tunniste, (ratanumero, voimassa) => {
+                    ratanumeroChanged(ratanumero);
+                    asetaAikavali(voimassa);
+                });
     });
 }

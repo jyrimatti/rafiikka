@@ -8,7 +8,7 @@ let luoMuutoksetPopup = (luotuja, duration, muutokset, title) => {
 };
 let luoMuutoksetPopup_ = (luotuja, duration, muutokset, title) => {
     let [container, elemHeader] = luoIkkuna(title || (luotuja ? 'Ilmaantuvat: ' : 'Poistuvat: ') + prettyPrint(duration));
-    container.setAttribute("class", "popupContainer infoPopup muutoksetContainer");
+    container.setAttribute("class", "popupContainer muutoksetContainer");
 
     let content = document.createElement("div");
     
@@ -17,18 +17,15 @@ let luoMuutoksetPopup_ = (luotuja, duration, muutokset, title) => {
     content.setAttribute("class", "muutoksetPopup");
     container.appendChild(content);
 
+    container.hiddenState = {_default: false};
+
     dragElement(container);
 
     muutokset.forEach(x => getJson(luotuja ? x(duration).luotuja : x(duration).poistuneita, luoRyhma(container, luotuja, x(duration).nimi)));
 };
 
 let luoRyhma = (container, luotuja, title) => {
-    let h = document.createElement("h5");
-    h.innerText = title;
-    container.appendChild(h);
-
-    let ul = document.createElement("ul");
-    container.appendChild(ul);
+    let ul = luoCollapsoitavaLista(container, title, container.hiddenState);
     ul.innerHTML = 'ladataan...';
 
     return data => {

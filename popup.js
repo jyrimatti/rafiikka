@@ -1,10 +1,20 @@
-let luoIkkuna = (title, offsetX, offsetY, onClose) => {
+let luoIkkuna = (title, offsetX1, offsetY1, offsetX2, offsetY2, onClose) => {
     let container = document.createElement("div");
     document.body.appendChild(container);
 
-    if (offsetX) {
-        container.style.left = offsetX;
-        container.style.top  = offsetY;
+    if (offsetX1) {
+        container.style.left = offsetX1;
+    }
+    if (offsetY1) {
+        container.style.top = offsetY1;
+    }
+    if (offsetX2) {
+        container.style.right = offsetX2;
+        container.style.width = 'auto';
+    }
+    if (offsetY2) {
+        container.style.bottom = offsetY2;
+        container.style.height = 'auto';
     }
 
     let elemHeader = document.createElement("div");
@@ -66,14 +76,25 @@ let avaaInfo = (tunniste, offsetX, offsetY, time) => {
     }
 };
 
+let kurkista = (elem, creator) => {
+    setTimeout(() => {
+        let container = creator();
+        let f = () => {
+            if (container.parentElement) {
+                container.parentElement.removeChild(container);
+                container.remove();
+            }
+        };
+        var siirryttySisaan = false;
+        container.addEventListener("mouseover", () => {
+            siirryttySisaan = true;
+            container.addEventListener("mouseout", f, { once: true });
+        }, { once: true });
+        elem.addEventListener("mouseout", () => setTimeout( () => siirryttySisaan ? '' : f(), 100), { once: true });
+        elem.addEventListener("click", f, { once: true });
+    }, 500);
+};
+
 let kurkistaInfo = (elem, tunniste, offsetX, offsetY, time) => {
-    let container = avaaInfo(tunniste, offsetX, offsetY, time);
-    let f = () => {
-        if (container.parentElement) {
-            container.parentElement.removeChild(container);
-            container.remove();
-        }
-    };
-    elem.addEventListener("mouseout", f, { once: true });
-    elem.addEventListener("click", f, { once: true });
+    kurkista(elem, () => avaaInfo(tunniste, offsetX, offsetY, time));
 };

@@ -31,8 +31,9 @@ let parsiAikataulu = (paiva, data) => {
                     let sijainti = null;
                     let paikka = aikataulupaikatDS.data[row.stationUICCode];
                     if (paikka != null) {
-                        if (valittunaRatanumero()) {
-                            paikka.ratakmSijainnit.filter(x => x.ratanumero == valittuDS.data)
+                        let ratanumero = valittunaRatanumero();
+                        if (ratanumero) {
+                            paikka.ratakmSijainnit.filter(x => x.ratanumero == ratanumero)
                                 .forEach(x => {
                                     sijainti = x.ratakm * 1000 + x.etaisyys
                                 });
