@@ -30,6 +30,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
         optgroupField: 'luokka',
         optgroupValueField: 'luokka',
         optgroupLabelField: 'luokka',
+        dropdownParent: 'body',
         score: _ => item => item.score,
         render: {
             item: (item, escape) => '<div class="item">' + item.nimi + '</div>',

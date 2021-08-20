@@ -271,15 +271,15 @@ body.fi .en, body.en .fi {
     margin-left: 0.7em;
     width: 90%;
 }
-.selectize-control .optgroup div[data-selectable].active {
+.selectize-dropdown .optgroup div[data-selectable].active {
     background-color: thistle;
     border-color: Black;
 }
-.selectize-control .optgroup div[data-selectable] {
+.selectize-dropdown .optgroup div[data-selectable] {
     position: relative;
     border-left: 5px solid transparent;
 }
-.selectize-control .optgroup div[data-selectable] > ul {
+.selectize-dropdown .optgroup div[data-selectable] > ul {
     position: absolute;
     top: 0;
     right: 0;
@@ -288,29 +288,29 @@ body.fi .en, body.en .fi {
     padding: 0;
     margin: 0;
 }
-.selectize-control .optgroup-header {
+.selectize-dropdown .optgroup-header {
     background-color: inherit;
     font-size: 2em;
     font-variant: small-caps;
     font-style: italic;
 }
-.selectize-control .optgroup[data-group=Infra] {
+.selectize-dropdown .optgroup[data-group=Infra] {
     background-color: AliceBlue;
 }
-.selectize-control .optgroup[data-group=Jeti] {
+.selectize-dropdown .optgroup[data-group=Jeti] {
     background-color: LightYellow;
 }
-.selectize-control .optgroup[data-group=Ruma] {
+.selectize-dropdown .optgroup[data-group=Ruma] {
     background-color: MistyRose;
 }
-.selectize-control .optgroup[data-group=Aikataulut] {
+.selectize-dropdown .optgroup[data-group=Aikataulut] {
     background-color: darkseagreen;
 }
-.selectize-control .optgroup[data-group=Junat] {
+.selectize-dropdown .optgroup[data-group=Junat] {
     background-color: Thistle;
 }
 
-.selectize-control .score {
+.selectize-dropdown .score {
     font-size: 0.75em;
     color: LightGray;
     font-style: italic;
@@ -415,7 +415,7 @@ body.fi .en, body.en .fi {
     border-left: 0;
     padding-left: 0;
 }
-.selectize-control .optgroup .title {
+.selectize-dropdown .optgroup .title {
     padding-left: 1.5em;
     padding-right: 3em;
     text-indent: -1.5em;
