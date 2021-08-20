@@ -125,15 +125,15 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
         search.$control.on('keydown', ev => {
             if (ev.key == "ArrowRight") {
                 if (prev) {
-                    prev.dispatchEvent(new MouseEvent('mouseout'));
+                    prev.dispatchEvent(new MouseEvent('mouseleave'));
                     prev = undefined;
                 }
                 let opt = search.$activeOption[0];
                 prev = opt.querySelector('.karttaikoni');
-                prev.onmouseover({ pageX: 0, pageY: 0});
+                prev.onmouseenter({ pageX: 0, pageY: 0});
             } else {
                 if (prev) {
-                    prev.dispatchEvent(new MouseEvent('mouseout'));
+                    prev.dispatchEvent(new MouseEvent('mouseleave'));
                     prev = undefined;
                 }
             }

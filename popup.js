@@ -29,7 +29,7 @@ let luoIkkuna = (title, offsetX1, offsetY1, offsetX2, offsetY2, onClose) => {
     let close = document.createElement("div");
     close.setAttribute("class", "close");
     close.innerText = "x";
-    close.addEventListener('mousedown', () => {
+    close.addEventListener('click', () => {
         if (onClose) {
             onClose();
         }
@@ -77,22 +77,20 @@ let avaaInfo = (tunniste, offsetX, offsetY, time) => {
 };
 
 let kurkista = (elem, creator) => {
-    setTimeout(() => {
-        let container = creator();
-        let f = () => {
-            if (container.parentElement) {
-                container.parentElement.removeChild(container);
-                container.remove();
-            }
-        };
-        var siirryttySisaan = false;
-        container.addEventListener("mouseover", () => {
-            siirryttySisaan = true;
-            container.addEventListener("mouseout", f, { once: true });
-        }, { once: true });
-        elem.addEventListener("mouseout", () => setTimeout( () => siirryttySisaan ? '' : f(), 100), { once: true });
-        elem.addEventListener("click", f, { once: true });
-    }, 500);
+    let container = creator();
+    let f = () => {
+        if (container.parentElement) {
+            container.parentElement.removeChild(container);
+            container.remove();
+        }
+    };
+    var siirryttySisaan = false;
+    container.addEventListener("mouseenter", () => {
+        siirryttySisaan = true;
+        container.addEventListener("mouseleave", f, { once: true });
+    }, { once: true });
+    elem.addEventListener("mouseleave", () => setTimeout( () => siirryttySisaan ? '' : f(), 100), { once: true });
+    elem.addEventListener("click", f, { once: true });
 };
 
 let kurkistaInfo = (elem, tunniste, offsetX, offsetY, time) => {

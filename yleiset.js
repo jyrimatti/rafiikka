@@ -643,7 +643,7 @@ let luoInfoLinkki = (tunniste, time) => onkoInfra(tunniste) || onkoJeti(tunniste
            title='Avaa tietoja'
            class='infoikoni'
            onclick='avaaInfo("${tunniste}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'
-           onmouseover='kurkistaInfo(this, "${tunniste}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'>
+           onmouseenter='kurkistaInfo(this, "${tunniste}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'>
             ℹ️
         </a>
     </li>` : '';
@@ -677,8 +677,8 @@ let luoKarttaLinkki = (tunniste, title, time) => onkoInfra(tunniste) || onkoTREX
         <a href=""
            title='Avaa kartalla'
            class='infoikoni karttaikoni'
-           onclick='kartta("${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;/g,'')}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'
-           onmouseover='kurkistaKartta(this, "${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;|\n/g,'')}", ${time ? '"' + time + '"' : time}, event.pageX, event.pageY); return false;' />
+           onclick='kartta("${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;/g,'')}", ${time ? '"' + time + '"' : time}, true, event.pageX, event.pageY); return false;'
+           onmouseenter='kurkistaKartta(this, "${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;|\n/g,'')}", ${time ? '"' + time + '"' : time}, event.pageX, event.pageY); return false;' />
            🗺
         </a>
     </li>

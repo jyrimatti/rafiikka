@@ -118,8 +118,8 @@ let updateListviewContents = (listview, map) => {
                     let span = document.createElement('span');
                     span.innerHTML = text;
                     span.addEventListener('click',     ev => listview.onSelect(f, ev));
-                    span.addEventListener('mouseover', ev => listview.onHover(f, ev));
-                    span.addEventListener('mouseout',  ev => listview.onHover(f, ev));
+                    span.addEventListener('mouseenter', ev => listview.onHover(f, ev));
+                    span.addEventListener('mouseleave',  ev => listview.onHover(f, ev));
                     licontent.appendChild(span);
                     li.appendChild(licontent);
 

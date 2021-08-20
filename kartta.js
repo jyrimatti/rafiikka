@@ -125,7 +125,6 @@ let onDrop = lisaa => (source, target) => {
                  .filter(layer => !targetMap.getLayers().getArray().find(l => l.get('title') == layer.get('title')))
                  .forEach(x => {
             sourceMap.removeLayer(x);
-            targetMap.addLayer(x);
             lisaa(x.get('shortName'));
         });
         sourceMap.getInteractions().getArray().forEach(x => {
@@ -137,8 +136,7 @@ let onDrop = lisaa => (source, target) => {
             targetMap.addOverlay(x);
         });
 
-        source.parentElement.removeChild(source);
-        source.remove();
+        source.getElementsByClassName('close')[0].dispatchEvent(new MouseEvent('click'));
         target.getElementsByClassName('title')[0].innerText = '...';
         target.getElementsByClassName('header')[0].getElementsByTagName('a').forEach(e => e.innerHTML = '');
     }
@@ -512,8 +510,29 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
 
     createListview(listview, onHover, onSelect);
 
-    let lisaa = lisaaKartalle(map);
-    let search = initSearch(haku, lisaa, poistaKartalta(map));
+    var search;
+    let updateTitleAndState = tunniste => {
+        search.createItem(tunniste);
+        let objects = search.getValue();
+        let title = objects instanceof Array ? objects.join(',') : objects;
+        if (persistState) {
+            setSubState(kartanIndeksi(elem.kartta))('sijainti', title);
+            container.getElementsByClassName('title')[0].innerText = title;
+        }
+    };
+
+    let lisaa = tunniste => {
+        let ret = lisaaKartalle(map)(tunniste);
+        if (ret) {
+            updateTitleAndState(tunniste);
+        }
+        return ret;
+    };
+    let poista = tunniste => {
+        poistaKartalta(map)(tunniste);
+        updateTitleAndState(tunniste);
+    };
+    search = initSearch(haku, lisaa, poista);
     search.settings.create = x => ({tunniste: x, nimi: title || x});
     search.disable();
     if (tunniste) {
@@ -557,11 +576,18 @@ let kurkistaKartta = (elem, tunniste, title, time, offsetX, offsetY) => {
     kurkista(elem, () => kartta(tunniste, title, time, false, offsetX, offsetY));
 };
 
+let etsiTaso = map => tunniste => flatLayerGroups(map.getLayers().getArray()).find(l => l.get('shortName') == tunniste);
+
 let poistaKartalta = map => tunniste => {
-    map.removeLayer(flatLayerGroups(map.getLayers().getArray()).find(l => l.get('shortName') == tunniste));
+    map.removeLayer(etsiTaso(map)(tunniste));
 }
 
 let lisaaKartalle = map => tunniste => {
+    let taso = etsiTaso(map)(tunniste);
+    if (taso) {
+        // already on map
+        return taso;
+    }
     let wkt = onkoWKT(tunniste);
     let preselectLayer =
         onkoJuna(tunniste)                   ? junaLayer(map, tunniste) :
