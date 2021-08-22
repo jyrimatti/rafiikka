@@ -48,24 +48,43 @@ let paivitaJunienRatakmsijainnit = series => () => {
 
 
 window.junasijainnit = new Paho.MQTT.Client(mqttUrl, mqttPort, "rafiikka_" + parseInt(Math.random() * 10000, 10));
+var junasijainnit_connecting = false;
 junasijainnit.onConnectionLost = errorHandler;
-let junasijainnitPaalle = () => {
-    if (!junasijainnit.isConnected()) {
+let junasijainnitPaalle = juna => {
+    if (!junasijainnit_connecting && !junasijainnit.isConnected()) {
+        log('Connecting trains');
+        junasijainnit_connecting = true;
         junasijainnit.connect({
             useSSL: true,
             timeout: 3,
             onSuccess: () => {
-                junasijainnit.subscribe(mqttTopic, {
+                junasijainnit_connecting = false;
+                let topic = mqttTopic(juna);
+                log('Subscribing to', topic);
+                junasijainnit.subscribe(topic, {
                     qos: 0
                 });
             },
             onFailure: errorHandler
         });
+    } else if (juna) {
+        let topic = mqttTopic(juna);
+        log('Subscribing to', topic);
+        junasijainnit.subscribe(topic, {
+            qos: 0
+        });
     }
 };
-let junasijainnitPois = () => {
+let junasijainnitPois = (juna) => {
     if (junasijainnit.isConnected()) {
-        junasijainnit.disconnect();
+        if (juna) {
+            let topic = mqttTopic(juna);
+            log('Unsubscribing from', topic);
+            junasijainnit.unsubscribe(topic);
+        } else {
+            log('Disconnecting trains');
+            junasijainnit.disconnect();
+        }
     }
 };
 
@@ -95,7 +114,7 @@ let valitseJuna = juna => {
             aktiivisetJunatDS.data[juna.departureDate] = {};
         }
         aktiivisetJunatDS.data[juna.departureDate][juna.trainNumber] = true;
-        junasijainnitPaalle();
+        junasijainnitPaalle(juna);
     }
     aktiivisetJunatDS.dispatchImmediately("done", {departureDate: juna.departureDate, trainNumber: juna.trainNumber});
 };

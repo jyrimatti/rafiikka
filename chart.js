@@ -149,7 +149,7 @@ window.onload = () => {
         chart.tooltip.label.maxWidth = 400;
         chart.tooltip.label.wrap = true;
 
-        let luoAktiivinenListaus = (series, dataSource) => {
+        let luoAktiivinenListaus = (series, dataSource, onRemove) => {
             let legend = chart.legend.itemContainers.values.find(x => x.dataItem.name == series.name);
             let aktiiviset             = new am4charts.Legend();
             aktiiviset.dataSource      = dataSource || new am4core.DataSource();
@@ -170,6 +170,9 @@ window.onload = () => {
             aktiiviset.itemContainers.template.paddingBottom = 0;
 
             on(aktiiviset.itemContainers.template.events, "doublehit", ev => {
+                if (onRemove) {
+                    onRemove(ev.target.dataItem.dataContext);
+                }
                 let nimi = ev.target.dataItem.dataContext.name;
                 aktiiviset.dataSource.data.splice(aktiiviset.dataSource.data.findIndex(x => x.name == nimi), 1);
                 aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
@@ -999,7 +1002,7 @@ window.onload = () => {
         });
         
         on(chart.events, "ready", () => {
-            let aktiiviset = luoAktiivinenListaus(junatSeries);
+            let aktiiviset = luoAktiivinenListaus(junatSeries, undefined, valitseJuna);
             on(aktiivisetJunatDS.events, "done", ev => {
                 aktiiviset.dataSource.data = Object.keys(ev.target.data).flatMap(departureDate => Object.keys(ev.target.data[departureDate]).map(trainNumber => [departureDate, trainNumber])).map(e => {
                     return { name: e[0] + " (" + e[1] + ")",
@@ -1010,14 +1013,12 @@ window.onload = () => {
                 aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data});
                 junatSeries.show();
             });
-
-            on(aktiiviset.itemContainers.template.events, "doublehit", ev => valitseJuna(ev.target.dataItem.dataContext));
         });
         
         junasijainnit.onMessageArrived = onJunasijaintiArrived(junatSeries);
 
-        on(junatSeries.events, "shown", junasijainnitPaalle);
-        on(junatSeries.events, "hidden", junasijainnitPois);
+        on(junatSeries.events, "shown", () => junasijainnitPaalle());
+        on(junatSeries.events, "hidden", () => junasijainnitPois());
 
 
         log("Alustetaan aikataulut ja toteumat");
@@ -1039,14 +1040,17 @@ window.onload = () => {
         let viimeisteleJunaSeries = series => {
             let bullet                        = new am4core.Circle();
             bullet.radius                     = 2;
-            bullet.tooltipText                = "{paikka}\n{dateX}";
+            bullet.tooltipText                = "{dateX}\n" +
+                                                "{paikka.nimi} -> {commercialTrack}\n" +
+                                                "🛑:{trainStopping}, $:{commercialStop}";
             bullet.cloneTooltip               = false;
             bullet.propertyFields.fillOpacity = "paaty";
             bullet.states.create("hover").properties.scale = 1.5;
             series.bullets.push(bullet);
 
             let segment                 = series.segments.template;
-            segment.tooltipText         = "Lähtöpäivä: " + series.dummyData.departureDate + "\nJunanumero: " + series.dummyData.trainNumber; // jostain syystä placeholder-syntax ei näitä löydä...
+            segment.tooltipText         = series.dummyData.trainType + series.dummyData.trainNumber + ' (' + series.dummyData.departureDate + ")\n" +
+                                          (series.dummyData.commuterLineID ? series.dummyData.commuterLineID + ' ' : '') + series.dummyData.trainCategory + " (" + series.dummyData.operator + ")"; // jostain syystä placeholder-syntax ei näitä löydä...
             segment.cloneTooltip        = false;
             segment.tooltipPosition     = "pointer";
             segment.interactionsEnabled = true;
@@ -1165,6 +1169,7 @@ window.onload = () => {
         };
         let viimeisteleAikataulu = series => {
             viimeisteleJunaSeries(series);
+            series.strokeDasharray = "4 2";
             let juna = series.dummyData;
             
             ladatutAikataulut[juna.departureDate][juna.trainNumber] = series;
@@ -1172,7 +1177,10 @@ window.onload = () => {
             on(series.events, "over", () => junaOver(juna, series.data));
             on(series.events, "out", () => junaOut(juna));
 
-            series.bullets.each(x => on(x.events, "hit", () => valitseJuna(juna)));
+            series.bullets.each(x => on(x.events, "hit", ev => {
+                let dc = ev.target.dataItem.dataContext;
+                kartta(dc.paikka.tunniste, dc.paikka.nimi, undefined, undefined, ev.point.x, ev.point.y);
+            }));
             on(series.segments.template.events, "hit", () => valitseJuna(juna));
         };
 

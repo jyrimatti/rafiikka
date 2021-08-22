@@ -78,7 +78,7 @@ let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
 
 let mqttUrl = "rata.digitraffic.fi";
 let mqttPort = 443;
-let mqttTopic = 'train-locations/#';
+let mqttTopic = juna => 'train-locations/' + (juna ? juna.departureDate + '/' + juna.trainNumber : '#');
 
 let errorHandler = error => log("Virhe!", error, error.stack, new Error().stack);
 

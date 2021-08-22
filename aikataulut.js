@@ -25,6 +25,10 @@ let parsiAikataulu = (paiva, data) => {
                     departureDate: train.departureDate,
                     trainNumber:   train.trainNumber,
                     lahtenyt:      false,
+                    operator:      train.operatorShortCode,
+                    trainType:     train.trainType,
+                    trainCategory: train.trainCategory,
+                    commuterLineID: train.commuterLineID,
                     vari:          train.trainCategory == 'Cargo' ? 'blue' : 'red'
                 },
                 rows: train.timeTableRows.map(row => {
@@ -52,8 +56,11 @@ let parsiAikataulu = (paiva, data) => {
                         actualTime:    row.actualTime ? new Date(row.actualTime) : null,
                         sijainti:      sijainti,
                         uicKoodi:      row.stationUICCode,
-                        paikka:        paikka ? paikka.lyhenne : null,
-                        paaty:         0
+                        paikka:        paikka,
+                        paaty:         0,
+                        trainStopping: row.trainStopping || false,
+                        commercialStop: row.commercialStop || false,
+                        commercialTrack: row.commercialTrack === '' ? '?' : row.commercialTrack
                     };
                 })
             };

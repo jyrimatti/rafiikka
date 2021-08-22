@@ -202,7 +202,8 @@ let junaLayer = (map, tunniste) => {
     });
 
     setInterval(paivitaYksikot(layer, map), 1000);
-    junasijainnitPaalle();
+    let juna = onkoJuna(tunniste);
+    junasijainnitPaalle({departureDate: juna[1], trainNumber: juna[2]});
     return layer;
 }
 
