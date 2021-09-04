@@ -1038,11 +1038,17 @@ window.onload = () => {
         }
 
         let viimeisteleJunaSeries = series => {
-            let bullet                        = new am4core.Circle();
-            bullet.radius                     = 2;
-            bullet.tooltipText                = "{dateX}\n" +
-                                                "{paikka.nimi} -> {commercialTrack}\n" +
+            series.bullets.template           = new am4core.Circle();
+            let bullet                        = series.bullets.template;
+            bullet.radius                     = 3;
+            bullet.tooltip                    = new am4core.Tooltip();
+            bullet.tooltip.keepTargetHover    = true;
+            bullet.tooltip.label.interactionsEnabled = true;
+            bullet.tooltipHTML                = "{dateX}<br/>" +
+                                                "{paikka.nimi} -> {commercialTrack}<br/>" +
                                                 "🛑:{trainStopping}, $:{commercialStop}";
+            add(bullet.adapter, "tooltipHTML", (html,target) => 
+                html + '<br/>' + luoLinkit('grafiikka', target.dataItem.dataContext.paikka.tunniste, target.dataItem.dataContext.paikka.nimi, target.dataItem.dataContext.dateX));
             bullet.cloneTooltip               = false;
             bullet.propertyFields.fillOpacity = "paaty";
             bullet.states.create("hover").properties.scale = 1.5;
@@ -1054,10 +1060,28 @@ window.onload = () => {
             segment.cloneTooltip        = false;
             segment.tooltipPosition     = "pointer";
             segment.interactionsEnabled = true;
-            segment.states.create("hover").properties.strokeWidth  = 3;
-            segment.states.create("active").properties.strokeWidth = 3;
+            //segment.states.create("active").properties.strokeWidth = 3;
+            add(segment.adapter, "tooltipText", x => x);
 
             on(segment.events, "inited", ev => ev.target.isActive = onkoAktiivinen(series.dummyData));
+
+            let label = series.createChild(am4core.Label);
+            label.fill = series.stroke;
+            label.strokeDasharray = "1,0"; // tämä pitää nollata väkisin. Periytyy muuten viivan tyyleistä, ugh...
+            label.fontSize = 10;
+            label.strokeWidth = 1;
+            on(label.events, "over", () => segment.dispatchImmediately("over"));
+            on(segment.strokeSprite.events, "propertychanged", event => {
+                if (!label.text) {
+                    label.text = series.dummyData.trainType + series.dummyData.trainNumber;
+                }
+                if (event.property == "path") {
+                    label.path = series.segments.getIndex(0).strokeSprite.path;
+                    label.locationOnPath = 0.5; // pitää asettaa aina pathin asettamisen jälkeen, ugh...
+                }
+            });
+
+            return label;
         };
 
         
@@ -1168,7 +1192,9 @@ window.onload = () => {
             return [series];
         };
         let viimeisteleAikataulu = series => {
-            viimeisteleJunaSeries(series);
+            let label = viimeisteleJunaSeries(series);
+            label.padding(0, 0, -12, 0);
+
             series.strokeDasharray = "4 2";
             let juna = series.dummyData;
             
@@ -1177,11 +1203,9 @@ window.onload = () => {
             on(series.events, "over", () => junaOver(juna, series.data));
             on(series.events, "out", () => junaOut(juna));
 
-            series.bullets.each(x => on(x.events, "hit", ev => {
-                let dc = ev.target.dataItem.dataContext;
-                kartta(dc.paikka.tunniste, dc.paikka.nimi, undefined, undefined, ev.point.x, ev.point.y);
-            }));
+            series.bullets.each(x => on(x.events, "hit", () => valitseJuna(juna)));
             on(series.segments.template.events, "hit", () => valitseJuna(juna));
+            on(label.events, "hit", () => valitseJuna(juna));
         };
 
         let luoToteuma = train => {
@@ -1201,7 +1225,9 @@ window.onload = () => {
             return [series];
         };
         let viimeisteleToteuma = series => {
-            viimeisteleJunaSeries(series);
+            let label = viimeisteleJunaSeries(series);
+            label.padding(0, 0, 5, 0);
+
             let juna = series.dummyData;
 
             ladatutToteumat[juna.departureDate][juna.trainNumber] = series;
@@ -1211,6 +1237,7 @@ window.onload = () => {
                 
             series.bullets.each(x => on(x.events, "hit", () => valitseJuna(juna)));
             on(series.segments.template.events, "hit", () => valitseJuna(juna));
+            on(label.events, "hit", () => valitseJuna(juna));
         };
 
         let luoAikataulut = data => {
