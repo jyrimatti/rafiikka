@@ -103,6 +103,7 @@ let fetchJson = (url, opts, callback, errorCallback) =>
       .catch(errorCallback || errorHandler);
 
 let getJson  = (url,       callback, signal, errorCallback) => fetchJson(url, {method: 'GET', signal: signal}             , callback, errorCallback);
+let headJson = (url,       callback, signal, errorCallback) => fetchJson(url, {method: 'HEAD', signal: signal}            , callback, errorCallback);
 let postJson = (url, body, callback, signal, errorCallback) => fetchJson(url, {method: 'POST', signal: signal, body: body}, callback, errorCallback);
 
 getJson(infraAPIUrl() + 'revisions.json?count=1', data => {
@@ -358,16 +359,11 @@ let esTilat = ['hyväksytty', 'lähetetty', 'lisätietopyyntö', 'luonnos', 'per
 let vsTilat = ['alustava', 'toteutuu', 'tehty', 'poistettu', 'vuosiohjelmissa (tila poistunut käytöstä)', 'käynnissä (tila poistunut käytöstä)'];
 let loTilat = ['aktiivinen', 'poistettu'];
 
-if (window.location.hash == '#seed') {
+if (window.location.hash.endsWith('&seed')) {
     let seed = urls => {
         if (urls.length > 0) {
             log("seedataan", urls[0]);
-            fetch(urls[0], {
-                headers: {
-                    'Digitraffic-User': 'Rafiikka'
-                }
-            }).then(() => seed(urls.slice(1)))
-              .catch(() => seed(urls.slice(1)));
+            headJson(urls[0], () => seed(urls.slice(1)), undefined, () => seed(urls.slice(1)));
         } else {
             log("seedattu");
         }
