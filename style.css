@@ -433,8 +433,12 @@ body.fi .en, body.en .fi {
 }
 .aikavalinta .alkuaika,
 .aikavalinta .loppuaika {
-    width: 8em;
+    width: 13em;
     z-index: 9;
+    font-size: 0.8em;
+}
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    margin: 0;
 }
 .aikavalinta .slider {
     width: 99%;

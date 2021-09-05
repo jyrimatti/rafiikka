@@ -37,10 +37,12 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
     container.appendChild(aikavalinta);
 
     let alkuaika = document.createElement('input');
+    alkuaika.setAttribute('type', 'datetime-local');
     alkuaika.setAttribute('class', 'ajanhetki alkuaika');
     alkuaika.setAttribute('title', 'alkuaika');
 
     let loppuaika = document.createElement('input');
+    loppuaika.setAttribute('type', 'datetime-local');
     loppuaika.setAttribute('class', 'ajanhetki loppuaika');
     loppuaika.setAttribute('title', 'loppuaika');
 
@@ -62,16 +64,16 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
     aikavalinta.appendChild(sliderParent);
     aikavalinta.appendChild(loppuaika);
 
-    let [aa,la] = [alkuaika, loppuaika].map(x => flatpickr(x, { enableTime: true }));
-    alkuaika.onchange = () => aa.setDate(new Date(alkuaika.value));
-    loppuaika.onchange = () => la.setDate(new Date(loppuaika.value));
-    [aa, la].forEach(x => x.config.onChange.push( () => {
-        if (aa.selectedDates[0] > la.selectedDates[0]) {
-            la.setDate(aa.selectedDates[0]);
+    [alkuaika, loppuaika].forEach(x => x.addEventListener("input", () => {
+        let alku = new Date(alkuaika.value);
+        let loppu = new Date(loppuaika.value);
+        if (alku.getTime() > loppu.getTime()) {
+            loppuaika.value = alkuaika.value;
+            loppu = alku;
         }
-        slider.min = aa.selectedDates[0].getTime();
-        slider.max = la.selectedDates[0].getTime();
-        if (aa.selectedDates[0] == la.selectedDates[0]) {
+        slider.min = alku.getTime();
+        slider.max = loppu.getTime();
+        if (alku.getTime() == loppu.getTime()) {
             slider.disabled = true;
         }
         if (slider.disabled) {
@@ -79,11 +81,11 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
         }
     }));
     slider.parentElement.onclick = _ => {
-        let a = aa.selectedDates[0];
-        let b = la.selectedDates[0];
-        if (a.getTime() != b.getTime()) {
+        let alku = new Date(alkuaika.value);
+        let loppu = new Date(loppuaika.value);
+        if (alku.getTime() != loppu.getTime()) {
             slider.disabled = false;
-            slider.value = a.getTime();
+            slider.value = alku.getTime();
             slider.onchange();
         }
     };
@@ -92,12 +94,12 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
         slider.onchange();
     };
     slider.onchange = ev => {
-        let a = aa.selectedDates[0];
-        let b = la.selectedDates[0];
-        if (a.getTime() == b.getTime() || !slider.disabled) {
-            slider.parentElement.title = 'Näytetään ajanhetki ' + dateFns.dateFns.format(dateFns.dateFnsTz.utcToZonedTime(a, 'Europe/Helsinki'), "dd.MM.yyyy HH:mm");
+        let alku = new Date(alkuaika.value);
+        let loppu = new Date(loppuaika.value);
+        if (alku.getTime() == loppu.getTime() || !slider.disabled) {
+            slider.parentElement.title = 'Näytetään ajanhetki ' + dateFns.dateFns.format(dateFns.dateFnsTz.utcToZonedTime(alku, 'Europe/Helsinki'), "dd.MM.yyyy HH:mm");
         } else {
-            slider.parentElement.title = 'Näytetään aikaväli ' + dateFns.dateFns.format(a, "dd.MM.yyyy HH:mm") + ' - ' + dateFns.dateFns.format(b, "dd.MM.yyyy HH:mm") + '. Klikkaa valitaksesi ajanhetken.';
+            slider.parentElement.title = 'Näytetään aikaväli ' + dateFns.dateFns.format(alku, "dd.MM.yyyy HH:mm") + ' - ' + dateFns.dateFns.format(loppu, "dd.MM.yyyy HH:mm") + '. Klikkaa valitaksesi ajanhetken.';
         }
         if (ev) {
             ev.preventDefault();
@@ -305,12 +307,10 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
                                                                                                : new Date(parseInt(slider.value));
     let aikavali = (alku, loppu) => {
         if (alku) {
-            alkuaika.value = muotoileAjanhetki(alku);
-            loppuaika.value = muotoileAjanhetki(loppu);
             slider.min = alku.getTime();
             slider.max = loppu.getTime();
-            alkuaika.onchange();
-            loppuaika.onchange();
+            alkuaika.value = alku.toISOString().replace('Z','');
+            loppuaika.value = loppu.toISOString().replace('Z','');
             if (persistState) {
                 setSubState(kartanIndeksi(elem.kartta))('aika', [alku, loppu]);
             }
@@ -420,11 +420,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         }
     };
     [alkuaika, loppuaika].forEach(x => {
-        let orig = x.onchange;
-        x.onchange = ev => {
-            if (orig) {
-                orig(ev);
-            }
+        x.addEventListener("input", () => {
             if (persistState) {
                 setSubState(kartanIndeksi(elem.kartta))('aika', aikavali());
             }
@@ -432,7 +428,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
                 paivitaTitle();
                 flatLayerGroups(map.getLayers().getArray()).forEach(l => l.getSource().refresh());
             });
-        };
+        });
     });
 
     let orig = slider.onchange;
