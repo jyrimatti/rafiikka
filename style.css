@@ -542,15 +542,16 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .listview ul li:hover {
     font-weight: bold;
 }
-h4 {
+summary {
     margin: 0 0 0.2em 0;
     background: linear-gradient(180deg, lightgray, transparent);
     font-family: sans-serif;
     font-variant: all-small-caps;
     font-weight: lighter;
-}
-h4.hidden {
     color: #aaa;
+}
+details[open] summary {
+    color: unset;
 }
 .collapseExpand {
     position: absolute;

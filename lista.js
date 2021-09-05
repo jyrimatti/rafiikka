@@ -49,43 +49,35 @@ let luoCollapseExpandAll = (hiddenState, onclick) => {
     return collapseExpand;
 };
 
-let luoCollapsoitavaLista = (container, titleHTML, hiddenState) => {
-    let header = document.createElement("h4");
+let luoCollapsoitavaLista = (details, titleHTML, hiddenState) => {
+    let header = document.createElement("summary");
     header.innerHTML = titleHTML;
-    container.appendChild(header);
+    details.appendChild(header);
 
     let ul = document.createElement("ul");
     if (hiddenState[titleHTML] || hiddenState._default) {
-        ul.style.display = 'none';
-        header.classList.add('hidden');
+        details.removeAttribute('open');
     }
-    header.addEventListener('click', () => {
-        if (hiddenState[titleHTML] || hiddenState._default) {
-            hiddenState[titleHTML] = false;
-            ul.style.display = 'block';
-            header.classList.remove('hidden');
-        } else {
-            hiddenState[titleHTML] = true;
-            ul.style.display = 'none';
-            header.classList.add('hidden');
-        }
-    });
+    details.addEventListener('toggle', () => hiddenState[titleHTML] = !(hiddenState[titleHTML] || hiddenState._default));
 
-    container.appendChild(ul);
+    details.appendChild(ul);
     return ul;
 };
 
-let updateListviewContents = (listview, map) => {
+let updateListviewContents = (listview, map) => logDiff("updateListviewContents", () => {
     let layerFeatures = featuresOnScreen(map);
+
     listview.querySelectorAll('.listviewcontents').forEach(x => listview.removeChild(x));
-    
     let container = document.createElement("div");
     container.setAttribute("class", "listviewcontents");
 
     layerFeatures.forEach(x => {
         let title = x[0].getProperties().title;
         if (title && title.indexOf('Tausta') < 0) {
-            let ul = luoCollapsoitavaLista(container, title, listview.hiddenState);
+            let details = document.createElement("details");
+            details.setAttribute("open", "open");
+            container.appendChild(details);
+            let ul = luoCollapsoitavaLista(details, title, listview.hiddenState);
 
             let filterText = listview.querySelector('.filter').value || '';
             if (filterText) {
@@ -130,4 +122,4 @@ let updateListviewContents = (listview, map) => {
     });
 
     listview.appendChild(container);
-};
+});

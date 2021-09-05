@@ -363,6 +363,8 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
             slider.getTickList().innerHTML = ajankohdat.map(x => '<option value="' + x.getTime() + '" label="' + muotoileAjanhetki(x) + '"></option>').join('');
         }
     };
+    let updateListView = () => updateListviewContents(listview, map);
+    map.on('moveend', updateListView);
     map.getLayers().on('add', ev => flatLayerGroups([ev.element]).forEach(x => {
         x.getSource().on('featuresLoaded', paivitaMuutosajankohdat);
         x.on('change:visible', paivitaMuutosajankohdat);
@@ -376,11 +378,9 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         x.on('loadFail', () => update(-1));
         x.on('loadAbort', () => update(-1));
 
-        let updateListView = () => updateListviewContents(listview, map);
         x.on('loadSuccess', updateListView);
         x.on('change:visible', updateListView);
         x.getSource().on('featuresLoaded', updateListView);
-        map.on('moveend', updateListView);
     }));
     map.getView().on('change', paivitaMuutosajankohdat);
 
