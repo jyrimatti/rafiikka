@@ -91,20 +91,54 @@ let loggingDelegate = f => (a, b, c) => {
     }
 };
 
-let fetchJson = (url, opts, callback, errorCallback) =>
-    fetch(url, {
+window.progress = document.getElementById('progress');
+
+let progressStart = type => {
+    progress.title += " " + type;
+    
+    progress.max += 1;
+    if (!progress.hasAttribute('value')) {
+        progress.setAttribute("value", 1);
+    }
+};
+
+let progressEnd = type => {
+    progress.title = progress.title.replace(" " + type, "");
+    
+    progress.value += 1;
+    if (progress.value == progress.max) {
+        progress.removeAttribute('value');
+        progress.max = 1;
+    }
+};
+
+let onkoSeed = window.location.hash == '#seed' || window.location.hash.endsWith('&seed');
+
+let fetchJson = (url, opts, callback, errorCallback) => {
+    let type = url.replace(/[?].*/,'')
+                  .replace(/[.][^/]+$/, '')
+                  .replace(/.*\/([^\/]+)$/, '$1');
+    progressStart(type);
+    return fetch(url, {
         ...opts,
         headers: {
             'Content-Type': 'application/json',
             'Digitraffic-User': 'Rafiikka'
         }
     }).then(response => response.json())
-      .then(callback)
-      .catch(errorCallback || errorHandler);
+      .then(x => {
+          progressEnd(type);
+          return callback(x);
+       })
+      .catch(x => {
+          progressEnd(type);
+          return (errorCallback || errorHandler)(x);
+       });
+}
 
-let getJson  = (url,       callback, signal, errorCallback) => fetchJson(url, {method: 'GET', signal: signal}             , callback, errorCallback);
-let headJson = (url,       callback, signal, errorCallback) => fetchJson(url, {method: 'HEAD', signal: signal}            , callback, errorCallback);
-let postJson = (url, body, callback, signal, errorCallback) => fetchJson(url, {method: 'POST', signal: signal, body: body}, callback, errorCallback);
+let getJson  = (url,       callback, signal, errorCallback) => onkoSeed ? null : fetchJson(url, {method: 'GET', signal: signal}             , callback, errorCallback);
+let headJson = (url,       callback, signal, errorCallback) =>                   fetchJson(url, {method: 'HEAD', signal: signal}            , callback, errorCallback);
+let postJson = (url, body, callback, signal, errorCallback) => onkoSeed ? null : fetchJson(url, {method: 'POST', signal: signal, body: body}, callback, errorCallback);
 
 getJson(infraAPIUrl() + 'revisions.json?count=1', data => {
     window.revisions.infra = data[0].revisio + '/';
@@ -359,7 +393,7 @@ let esTilat = ['hyväksytty', 'lähetetty', 'lisätietopyyntö', 'luonnos', 'per
 let vsTilat = ['alustava', 'toteutuu', 'tehty', 'poistettu', 'vuosiohjelmissa (tila poistunut käytöstä)', 'käynnissä (tila poistunut käytöstä)'];
 let loTilat = ['aktiivinen', 'poistettu'];
 
-if (window.location.hash.endsWith('&seed')) {
+if (onkoSeed) {
     let seed = urls => {
         if (urls.length > 0) {
             log("seedataan", urls[0]);
@@ -397,35 +431,18 @@ let on   = (obj, event, f) => obj.on(event,   loggingDelegate(f));
 let once = (obj, event, f) => obj.once(event, loggingDelegate(f));
 let add  = (obj, name,  f) => obj.add(name,   loggingDelegate(f));
 
-
-window.progress = document.getElementById('progress');
-
 let monitor = (ds, type) => {
     ds.events.on("error", errorHandler);
-    
-    on(ds.events, "started", () => {
-        progress.title += " " + type;
-        
-        progress.max += 1;
-        if (!progress.hasAttribute('value')) {
-            progress.setAttribute("value", 1);
-        }
-    });
-    on(ds.events, "ended", () => {
-        progress.title = progress.title.replace(" " + type, "");
-        
-        progress.value += 1;
-        if (progress.value == progress.max) {
-            progress.removeAttribute('value');
-            progress.max = 1;
-        }
-    });
+    on(ds.events, "started", () => progressStart(type));
+    on(ds.events, "ended", () => progressEnd(type));
 }
 
 let luoDatasource = (type, urlF, f) => {
     let ds = new am4core.DataSource();
-    ds.url = urlF();
-    add(ds.adapter, "url", () => urlF());
+    if (!onkoSeed) {
+        ds.url = urlF();
+        add(ds.adapter, "url", () => urlF());
+    }
     initDS(ds);
     monitor(ds, type);
     on(ds.events, "parseended", ev => {
