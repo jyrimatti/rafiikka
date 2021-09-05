@@ -572,19 +572,6 @@ window.onload = () => {
         luoAikavalinSiirtoButton("-", (x => -0.25 * x), (x =>  0.25 * x), 'Kavenna aikajaksoa').marginLeft = 10;
         luoAikavalinSiirtoButton("+", (x =>  0.2  * x), (x => -0.2  * x), 'Levennä aikajaksoa');
 
-        
-
-        window.loading = chart.plotContainer.createChild(am4core.Label);
-        loading.dataItem = loadingIndicator;
-        loading.fontSize = 10;
-        add(loading.adapter, "text", (text, target) => {
-            if (!target.dataItem) {
-                return text;
-            }
-            let aktiiviset = target.dataItem.categories.aktiiviset;
-            return aktiiviset == "" ? "" : "Ladataan: " + aktiiviset.trim().split(" ").join(", ");
-        });
-
 
 
         let nykyhetki                  = xAxis.axisRanges.create();

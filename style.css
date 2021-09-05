@@ -3,11 +3,18 @@
     height: 600px;
     margin-top: 1em;
 }
+progress {
+    width: 73em;
+}
+progress:indeterminate {
+    visibility: hidden;
+}
 h1 {
     font-weight: 100;
     font-style: italic;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     margin-left: 0.5em;
+    margin-top: 0;
     margin-bottom: 0.25em;
 }
 select {

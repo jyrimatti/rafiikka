@@ -60,7 +60,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
         load: (query, callback) => {
             let f = () => {
                 let cb = x => callback(x.map(y => { return {...y, query: query}; }));
-                if (window.loadingIndicator.categories.aktiiviset.indexOf(' Haku-') >= 0) {
+                if (window.progress.title.indexOf(' Haku-') >= 0) {
                     setTimeout(() => {
                         log("Viivytetään hakua...");
                         f();

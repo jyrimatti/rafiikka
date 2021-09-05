@@ -402,19 +402,27 @@ let once = (obj, event, f) => obj.once(event, loggingDelegate(f));
 let add  = (obj, name,  f) => obj.add(name,   loggingDelegate(f));
 
 
-window.loadingIndicator = new am4core.DataItem();
-window.loadingIndicator.categories.aktiiviset = "";
-window.loadingIndicator.values.count = {value: 0};
+window.progress = document.getElementById('progress');
 
 let monitor = (ds, type) => {
     ds.events.on("error", errorHandler);
+    
     on(ds.events, "started", () => {
-        loadingIndicator.setCategory("aktiiviset", loadingIndicator.categories.aktiiviset + " " + type);
-        loadingIndicator.setValue("count", loadingIndicator.values.count.value + 1);
+        progress.title += " " + type;
+        
+        progress.max += 1;
+        if (!progress.hasAttribute('value')) {
+            progress.setAttribute("value", 1);
+        }
     });
     on(ds.events, "ended", () => {
-        loadingIndicator.setCategory("aktiiviset", loadingIndicator.categories.aktiiviset.replace(" " + type, ""));
-        loadingIndicator.setValue("count", loadingIndicator.values.count.value - 1);
+        progress.title = progress.title.replace(" " + type, "");
+        
+        progress.value += 1;
+        if (progress.value == progress.max) {
+            progress.removeAttribute('value');
+            progress.max = 1;
+        }
     });
 }
 
