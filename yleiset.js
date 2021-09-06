@@ -42,9 +42,10 @@ let toISOStringNoMillis = (d) => {
 };
 
 window.ikkuna = () => getMainState('aika');
-window.rajat  = () => [dateFns.dateFns.addDays(ikkuna()[0], -3), dateFns.dateFns.addDays(ikkuna()[1], 3)];
+window.rajat  = () => laajennaAikavali(getMainState('aika')); //[dateFns.dateFns.addDays(ikkuna()[0], -3), dateFns.dateFns.addDays(ikkuna()[1], 3)];
 
-let laajennaAikavali = x => [dateFns.dateFns.startOfMonth(x[1]), dateFns.dateFns.endOfMonth(x[1])];
+let laajennaAikavali = x => [startOfMonthUTC(dateFns.dateFns.addMonths(x[1], -1)),
+                             startOfMonthUTC(dateFns.dateFns.addMonths(x[1], 1))];
 
 let limitInterval = intervalString => {
     let begin = new Date('2010-01-01T00:00:00Z');
@@ -150,9 +151,12 @@ getJson(etj2APIUrl() + 'revisions.json?count=1', data => {
 });
 
 let ikuisuusAikavali = 'time=2010-01-01T00:00:00Z/2030-01-01T00:00:00Z';
-let infraAikavali = () => 'time=' + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[0])) + "/" + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[1]));
-let etj2Aikavali  = () => 'time=' + laajennaAikavali(rajat()).map(function(x) { return toISOStringNoMillis(startOfDayUTC(x)); }).join("/");
-let rumaAikavali  = () => 'start=' + toISOStringNoMillis(startOfDayUTC(rajat()[0])) + "&end=" + toISOStringNoMillis(startOfDayUTC(rajat()[1]));
+// haetaan infra oletuksena päätilan alkuajanhetkellä
+let infraAikavali = () => 'time=' + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[0])) + "/" + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[0]));
+// haetaan ennakkotiedot oletuksena päätilan aikakonteksti laajennettuna (+- kuukausi tms)
+let etj2Aikavali  = () => 'time=' + laajennaAikavali(getMainState('aika').slice(0,2)).map(toISOStringNoMillis).join("/");
+// haetaan ratatyöt oletuksena tarkasti päätilan aikakontekstilla (ei cachetusta)
+let rumaAikavali  = () => 'start=' + getMainState('aika').slice(0,2).map(startOfDayUTC).map(toISOStringNoMillis).join("&end=");
 
 let junienEsitysaikavali = 1000*60*60*24*5;
 

@@ -67,6 +67,16 @@ let startOfDayUTC = x => {
     return y;
 };
 
+let startOfMonthUTC = x => {
+    let y = new Date(x.getTime());
+    y.setUTCDate(1);
+    y.setUTCHours(0);
+    y.setUTCMinutes(0);
+    y.setUTCSeconds(0);
+    y.setUTCMilliseconds(0);
+    return y;
+};
+
 let defaultAika = () => {
     let now = pyoristaAjanhetki(dateFns.dateFns.sub(new Date(), {hours: 1}));
     return [now, dateFns.dateFns.add(now, {hours: 4}), undefined, {hours: 4}];
