@@ -58,7 +58,7 @@ let luoCollapsoitavaLista = (details, titleHTML, hiddenState) => {
     if (hiddenState[titleHTML] || hiddenState._default) {
         details.removeAttribute('open');
     }
-    details.addEventListener('toggle', () => hiddenState[titleHTML] = !(hiddenState[titleHTML] || hiddenState._default));
+    header.addEventListener('click', () => hiddenState[titleHTML] = !(hiddenState[titleHTML] || hiddenState._default));
 
     details.appendChild(ul);
     return ul;

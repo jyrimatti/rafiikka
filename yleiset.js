@@ -150,7 +150,9 @@ getJson(etj2APIUrl() + 'revisions.json?count=1', data => {
     log("Saatiin etj2-revisioksi", window.revisions.etj2);
 });
 
-let ikuisuusAikavali = 'time=2010-01-01T00:00:00Z/2030-01-01T00:00:00Z';
+let ikuisuusAlku = '2010-01-01T00:00:00Z';
+let ikuisuusLoppu = '2030-01-01T00:00:00Z';
+let ikuisuusAikavali = 'time=' + ikuisuusAlku + '/' + ikuisuusLoppu;
 // haetaan infra oletuksena päätilan alkuajanhetkellä
 let infraAikavali = () => 'time=' + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[0])) + "/" + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[0]));
 // haetaan ennakkotiedot oletuksena päätilan aikakonteksti laajennettuna (+- kuukausi tms)
@@ -545,11 +547,11 @@ let luoInfraAPIUrl = (str, time) => {
 let luoEtj2APIUrl = (str, time) => {
     let m = onkoJetiOID(str)
     if (m) {
-        return etj2APIUrl() + m[0] + '.json?' + (time ? 'time=' + time : etj2Aikavali());
+        return etj2APIUrl() + m[0] + '.json?' + (time ? 'time=' + time : '');
     }
     m = onkoJeti(str);
     if (m) {
-        return etj2APIUrl(true) + m[0] + '.json?' + (time ? 'time=' + time : etj2Aikavali());
+        return etj2APIUrl(true) + m[0] + '.json?' + (time ? 'time=' + time : '');
     }
 }
 

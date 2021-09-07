@@ -40,11 +40,13 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
     alkuaika.setAttribute('type', 'datetime-local');
     alkuaika.setAttribute('class', 'ajanhetki alkuaika');
     alkuaika.setAttribute('title', 'alkuaika');
+    alkuaika.setAttribute('min', ikuisuusAlku.replace('Z',''));
 
     let loppuaika = document.createElement('input');
     loppuaika.setAttribute('type', 'datetime-local');
     loppuaika.setAttribute('class', 'ajanhetki loppuaika');
     loppuaika.setAttribute('title', 'loppuaika');
+    loppuaika.setAttribute('max', ikuisuusLoppu.replace('Z',''));
 
     let sliderParent = document.createElement('span');
     sliderParent.setAttribute('title', '');
@@ -307,6 +309,8 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
                                                                                                : new Date(parseInt(slider.value));
     let aikavali = (alku, loppu) => {
         if (alku) {
+            alku = alku.getTime() < new Date(ikuisuusAlku).getTime() ? new Date(ikuisuusAlku) : alku;
+            loppu = loppu.getTime() > new Date(ikuisuusLoppu).getTime() ? new Date(ikuisuusLoppu) : loppu;
             slider.min = alku.getTime();
             slider.max = loppu.getTime();
             alkuaika.value = alku.toISOString().replace('Z','');

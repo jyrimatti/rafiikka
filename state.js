@@ -153,11 +153,11 @@ let getSubState = index => {
     return undefined;
 };
 let setSubState = index => (key, val) => {
-    if (val instanceof Array && getMainState(key).every( (x,i) => x === val[i] ) ||
+    /*if (val instanceof Array && getMainState(key).every( (x,i) => x === val[i] ) ||
        !(val instanceof Array) && getMainState(key) === val) {
         setState(index)(key, undefined);
-    } else {
+    } else {*/
         setState(index)(key, val);
-    }
+    //}
 };
 let clearSubState = index => setState(index)(undefined, undefined);

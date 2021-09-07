@@ -525,10 +525,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .listview ul {
     line-height: 1em;
     font-size: 0.75em;
-    padding-left: 1em;
+    padding-left: 0;
 }
 .listview ul li {
     white-space: nowrap;
+    padding-left: 1em;
 }
 .listview ul li .objectfocus {
     display: none;

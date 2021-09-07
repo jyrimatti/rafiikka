@@ -1369,6 +1369,7 @@ window.onload = () => {
                 haeEnnakkotiedonRatanumerotJaVoimassaolo(tunniste, (ratanumero, voimassa) => {
                     ratanumeroChanged(ratanumero);
                     asetaAikavali(voimassa);
+                    kartta(tunniste, tunniste, undefined, true, '4em', '10em', '4em', '4em');
                 });
     });
 }
