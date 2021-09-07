@@ -121,7 +121,12 @@ let aikataulupaikkavali = rkmv => {
     if (indeksit.length == 0) {
         return [];
     }
-    return [indeksit[0], indeksit[indeksit.length-1]].map(i => (1 + i%1) * valittuDS.data[Math.floor(i)][1]);
+    let indeksi1 = indeksit[0];
+    let indeksi2 = indeksit[indeksit.length-1];
+    let distance1 = valittuDS.data[Math.floor(indeksi1)][1];
+    let distance2 = valittuDS.data[Math.floor(indeksi2)][1];
+    return [(1 + indeksi1%1) * (distance2 - distance1),
+            (1 + indeksi2%1) * distance2];
 }
 
 window.koordinaatitMap = {};

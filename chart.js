@@ -647,12 +647,13 @@ window.onload = () => {
 
         let luoRanget = () => {
             logDiff("Luodaan rangeja", () => {
-                Object.values(valittuDS.data).forEach(([uicKoodi,distance],index) => {
+                let data = Object.values(valittuDS.data);
+                data.forEach(([uicKoodi,distance],index) => {
                     let x = aikataulupaikatDS.data[uicKoodi];
                     let range               = new am4charts.ValueAxisDataItem();
                     yAxis.axisRanges.push(range);
-                    range.value             = index;
-                    range.endValue          = distance;
+                    range.value             = index == 0 ? 0 : data[index][1];
+                    range.endValue          = index == data.length-1 ? data[data.length-1][1] : data[index][1];
                     range.grid.stroke       = am4core.color("blue").lighten(0.5);
                     range.label.dx          = -30;
                     range.label.inside      = true;
@@ -703,6 +704,8 @@ window.onload = () => {
             series.hidden                = true;
             series.hiddenState.transitionDuration  = 0;
             series.defaultState.transitionDuration = 0;
+            series.columns.template.hiddenState.transitionDuration  = 0;
+            series.columns.template.defaultState.transitionDuration = 0;
 
             series.tooltip.label.maxWidth = 400;
             series.tooltip.label.wrap = true;
@@ -726,7 +729,28 @@ window.onload = () => {
             });
 
             on(chart.events, "ready", () => {
-                let aktiiviset = luoAktiivinenListaus(series);
+                let onRemove = x => objectCache[x.name].forEach(c => c.show());
+                let aktiiviset = luoAktiivinenListaus(series, undefined, onRemove);
+
+                on(aktiiviset.itemContainers.template.events, "hit", ev => {
+                    let nimi = ev.target.dataItem.dataContext.name;
+                    let cache = objectCache[nimi];
+                    log("Näytetään/piilotetaan", nimi);
+                    cache.forEach(x => {
+                        if (x.visible) {
+                            x.hide();
+                        } else {
+                            x.show();
+                        }
+                    });
+                });
+
+                on(series.events, "shown", () => {
+                    aktiiviset.dataSource.data.forEach(x => {
+                        x.visible = true;
+                    });
+                    aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
+                });
 
                 on(series.columns.template.events, "hit", ev => {
                     let nimi = ev.target.dataItem.dataContext.sisainenTunniste;
