@@ -65,7 +65,7 @@ let leikkaa = a => b => a.ratanumero == b.ratanumero &&
                         ratakmsijaintiComparator(b.alku, a.loppu) <= 0;
 
 let aikataulupaikkavali = rkmv => {
-    let valitutAikataulupaikat = valittuDS.data.map(uic => aikataulupaikatDS.data[uic]);
+    let valitutAikataulupaikat = valittuDS.data.map(([uic,distance]) => aikataulupaikatDS.data[uic]);
     let leikkaavienAikataulupaikkojenRatakmvalit = valitutAikataulupaikat.map(x => x.ratakmvalit.filter(leikkaa(rkmv)));
 
     let leikkaavatAikataulupaikkojenIndeksit = leikkaavienAikataulupaikkojenRatakmvalit
@@ -121,7 +121,7 @@ let aikataulupaikkavali = rkmv => {
     if (indeksit.length == 0) {
         return [];
     }
-    return [indeksit[0], indeksit[indeksit.length-1]];
+    return [indeksit[0], indeksit[indeksit.length-1]].map(i => (1 + i%1) * valittuDS.data[Math.floor(i)][1]);
 }
 
 window.koordinaatitMap = {};
@@ -167,8 +167,8 @@ let koordinaatti2sijainti = koordinaatti => {
     if (valittunaAikataulupaikka()) {
         let coord = buildGeometry(koordinaatti);
 
-        let sisaltyva = valittuDS.data.flatMap( (x,index) => {
-            let paikka = aikataulupaikatDS.data[x];
+        let sisaltyva = valittuDS.data.flatMap( ([uickoodi,distance],index) => {
+            let paikka = aikataulupaikatDS.data[uickoodi];
             if (paikka.geometria.getGeometryType() != 'Point') {
                 let mbc = new jsts.algorithm.MinimumBoundingCircle(paikka.geometria);
                 if (mbc.getCircle().contains(coord)) {

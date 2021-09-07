@@ -40,11 +40,13 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                 if (reitti) {
                     reitti = [reitti[1]].concat(reitti[2] ? reitti[2].split('=>').filter(x => x != '') : []).concat(reitti[3]);
                     reitti = reitti.map(x => !x ? x : Object.values(aikataulupaikatDS.data)
-                                                            .filter(y => x == y.tunniste || ''+x == y.uicKoodi || y.lyhenne && x.toLowerCase() == y.lyhenne.toLowerCase())
+                                                            .filter(y => x == y.tunniste || ''+x == y.uicKoodi || y.lyhenne && x.toLowerCase() == y.lyhenne.toLowerCase() || y.nimi && x.toLowerCase() == y.nimi.toLowerCase())
                                                             .map(x => x.tunniste)
                                                             .find(x => x))
                     if (!reitti.includes(undefined)) {
                         tunniste = reitti[0] + '=>' + (reitti.length > 2 ? reitti.slice(1,-1).join('=>') + '=>' : '') + reitti[reitti.length-1];
+                    } else {
+                        return '<div></div>';
                     }
                 }
                 return `

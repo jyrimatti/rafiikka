@@ -169,6 +169,7 @@ let pmSijaintiUrl             = (numero, suunta, etaisyys, time) => infraAPIUrl(
 let ratakmValiUrl             = (ratanumero, alkuratakm, alkuetaisyys, loppuratakm, loppuetaisyys, time) => infraAPIUrl() + 'radat/' + ratanumero + '/' + alkuratakm + '+' + alkuetaisyys + '-' + loppuratakm + '+' + loppuetaisyys + '.json?' + (time ? 'time=' + time : infraAikavali());
 let liikennepaikkavalitUrl    = () => infraAPIUrl() + "liikennepaikkavalit.json?propertyName=alkuliikennepaikka,loppuliikennepaikka,ratakmvalit,objektinVoimassaoloaika,tunniste&" + infraAikavali();
 let reittiUrl                 = (alku, etapit, loppu, time) => infraAPIUrl() + "reitit/kaikki/" + alku + "/" + (etapit && etapit.length > 0 ? etapit.join(',') + '/' : '') + loppu + ".json?propertyName=geometria,liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet&" + (time ? 'time=' + time : infraAikavali());
+let reittihakuUrl             = (alku, etapit, loppu, time) => infraAPIUrl() + "reitit/kaikki/" + alku + "/" + (etapit && etapit.length > 0 ? etapit.join(',') + '/' : '') + loppu + ".json?propertyName=liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet&" + (time ? 'time=' + time : infraAikavali());
 let ratapihapalveluTyypitUrl  = () => infraAPIUrl() + "ratapihapalvelutyypit.json";
 let opastinTyypitUrl          = () => infraAPIUrl() + "opastintyypit.json";
 let vaihdeTyypitUrl           = () => infraAPIUrl() + "vaihdetyypit.json";

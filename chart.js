@@ -6,7 +6,7 @@ on(aikataulupaikatDS.events, "done", ev => {
             log('odotellaan aikataulupaikkojen latautumista...');
             return;
         }
-        valittuDS.data = paikat.map(x => x.uicKoodi);
+        valittuDS.data = paikat.map((x,i) => [x.uicKoodi, i]);
         log("Alustettu y-akseli:", valittuDS.data)
         valittuDS.dispatch("done", {target: {data: valittuDS.data}});
     }
@@ -73,7 +73,7 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
     uusiVali = uusiVali.map(x => x.tunniste);
 
     let reittiDS = new am4core.DataSource();
-    reittiDS.url = reittiUrl(uusiVali[0], uusiVali.slice(1, -1), uusiVali[uusiVali.length-1]);
+    reittiDS.url = reittihakuUrl(uusiVali[0], uusiVali.slice(1, -1), uusiVali[uusiVali.length-1]);
     initDS(reittiDS);
     monitor(reittiDS, uusiVali.map(x => aikataulupaikatDS.data[x].lyhenne).join("=>"));
     on(reittiDS.events, "done", ev => {
@@ -110,9 +110,14 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
             return seLv.concat([seuraava]);
         });
 
+        let haeEtaisyys = tunniste => (data.liikennepaikat    .find(x => x.tunniste == tunniste) ||
+                                       data.liikennepaikanOsat.find(x => x.tunniste == tunniste) ||
+                                       data.linjavaihteet     .find(x => x.tunniste == tunniste) ||
+                                       data.seisakkeet        .find(x => x.tunniste == tunniste)).indeksi;
+
         let ketju = [uusiVali[0]].concat(aikataulupaikat).concat([uusiVali[uusiVali.length-1]])
                                 .filter( (item, pos, ary) => !pos || item != ary[pos - 1])
-                                .map(x => aikataulupaikatDS.data[x].uicKoodi);
+                                .map(x => [aikataulupaikatDS.data[x].uicKoodi, haeEtaisyys(x)]);
         if (JSON.stringify(valittuDS.data) != JSON.stringify(ketju)) {
             log("Valittiin aikataulupaikkaketju:", ketju);
             valittuDS.data = ketju;
@@ -325,9 +330,9 @@ window.onload = () => {
                     log('odotellaan aikataulupaikkojen latautumista...');
                     return;
                 }
-                yAxis.title.text = ev.target.data.map(x => aikataulupaikatDS.data[x].lyhenne).join(" - ");
+                yAxis.title.text = ev.target.data.map(([uickoodi,distance]) => aikataulupaikatDS.data[uickoodi].lyhenne).join(" - ");
                 yAxis.min = 0;
-                yAxis.max = ev.target.data.length - 1;
+                yAxis.max = ev.target.data[ev.target.data.length - 1][1];
             }
             log("Rajoitettiin y-akseli välille: " + yAxis.min + " - " + yAxis.max);
         });
@@ -642,12 +647,12 @@ window.onload = () => {
 
         let luoRanget = () => {
             logDiff("Luodaan rangeja", () => {
-                Object.values(valittuDS.data).forEach((uicKoodi,index) => {
+                Object.values(valittuDS.data).forEach(([uicKoodi,distance],index) => {
                     let x = aikataulupaikatDS.data[uicKoodi];
                     let range               = new am4charts.ValueAxisDataItem();
                     yAxis.axisRanges.push(range);
                     range.value             = index;
-                    range.endValue          = index;
+                    range.endValue          = distance;
                     range.grid.stroke       = am4core.color("blue").lighten(0.5);
                     range.label.dx          = -30;
                     range.label.inside      = true;

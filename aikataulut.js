@@ -42,7 +42,7 @@ let parsiAikataulu = (paiva, data) => {
                                     sijainti = x.ratakm * 1000 + x.etaisyys
                                 });
                         } else if (valittunaAikataulupaikka()) {
-                            let sij = valittuDS.data.indexOf(row.stationUICCode);
+                            let sij = valittuDS.data.findIndex(([uickoodi,distance]) => uickoodi == row.stationUICCode);
                             if (sij > -1) {
                                 sijainti = sij;
                             }

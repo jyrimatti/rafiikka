@@ -12,6 +12,10 @@ let parseInterval = str => {
     } else if (parts.length == 2) {
         let beginInstant  = dateFns.dateFns.parse(parts[0], "yyyy-MM-dd'T'HH:mm:ssX", new Date(0));
         let endInstant    = dateFns.dateFns.parse(parts[1], "yyyy-MM-dd'T'HH:mm:ssX", new Date(0));
+        if (!isNaN(beginInstant.getTime()) && !isNaN(endInstant.getTime())) {
+            return [beginInstant, endInstant, undefined, undefined];
+        }
+        
         let beginDuration;
         try {
             beginDuration = dateFns.durationFns.parse(parts[0]);
@@ -20,9 +24,7 @@ let parseInterval = str => {
         try {
             endDuration = dateFns.durationFns.parse(parts[1]);
         } catch (_) {}
-        if (!isNaN(beginInstant.getTime()) && !isNaN(endInstant.getTime())) {
-            return [beginInstant, endInstant, undefined, undefined];
-        } else if (!isNaN(beginInstant.getTime()) && endDuration) {
+        if (!isNaN(beginInstant.getTime()) && endDuration) {
             let k = dateFns.durationFns.normalize({milliseconds: Math.floor(dateFns.durationFns.toMilliseconds(endDuration))});
             return [beginInstant, dateFns.dateFns.add(beginInstant, endDuration), undefined, endDuration];
         } else if (!isNaN(endInstant.getTime()) && beginDuration) {
