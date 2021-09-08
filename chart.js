@@ -1390,15 +1390,21 @@ window.onload = () => {
         xAxis.zoomToDates(voimassa[0], voimassa[1]);
     };
 
-    getMainState('sijainti')
+    if (getStates().length == 1) {
+        // jos päätilan sijainti on "sopiva", niin avataan se myös kartalle, tai lasketaan siitä sopiva arvaus työrakografiikkaan.
+        getMainState('sijainti')
             .split(',')
-            .filter(onkoJeti)
+            .filter(x => !onkoRatanumero(x) && !onkoReitti(x)) // ratanumerot ja reitit avattakoon vain työrakografiikalle, koska ne ovat suoraan käypiä siihen.
             .slice(0,1)
             .forEach(tunniste => {
-                haeEnnakkotiedonRatanumerotJaVoimassaolo(tunniste, (ratanumero, voimassa) => {
-                    ratanumeroChanged(ratanumero);
-                    asetaAikavali(voimassa);
-                    kartta(tunniste, tunniste, undefined, true, '4em', '10em', '4em', '4em');
-                });
-    });
+                if (onkoJeti(tunniste)) {
+                    // Jeteistä voidaan päätellä jotakin sijainnista, ja avata työrakografiikka sopivaan paikkaan
+                    haeEnnakkotiedonRatanumerotJaVoimassaolo(tunniste, (ratanumero, voimassa) => {
+                        ratanumeroChanged(ratanumero);
+                        asetaAikavali(voimassa);
+                    });
+                }
+                kartta(tunniste, tunniste, undefined, true, '4em', '8em', '4em', '4em');
+        });
+    }
 }

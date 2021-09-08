@@ -88,11 +88,11 @@ let defaultState = () => ({moodi:'kartta', aika: defaultAika(), sijainti: '(009)
 
 let parseState = state => {
     let st = {};
-    state.forEach((_,key) => Object.entries(parseStatePart(key)).forEach(kv => st[kv[0]] = kv[1]));
+    state.forEach(x => Object.entries(parseStatePart(decodeURIComponent(x))).forEach(kv => st[kv[0]] = kv[1]));
     return st;
 }
 
-let getStates = () => window.location.hash.substring(1).split('#').map(x => new URLSearchParams('?' + x)).map(parseState);
+let getStates = () => window.location.hash.substring(1).split('#').map(x => x.split('&')).map(parseState);
 
 let getState = index => key => {
     let state = getStates()[index];

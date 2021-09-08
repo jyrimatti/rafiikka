@@ -541,25 +541,42 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
             if (!lisaa(x)) {
                 log("Odotellaan", x);
                 let handler = () => {
-                    let loading = window.loadingIndicator.values.count.value;
+                    let loading = window.progress.max;
                     if (loading <= 1) {
-                        // ei enää paljon latauksia jäljellä -> voidaan etsiä osumaa
-                        let found = Object.entries(search.options).sort((a,b) => b[1].score - a[1].score).find(x => x[1].score >= (loading > 0 ? 500 : 0));
+                        log("ei enää paljon latauksia jäljellä -> voidaan etsiä osumaa");
+                        let found = Object.entries(search.options).sort((a,b) => b[1].score - a[1].score).find(x => x[1].score >= 100);
                         if (found) {
-                            search.off('load', handler);
                             log("Saatiin riittävän hyvä osuma", found);
                             lisaa(found[0]);
+                        } else {
+                            log("Ei riittävän hyvää osumaa");
                         }
+                        search.enable();
+                        search.close();
+                        search.settings.create = false;
+                    } else {
+                        setTimeout(handler, 500);
                     }
                 };
-                search.on('load', handler);
-                search.onSearchChange(x);
+                
+                let odotellaanLatautumista = () => {
+                    if (window.progress.max > 1) {
+                        log("Odotellaan pohjadatan latautumista...")
+                        setTimeout(odotellaanLatautumista, 500);        
+                    } else {
+                        log("Pohjadata latautunut, haetaan termiä", x);
+                        search.onSearchChange(x);
+                        setTimeout(handler, 500);
+                    }
+                }
+                setTimeout(odotellaanLatautumista, 100);
+            } else {
+                search.enable();
+                search.close();
+                search.settings.create = false;
             }
         });
     }
-    search.enable();
-    search.close();
-    search.settings.create = false;
 
     dragElement(container, onDrop(x => {
         search.settings.create = true;
