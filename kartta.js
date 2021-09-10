@@ -279,6 +279,58 @@ let kartanIndeksi = map => {
     return ret + 1;
 };
 
+class RotateLeftControl extends ol.control.Control {
+    constructor(opt_options) {
+      const options = opt_options || {};
+      const button = document.createElement('button');
+      button.innerHTML = '⟲';
+  
+      const element = document.createElement('div');
+      element.className = 'rotate-left ol-unselectable ol-control';
+      element.setAttribute("title", "Vastapäivään 45°. Alt+shift+drag pyörittää vapaasti.");
+      element.appendChild(button);
+  
+      super({
+        element: element,
+        target: options.target,
+      });
+  
+      button.addEventListener('click', () => {
+        let view = this.getMap().getView();
+        view.animate({
+            duration: 250,
+            rotation: view.getRotation() - Math.PI / 4,
+        });
+      }, false);
+    }
+}
+class RotateRightControl extends ol.control.Control {
+    constructor(opt_options) {
+      const options = opt_options || {};
+      const button = document.createElement('button');
+      button.innerHTML = '⟳';
+  
+      const element = document.createElement('div');
+      element.className = 'rotate-right ol-unselectable ol-control';
+      element.setAttribute("title", "Myötäpäivään 45°. Alt+shift+drag pyörittää vapaasti.");
+      element.appendChild(button);
+  
+      super({
+        element: element,
+        target: options.target,
+      });
+  
+      button.addEventListener('click', () => {
+        let view = this.getMap().getView();
+        view.animate({
+            duration: 250,
+            rotation: view.getRotation() + Math.PI / 4,
+        });
+      }, false);
+    }
+
+}
+
 let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2, offsetY2) => {
     persistState = persistState === undefined ? true : persistState;
     var elem;
@@ -328,6 +380,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     if (onkoKaavio()) {
         taustaLayer.setVisible(false);
     }
+
     let map = new ol.Map({
         target: elem,
         overlays: [overlay],
@@ -341,8 +394,11 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         controls: [
             new ol.control.Attribution({collapsible: false}),
             new ol.control.Zoom(),
+            new ol.control.Rotate(),
             new ol.control.ZoomSlider(),
             new ol.control.ScaleLine(),
+            new RotateLeftControl(),
+            new RotateRightControl(),
             new ol.control.MousePosition({
                 coordinateFormat: c => Math.round(c[0]) + "," + Math.round(c[1])
             }),
@@ -351,6 +407,16 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     });
     window.map = map;
     elem.kartta = map;
+
+    var t;
+    map.getView().on('change:rotation', () => {
+        if (persistState) {
+            clearTimeout(t);
+            t = setTimeout(() => setSubState(kartanIndeksi(map))('rotaatio', map.getView().getRotation()), 300);
+        }
+    });
+
+    map.getView().setRotation(getSubState(kartanIndeksi(elem.kartta))('rotaatio'));
 
     kaavioCheck.checked = persistState && getSubState(kartanIndeksi(elem.kartta))('moodi') == 'kaavio';
 

@@ -39,11 +39,26 @@ ul.ikonit li {
     display: table-cell;
 }
 
+.rotate-left {
+    top: 2.5em;
+    left: 0.5em;
+    padding-bottom: 3px;
+}
+.rotate-right {
+    top: 2.5em;
+    left: 2.2em;
+    padding-bottom: 3px;
+}
+.ol-rotate {
+    right: auto;
+    left: 3.9em;
+    top: 2.5em;
+}
 .ol-zoom {
-    top: 3em;
+    top: 4.5em;
 }
 .ol-zoomslider {
-    top: 6.5em;
+    top: 8em;
 }
 
 .ol-scale-line,
