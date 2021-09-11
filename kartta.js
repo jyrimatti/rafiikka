@@ -125,6 +125,7 @@ let onDrop = lisaa => (source, target) => {
     let sourceMap = source.getElementsByClassName('kartta')[0].kartta;
     let targetMap = target.getElementsByClassName('kartta')[0].kartta;
     if (targetMap != sourceMap) {
+        log("Suljetaan kartta", source.id);
         sourceMap.getLayers().getArray()
                  .filter(layer => !targetMap.getLayers().getArray().find(l => l.get('title') == layer.get('title')))
                  .forEach(x => {

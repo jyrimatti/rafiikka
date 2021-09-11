@@ -38,8 +38,25 @@ let luoIkkuna = (title, offsetX1, offsetY1, offsetX2, offsetY2, onClose) => {
     });
     elemHeader.appendChild(close);
 
+    container.addEventListener('click', () => moveToTop(container));
+    container.addEventListener('dragstart', () => moveToBottom(container));
+    container.addEventListener('dragend', () => moveToTop(container));
+
     return [container, elemHeader];
 };
+
+let moveToBottom = container => {
+    let popups = document.body.querySelectorAll(':scope > .popupContainer');
+    if (container.parentNode) {
+        popups[0].before(container);
+    }
+}
+let moveToTop = container => {
+    let popups = document.body.querySelectorAll(':scope > .popupContainer');
+    if (container.parentNode) {
+        popups[popups.length-1].after(container);
+    }
+}
 
 let avaaInfo = (tunniste, offsetX, offsetY, time) => {
     let url = onkoInfra(tunniste) || onkoTREX(tunniste) ? luoInfraAPIUrl(tunniste, time) :

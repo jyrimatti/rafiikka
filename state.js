@@ -123,7 +123,7 @@ let setState = index => (key, val) => {
     if (!key) {
         states.splice(index, 1);
     } else {
-        if (states.length <= index) {
+        while (states.length <= index) {
             states.push({});
         }
         if (key == 'aika') {
