@@ -451,6 +451,8 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
 
         x.on('loadSuccess', updateListView);
         x.on('change:visible', updateListView);
+        x.on('change:visible', ev => ev.target.getSource().getFeatures().forEach(f => korostusPois(map, f)));
+
         x.getSource().on('featuresLoaded', updateListView);
     }));
     map.getView().on('change', paivitaMuutosajankohdat);
@@ -580,7 +582,9 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
 
     var search;
     let updateTitleAndState = tunniste => {
+        search.settings.create = x => ({tunniste: x, nimi: x});
         search.createItem(tunniste);
+        search.settings.create = false;
         let objects = search.getValue();
         let title = objects instanceof Array ? objects.join(',') : objects;
         if (persistState) {
@@ -601,7 +605,6 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         updateTitleAndState(tunniste);
     };
     search = initSearch(haku, lisaa, poista);
-    search.settings.create = x => ({tunniste: x, nimi: title || x});
     search.disable();
     if (tunniste) {
         tunniste.split(',').forEach(x => {
@@ -620,7 +623,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
                         }
                         search.enable();
                         search.close();
-                        search.settings.create = false;
+                        //search.settings.create = false;
                     } else {
                         setTimeout(handler, 500);
                     }
@@ -640,14 +643,14 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
             } else {
                 search.enable();
                 search.close();
-                search.settings.create = false;
+                //search.settings.create = false;
             }
         });
     }
 
     dragElement(container, onDrop(x => {
-        search.settings.create = true;
         search.disable();
+        search.settings.create = x => ({tunniste: x, nimi: x});
         search.createItem(x);
         search.enable();
         search.close();
@@ -816,7 +819,12 @@ let createPopupContent = (tunniste, container) => {
     }
 }
 
-let cropIfConstrained = (voimassa, kaavio, f, source, kohde) => {
+let cropIfConstrained = (voimassa, kaavio, fs, source, kohde) => {
+    if (fs.length != 1) {
+        log(fs);
+        throw new Error("Whoops, shouldn't be here");
+    }
+    let f = fs[0];
     if (kohde.rajaus) { // jos oli rajaus, niin tehdään taiat. Muuten jätetään geometria kokonaiseksi.
         resolveMask(kohde.rajaus, voimassa, kaavio, mask => {
             if (mask) {
@@ -937,7 +945,7 @@ let korostus = (map, f, kohdistaKartta) => {
 
 let korostusPois = (map, f) => {
     if (dehighlightFeature(map)(f)) {
-        let avain = lueTunniste(f.getProperties()) + '_' + map.kaavio() + '-' + map.ajanhetki();
+        let avain = lueTunniste(f.getProperties()) + '_' + map.kaavio() + '-' + (map.aikavali() || map.ajanhetki());
         if (map.highlightLayers[avain]) {
             map.highlightLayers[avain].setVisible(false);
         }
@@ -949,7 +957,7 @@ let korostaEnnakkotieto = (map, tunniste, kaavio, ajanhetki, aikavali) => {
     let prefix = jetiKohdePrefix(tunniste);
     if (prefix) {
         let props = '-laskennallinenKarttapiste,tunniste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
-        let avain = tunniste + '_' + kaavio() + '-' + ajanhetki();
+        let avain = tunniste + '_' + kaavio() + '-' + (aikavali() || ajanhetki());
 
         if (highlightLayers[avain]) {
             highlightLayers[avain].setVisible(true);
@@ -1032,7 +1040,7 @@ let korostaEnnakkotieto = (map, tunniste, kaavio, ajanhetki, aikavali) => {
                                  .filter(f => f.getProperties()._source);
 
                 raiteet.concat(radat).concat(lpvalit)
-                       .forEach(k => cropIfConstrained(voimassa, kaavio, removeItemOnce(fs, x => k.tunniste == lueTunniste(x.getProperties())), newLayer.getSource(), k));
+                       .forEach(k => cropIfConstrained(voimassa, kaavio, fs.filter(x => k.tunniste == lueTunniste(x.getProperties())), newLayer.getSource(), k));
             }
 
             newLayer.getSource().on('featuresLoaded', doCroppingOfConstrained);            

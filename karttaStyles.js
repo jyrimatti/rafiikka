@@ -25,9 +25,13 @@ let highlightImage = image => {
             .then(x => {
                 // need as base64, otherwise doesn't seem to work
                 let result = 'data:image/svg+xml;base64,' + btoa(setHighlightStyles('#f00', x));
+                log("Highlighting icon", result);
                 // need to go under the API to be able to reload the new src.
-                ret.iconImage_.src_ = result;
-                ret.iconImage_.imageState_ = 0; //ol.ImageState.IDLE
+                let iconImage_ = Object.values(ret).find(x => x && x.getImageState);
+                let src_Key = Object.keys(iconImage_).find(x => iconImage_[x] == iconImage_.getSrc());
+                iconImage_[src_Key] = result;
+                let imageState_Key = Object.keys(iconImage_).find(x => typeof iconImage_[x] == 'number');
+                iconImage_[imageState_Key] = 0; //ol.ImageState.IDLE
                 ret.load();
             });
         return ret;

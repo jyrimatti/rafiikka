@@ -46,14 +46,14 @@ let luoIkkuna = (title, offsetX1, offsetY1, offsetX2, offsetY2, onClose) => {
 };
 
 let moveToBottom = container => {
-    let popups = document.body.querySelectorAll(':scope > .popupContainer');
     if (container.parentNode) {
+        let popups = container.parentNode.childNodes;
         popups[0].before(container);
     }
 }
 let moveToTop = container => {
-    let popups = document.body.querySelectorAll(':scope > .popupContainer');
     if (container.parentNode) {
+        let popups = container.parentNode.childNodes;
         popups[popups.length-1].after(container);
     }
 }

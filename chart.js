@@ -1404,7 +1404,8 @@ window.onload = () => {
                         asetaAikavali(voimassa);
                     });
                 }
-                kartta(tunniste, tunniste, undefined, true, '4em', '8em', '4em', '4em');
         });
+        let tunniste = getMainState('sijainti');
+        kartta(tunniste, tunniste, undefined, true, '4em', '8em', '4em', '4em');
     }
 }
