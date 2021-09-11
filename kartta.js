@@ -280,58 +280,6 @@ let kartanIndeksi = map => {
     return ret + 1;
 };
 
-class RotateLeftControl extends ol.control.Control {
-    constructor(opt_options) {
-      const options = opt_options || {};
-      const button = document.createElement('button');
-      button.innerHTML = '⟲';
-  
-      const element = document.createElement('div');
-      element.className = 'rotate-left ol-unselectable ol-control';
-      element.setAttribute("title", "Vastapäivään 45°. Alt+shift+drag pyörittää vapaasti.");
-      element.appendChild(button);
-  
-      super({
-        element: element,
-        target: options.target,
-      });
-  
-      button.addEventListener('click', () => {
-        let view = this.getMap().getView();
-        view.animate({
-            duration: 250,
-            rotation: view.getRotation() - Math.PI / 4,
-        });
-      }, false);
-    }
-}
-class RotateRightControl extends ol.control.Control {
-    constructor(opt_options) {
-      const options = opt_options || {};
-      const button = document.createElement('button');
-      button.innerHTML = '⟳';
-  
-      const element = document.createElement('div');
-      element.className = 'rotate-right ol-unselectable ol-control';
-      element.setAttribute("title", "Myötäpäivään 45°. Alt+shift+drag pyörittää vapaasti.");
-      element.appendChild(button);
-  
-      super({
-        element: element,
-        target: options.target,
-      });
-  
-      button.addEventListener('click', () => {
-        let view = this.getMap().getView();
-        view.animate({
-            duration: 250,
-            rotation: view.getRotation() + Math.PI / 4,
-        });
-      }, false);
-    }
-
-}
-
 let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2, offsetY2) => {
     persistState = persistState === undefined ? true : persistState;
     var elem;
@@ -760,6 +708,35 @@ let select = map => {
             focus.addEventListener('click', () => fitToView(map)(feature));
             header.appendChild(focus);
 
+            let detach = document.createElement("div");
+            detach.setAttribute("class", "detach");
+            detach.innerText = '↵';
+            detach.addEventListener('click', ev => {
+                if (container.classList.contains('detached')) {
+                    container.classList.remove('detached');
+                    header.setAttribute("draggable", "false");
+                    map.getTarget().removeChild(container);
+                    container.style.left = '';
+                    container.style.top = '';
+                    overlay = new ol.Overlay({
+                        element: container,
+                        position: map.getEventCoordinate(ev)
+                    });
+                    map.addOverlay(overlay);
+                } else {
+                    let dx = ev.target.offsetLeft;
+                    let dy = ev.target.offsetTop;
+                    let coord = map.getEventPixel(ev);
+                    map.getTarget().appendChild(container);
+                    container.style.left = (coord[0] - dx) + 'px';
+                    container.style.top = (coord[1] - dy) + 'px';
+                    container.classList.add('detached');
+                    dragElement(container);
+                    map.removeOverlay(overlay);
+                }
+            });
+            header.appendChild(detach);
+
             overlay = new ol.Overlay({
                 element: container
             });
@@ -773,18 +750,35 @@ let select = map => {
 
             line = new ol.Feature(new ol.geom.LineString([coordinate, centerCoordinate(coordinate)]));
 
-            header.addEventListener('mousedown', () => {
+            header.addEventListener('mousedown', ev => {
+                let dx = ev.offsetX;
+                let dy = ev.offsetY;
                 let move = evt => {
-                    let coord = map.getEventCoordinate(evt);
-                    overlay.setPosition(coord);
-                    line.getGeometry().setCoordinates([coordinate, centerCoordinate(coord)]);
+                    let pixel = map.getEventPixel(evt);
+                    if (pixel[0] >= 0) {
+                        pixel[0] -= dx;
+                        pixel[1] -= dy;
+                        let coord = map.getCoordinateFromPixel(pixel);
+                        overlay.setPosition(coord);
+                        line.getGeometry().setCoordinates([coordinate, centerCoordinate(coord)]);
+                    }
                 }
-                let end = () => {
+                let end = evt => {
                     window.removeEventListener('mousemove', move);
                     window.removeEventListener('mouseup', end);
+                    window.removeEventListener('dragend', end);
+                    container.removeEventListener('drag', move);
+                    move(evt);
                 }
                 window.addEventListener('mousemove', move);
                 window.addEventListener('mouseup', end);
+                window.addEventListener('dragend', end);
+                container.addEventListener('drag', move);
+            });
+
+            map.on('moveend', () => {
+                let pixel = [container.offsetLeft, container.offsetTop];
+                line.getGeometry().setCoordinates([coordinate, centerCoordinate(map.getCoordinateFromPixel(pixel))]);
             });
 
             overlay.setPosition(coordinate);

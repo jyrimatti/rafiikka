@@ -4,13 +4,14 @@ var elementDragged;
 let kelpaaKohteeksi = ev => ev.target.ondrop && (ev.target.parentElement.id||'') != elementDragged[0];
 
 let dragstart = ev => {
-    if (!ev.target.id) {
-        ev.target.id = Math.random().toString(36);
+    let elem = ev.target.parentElement;
+    if (!elem.id) {
+        elem.id = Math.random().toString(36);
     }
-    elementDragged = [ev.target.id, ev.clientX, ev.clientY];
+    log('Raahataan', elem.id);
+    elementDragged = [elem.id, ev.clientX, ev.clientY];
     ev.dataTransfer.setDragImage(new Image(), 0, 0);
 
-    let elem = ev.target;
     if (elem.style.width == 'auto' || elem.style.height == 'auto' || elem.style.bottom != 'auto' || elem.style.right != 'auto') {
         log('Ikkuna oli venytetty -> kiinnitetään koko');
         let offsetTop = elem.offsetTop;
@@ -27,8 +28,26 @@ let dragstart = ev => {
 let drag = elem => ev => {
     let clientX = elementDragged[1];
     let clientY = elementDragged[2];
-    elem.style.top  = (elem.offsetTop  - (clientY - (ev.clientY == 0 ? clientY : ev.clientY))) + 'px';
-    elem.style.left = (elem.offsetLeft - (clientX - (ev.clientX == 0 ? clientX : ev.clientX))) + 'px';
+
+    let top = elem.offsetTop  - (clientY - (ev.clientY == 0 ? clientY : ev.clientY));
+    let left = elem.offsetLeft - (clientX - (ev.clientX == 0 ? clientX : ev.clientX));
+
+    if (left < 0) {
+        left = 0;
+    }
+    if (top < 0) {
+        top = 0;
+    }
+    if (left > elem.parentElement.offsetWidth - elem.offsetWidth) {
+        left = elem.parentElement.offsetWidth - elem.offsetWidth;
+    }
+    if (top > elem.parentElement.offsetHeight - elem.offsetHeight) {
+        top = elem.parentElement.offsetHeight - elem.offsetHeight;
+    }
+
+    elem.style.top  = top + 'px';
+    elem.style.left = left + 'px';
+
     elementDragged[1] = ev.clientX;
     elementDragged[2] = ev.clientY;
     ev.stopPropagation();
@@ -43,12 +62,12 @@ let drop = (elem, onDrop) => ev => {
 };
 
 let dragElement = (elem, onDrop) => {
-    elem.setAttribute("draggable", "true");
+    let header = elem.getElementsByClassName('header')[0];
+    header.setAttribute("draggable", "true");
     elem.addEventListener('dragstart', dragstart);
     elem.addEventListener('drag', drag(elem));
 
     if (onDrop) {
-        let header = elem.getElementsByClassName('header')[0];
         header.addEventListener('dragenter', ev => kelpaaKohteeksi(ev) ? ev.target.classList.add('over') : '');
         header.addEventListener('dragover',  ev => ev.preventDefault());
         header.addEventListener('dragleave', ev => kelpaaKohteeksi(ev) ? ev.target.classList.remove('over') : '');

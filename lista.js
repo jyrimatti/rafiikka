@@ -1,4 +1,6 @@
 let createListview = (elem, onHover, onSelect) => {
+    elem.classList.add('detached');
+
     let elemHeader = document.createElement("div");
     elemHeader.setAttribute("class", "header");
 
