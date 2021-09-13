@@ -12,7 +12,7 @@ let luoMuutoksetPopup_ = (luotuja, duration, muutokset, title) => {
 
     let content = document.createElement("div");
     
-    let id = ''+Math.random();
+    let id = generateId();
     content.setAttribute("id", id);
     content.setAttribute("class", "muutoksetPopup");
     container.appendChild(content);

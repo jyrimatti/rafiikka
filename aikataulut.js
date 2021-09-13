@@ -128,7 +128,7 @@ let luoJunaPopup_ = (lahtopaiva, junanumero) => {
 
     let content = document.createElement("div");
     
-    let id = ''+Math.random();
+    let id = generateId();
     content.setAttribute("id", id);
     content.setAttribute("class", "junaPopup");
     container.appendChild(content);

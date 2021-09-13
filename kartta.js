@@ -33,12 +33,12 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
     container.appendChild(listview);
 
     let aikavalinta = document.createElement('div');
-    aikavalinta.setAttribute('class', 'aikavalinta');
+    aikavalinta.setAttribute('class', 'aikavalinta detached');
     container.appendChild(aikavalinta);
 
     let alkuaika = document.createElement('input');
     alkuaika.setAttribute('type', 'datetime-local');
-    alkuaika.setAttribute('class', 'ajanhetki alkuaika');
+    alkuaika.setAttribute('class', 'ajanhetki alkuaika draghandle');
     alkuaika.setAttribute('title', 'alkuaika');
     alkuaika.setAttribute('min', ikuisuusAlku.replace('Z',''));
 
@@ -50,9 +50,10 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
 
     let sliderParent = document.createElement('span');
     sliderParent.setAttribute('title', '');
+    sliderParent.setAttribute('class', 'draghandle');
     let ticks = document.createElement('datalist');
     sliderParent.appendChild(ticks);
-    ticks.id = ''+Math.random();
+    ticks.id = generateId();
     let slider = document.createElement('input');
     sliderParent.appendChild(slider);
     slider.setAttribute('type', 'range');
@@ -65,6 +66,8 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
     aikavalinta.appendChild(alkuaika);
     aikavalinta.appendChild(sliderParent);
     aikavalinta.appendChild(loppuaika);
+
+    dragElement(aikavalinta);
 
     [alkuaika, loppuaika].forEach(x => x.addEventListener("input", () => {
         let alku = new Date(alkuaika.value);
@@ -143,7 +146,7 @@ let onDrop = lisaa => (source, target) => {
 
         source.getElementsByClassName('close')[0].dispatchEvent(new MouseEvent('click'));
         target.getElementsByClassName('title')[0].innerText = '...';
-        target.getElementsByClassName('header')[0].getElementsByTagName('a').forEach(e => e.innerHTML = '');
+        target.getElementsByClassName('draghandle')[0].getElementsByTagName('a').forEach(e => e.innerHTML = '');
     }
 }
 
@@ -341,7 +344,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
             projection: projection
         }),
         controls: [
-            new ol.control.Attribution({collapsible: false}),
+            new ol.control.Attribution({collapsible: true}),
             new ol.control.Zoom(),
             new ol.control.Rotate(),
             new ol.control.ZoomSlider(),

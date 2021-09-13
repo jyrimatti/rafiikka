@@ -44,30 +44,33 @@ ul.ikonit li {
 }
 
 .rotate-left {
-    top: 2.5em;
+    top: 0.5em;
     left: 0.5em;
     padding-bottom: 3px;
 }
 .rotate-right {
-    top: 2.5em;
+    top: 0.5em;
     left: 2.2em;
     padding-bottom: 3px;
 }
 .ol-rotate {
     right: auto;
     left: 3.9em;
-    top: 2.5em;
+    top: 0.5em;
 }
 .ol-zoom {
-    top: 4.5em;
+    top: 2.5em;
 }
 .ol-zoomslider {
-    top: 8em;
+    top: 6em;
 }
 
-.ol-scale-line,
-.ol-attribution.ol-uncollapsible {
-    bottom: 3.1em;
+.ol-attribution {
+    bottom: 2em;
+    right: auto;
+    left: 0.5em;
+}
+.ol-scale-line {
     font-size: 0.6em;
 }
 
@@ -153,6 +156,60 @@ ul.ikonit li {
 }
 .detached {
     background: rgba(255,255,255,0.5);
+}
+.snapped.left:not(:hover):not(.dragging),
+.snapped.right:not(:hover):not(.dragging) {
+    width: 2em !important;
+    height: 5em !important;
+    transition: width 0.25s, height 0.25s;
+}
+.snapped.left:not(:hover):not(.dragging) > .header > .title {
+    transform: rotate(-90deg);
+}
+.snapped.right:not(:hover):not(.dragging) {
+    writing-mode: vertical-lr;
+}
+.snapped.top:not(:hover):not(.dragging),
+.snapped.bottom:not(:hover):not(.dragging) {
+    width: 9em !important;
+    height: 2em !important;
+    transition: width 0.25s, height 0.25s;
+}
+.snapped:not(:hover):not(.dragging) > .draghandle {
+    height: 100% !important;
+    line-height: 2em;
+}
+.snapped {
+    transition: width 0.25s, height 0.25s;
+}
+.snapped.left {
+    left: 0 !important;
+    right: auto !important;
+}
+.snapped.right {
+    right: 0 !important;
+    left: auto !important;
+}
+.snapped.top {
+    top: 1em !important;
+    bottom: auto !important;
+}
+.snapped.bottom {
+    bottom: 0 !important;
+    top: auto !important;
+}
+.snapped:not(:hover) *:not(.title) {
+    display: none;
+}
+.snapped:not(:hover).left .draghandle,
+.snapped:not(:hover).right .draghandle {
+    height: 100%;
+    display: block;
+}
+.snapped:not(:hover).top .draghandle,
+.snapped:not(:hover).bottom .draghandle {
+    width: 100%;
+    display: block;
 }
 .popupContainer .header .open img {
     width: 1em;
@@ -300,7 +357,8 @@ body.fi .en, body.en .fi {
     width: 50%;
 }
 .popupContainer .selectize-control {
-    margin-left: 0.7em;
+    margin-left: 6em;
+    top: 0.25em;
     width: 90%;
 }
 .selectize-dropdown .optgroup div[data-selectable].active {
@@ -456,9 +514,11 @@ body.fi .en, body.en .fi {
 .aikavalinta {
     position: absolute;
     display: flex;
-    bottom: 0;
-    left: 0.5em;
-    right: 0.5em;
+    bottom: 0.25em;
+    left: 10em;
+    right: 1em;
+    overflow: hidden;
+    resize: horizontal;
 }
 .aikavalinta > span {
     flex: 1;

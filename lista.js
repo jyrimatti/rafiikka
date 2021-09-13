@@ -2,7 +2,7 @@ let createListview = (elem, onHover, onSelect) => {
     elem.classList.add('detached');
 
     let elemHeader = document.createElement("div");
-    elemHeader.setAttribute("class", "header");
+    elemHeader.setAttribute("class", "header draghandle");
 
     let headerText = document.createElement('span');
     headerText.classList.add('title')

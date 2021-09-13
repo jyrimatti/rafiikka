@@ -240,7 +240,7 @@ let hakuMuodosta = (str, callback, vainJunat) => {
                     srs = 'srsName=crs:84';
                 }
 
-                let id = ''+Math.random();
+                let id = generateId();
                 getJson(koordinaattiUrl(m[1] + ',' + m[2], srs), data => {
                     let rkm = data.flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
                     let pm  = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
@@ -257,7 +257,7 @@ let hakuMuodosta = (str, callback, vainJunat) => {
             }
             m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)$/);
             if (m) {
-                let id = Math.random();
+                let id = generateId();
                 getJson(ratakmSijaintiUrl(m[1], m[2], m[3]), data => {
                     let pm = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
                     document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
@@ -273,7 +273,7 @@ let hakuMuodosta = (str, callback, vainJunat) => {
             }
             m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)\s*(?:->|-|>|\/)\s*([^+]+)\+(\d+)$/);
             if (m) {
-                let id = Math.random();
+                let id = generateId();
                 getJson(ratakmValiUrl(m[1], m[2], m[3], m[4], m[5]), data => {
                     let pm = data.flatMap(x => x.paikantamismerkkivalit.map(muotoilePmv)).join('<br />');
                     document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
@@ -309,7 +309,7 @@ let hakuMuodosta = (str, callback, vainJunat) => {
             }
             m = str.match(/^(\d+)([+-])(\d+)$/);
             if (m) {
-                let id = Math.random();
+                let id = generateId();
                 getJson(pmSijaintiUrl(m[1], m[2], m[3], m[4], m[5]), data => {
                     let rkm = data.flatMap(x => x.sijainnit).flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
                     document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '');

@@ -86,7 +86,7 @@ let luoTilastoPopup_ = (nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari
 
     let content = document.createElement("div");
     
-    let id = ''+Math.random();
+    let id = generateId();
     content.setAttribute("id", id);
     content.setAttribute("class", "tilastoPopup");
     container.appendChild(content);

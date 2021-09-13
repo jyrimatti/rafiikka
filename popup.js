@@ -18,7 +18,7 @@ let luoIkkuna = (title, offsetX1, offsetY1, offsetX2, offsetY2, onClose) => {
     }
 
     let elemHeader = document.createElement("div");
-    elemHeader.setAttribute("class", "header");
+    elemHeader.setAttribute("class", "header draghandle");
     container.appendChild(elemHeader);
 
     let elemTitle = document.createElement("div");
@@ -38,8 +38,7 @@ let luoIkkuna = (title, offsetX1, offsetY1, offsetX2, offsetY2, onClose) => {
     });
     elemHeader.appendChild(close);
 
-    container.addEventListener('click', () => moveToTop(container));
-    container.addEventListener('dragstart', () => moveToBottom(container));
+    //container.addEventListener('dragstart', () => moveToBottom(container));
     container.addEventListener('dragend', () => moveToTop(container));
 
     return [container, elemHeader];

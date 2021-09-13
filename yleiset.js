@@ -660,6 +660,8 @@ let prettyPrint = obj => {
 
 let escapeRegex = str => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
+let generateId = () => 'id'+Math.random().toString(36).slice(2);
+
 let splitString = str => {
     let m = str.match(/"[^"]+"|[^ ]+/g);
     return m ? m.map(x => x.replace(/^"|"$/g, '')) : [];
