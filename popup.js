@@ -78,7 +78,8 @@ let avaaInfo = (tunniste, offsetX, offsetY, time) => {
         content.setAttribute("class", "info");
         container.appendChild(content);
     
-        dragElement(container);
+        dragElement(container, undefined, tunniste);
+        moveElement(container, () => tunniste);
 
         if (onkoJuna(tunniste) || onkoRuma(tunniste)) {
             getJson(url, data => {

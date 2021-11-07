@@ -669,13 +669,13 @@ let splitString = str => {
     return m ? m.map(x => x.replace(/^"|"$/g, '')) : [];
 }
 
-let luoInfoLinkki = (tunniste, time) => onkoInfra(tunniste) || onkoJeti(tunniste) || onkoRatanumero(tunniste) || onkoJuna(tunniste) || onkoRuma(tunniste) ? `
+let luoInfoLinkki = (tunniste, time, peek) => onkoInfra(tunniste) || onkoJeti(tunniste) || onkoRatanumero(tunniste) || onkoJuna(tunniste) || onkoRuma(tunniste) ? `
     <li>
         <a href=""
            title='Avaa tietoja'
            class='infoikoni'
            onclick='avaaInfo("${tunniste}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'
-           onmouseenter='kurkistaInfo(this, "${tunniste}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'>
+           ` + (peek ? `onmouseenter='kurkistaInfo(this, "${tunniste}", ([...document.querySelectorAll(".selectize-dropdown").values()].filter(x => x.style.display!="none")[0].offsetLeft + [...document.querySelectorAll(".selectize-dropdown").values()].filter(x => x.style.display!="none")[0].offsetWidth) + "px", (event.pageY-20) + "px", ${time ? '"' + time + '"' : time}); return false;'` : '') + `>
             ℹ️
         </a>
     </li>` : '';
@@ -704,13 +704,13 @@ let luoEtj2APILinkki = (tunniste, time) => onkoJeti(tunniste) ? `
     </li>
 ` : '';
 
-let luoKarttaLinkki = (tunniste, title, time) => onkoInfra(tunniste) || onkoTREX(tunniste) || onkoJeti(tunniste) || onkoRuma(tunniste) || onkoJuna(tunniste) ? `
+let luoKarttaLinkki = (tunniste, title, time, peek) => onkoInfra(tunniste) || onkoTREX(tunniste) || onkoJeti(tunniste) || onkoRuma(tunniste) || onkoJuna(tunniste) ? `
     <li>
         <a href=""
            title='Avaa kartalla'
            class='infoikoni karttaikoni'
            onclick='kartta("${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;/g,'')}", ${time ? '"' + time + '"' : time}, true, event.pageX, event.pageY); return false;'
-           onmouseenter='kurkistaKartta(this, "${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;|\n/g,'')}", ${time ? '"' + time + '"' : time}, event.pageX, event.pageY); return false;' />
+           ` + (peek ? `onmouseenter='kurkistaKartta(this, "${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;|\n/g,'')}", ${time ? '"' + time + '"' : time}, ([...document.querySelectorAll(".selectize-dropdown").values()].filter(x => x.style.display!="none")[0].offsetLeft + [...document.querySelectorAll(".selectize-dropdown").values()].filter(x => x.style.display!="none")[0].offsetWidth) + "px", (event.pageY-20) + "px"); return false;'` : '') + `/>
            🗺
         </a>
     </li>
@@ -832,8 +832,8 @@ let luoGrafiikkaLinkkiJetille = tunniste => !onkoJeti(tunniste) ? '' : `
 let luoLinkit = (tyyppi, tunniste, karttaTitle, time) => `
 <ul class="ikonit">${
     (tyyppi == 'grafiikka' ? '' : luoGrafiikkaLinkki(tunniste)) +
-    (tyyppi == 'info'      ? '' : luoInfoLinkki(tunniste, time)) +
-    (tyyppi == 'kartta'    ? '' : karttaTitle ? luoKarttaLinkki(tunniste, karttaTitle, time) : '') +
+    (tyyppi == 'info'      ? '' : luoInfoLinkki(tunniste, time, tyyppi == '')) +
+    (tyyppi == 'kartta'    ? '' : karttaTitle ? luoKarttaLinkki(tunniste, karttaTitle, time, tyyppi == '') : '') +
     (tyyppi == 'aikataulu' ? '' : luoAikatauluLinkki(tunniste)) +
     (tyyppi == 'raide'     ? '' : luoRaideLinkki(tunniste)) +
     luoInfraAPILinkki(tunniste, time) +

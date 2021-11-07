@@ -125,28 +125,32 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
 };
 
 let onDrop = lisaa => (source, target) => {
-    let sourceMap = source.getElementsByClassName('kartta')[0].kartta;
-    let targetMap = target.getElementsByClassName('kartta')[0].kartta;
-    if (targetMap != sourceMap) {
-        log("Suljetaan kartta", source.id);
-        sourceMap.getLayers().getArray()
-                 .filter(layer => !targetMap.getLayers().getArray().find(l => l.get('title') == layer.get('title')))
-                 .forEach(x => {
-            sourceMap.removeLayer(x);
-            lisaa(x.get('shortName'));
-        });
-        sourceMap.getInteractions().getArray().forEach(x => {
-            sourceMap.removeInteraction(x);
-            targetMap.addInteraction(x);
-        });
-        sourceMap.getOverlays().getArray().forEach(x => {
-            sourceMap.removeOverlay(x);
-            targetMap.addOverlay(x);
-        });
+    let sourceKartta = source.getElementsByClassName('kartta');
+    let targetKartta = target.getElementsByClassName('kartta');
+    if (sourceKartta && targetKartta) {
+        let sourceMap = sourceKartta[0].kartta;
+        let targetMap = targetKartta[0].kartta;
+        if (targetMap != sourceMap) {
+            log("Suljetaan kartta", source.id);
+            sourceMap.getLayers().getArray()
+                    .filter(layer => !targetMap.getLayers().getArray().find(l => l.get('title') == layer.get('title')))
+                    .forEach(x => {
+                sourceMap.removeLayer(x);
+                lisaa(x.get('shortName'));
+            });
+            sourceMap.getInteractions().getArray().forEach(x => {
+                sourceMap.removeInteraction(x);
+                targetMap.addInteraction(x);
+            });
+            sourceMap.getOverlays().getArray().forEach(x => {
+                sourceMap.removeOverlay(x);
+                targetMap.addOverlay(x);
+            });
 
-        source.getElementsByClassName('close')[0].dispatchEvent(new MouseEvent('click'));
-        target.getElementsByClassName('title')[0].innerText = '...';
-        target.getElementsByClassName('draghandle')[0].getElementsByTagName('a').forEach(e => e.innerHTML = '');
+            source.getElementsByClassName('close')[0].dispatchEvent(new MouseEvent('click'));
+            target.getElementsByClassName('title')[0].innerText = '...';
+            target.getElementsByClassName('draghandle')[0].getElementsByTagName('a').forEach(e => e.innerHTML = '');
+        }
     }
 }
 
@@ -368,12 +372,11 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         }
     });
 
-    map.getView().setRotation(getSubState(kartanIndeksi(elem.kartta))('rotaatio'));
-
-    kaavioCheck.checked = persistState && getSubState(kartanIndeksi(elem.kartta))('moodi') == 'kaavio';
+    kaavioCheck.checked = persistState && getSubState(kartanIndeksi(map))('moodi') == 'kaavio';
 
     if (persistState) {
-        setSubState(kartanIndeksi(elem.kartta))('sijainti', tunniste);
+        map.getView().setRotation(getSubState(kartanIndeksi(map))('rotaatio'));
+        setSubState(kartanIndeksi(map))('sijainti', tunniste);
     }
 
     initTooltips(container);
@@ -422,7 +425,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
 
     kaavioCheck.onchange = _ => {
         if (persistState) {
-            setSubState(kartanIndeksi(elem.kartta))('moodi', onkoKaavio() ? 'kaavio' : 'kartta');
+            setSubState(kartanIndeksi(map))('moodi', onkoKaavio() ? 'kaavio' : 'kartta');
         }
         log('Moodi vaihtui arvoon', onkoKaavio(), 'päivitetään layer data');
         flatLayerGroups(map.getLayers().getArray()).forEach(l => l.getSource().refresh());
@@ -446,7 +449,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     [alkuaika, loppuaika].forEach(x => {
         x.addEventListener("input", () => {
             if (persistState) {
-                setSubState(kartanIndeksi(elem.kartta))('aika', aikavali());
+                setSubState(kartanIndeksi(map))('aika', aikavali());
             }
             logDiff('Aikaväli vaihtui arvoon', aikavali(), 'päivitetään layer data', () => {
                 paivitaTitle();
@@ -466,7 +469,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
             slider.value = lahin.getTime();
         }
         if (persistState) {
-            setSubState(kartanIndeksi(elem.kartta))('aika', aikavali());
+            setSubState(kartanIndeksi(map))('aika', aikavali());
         }
         logDiff('Aikavalinta vaihtui, renderöidään kartta', () => {
             paivitaTitle();
@@ -533,13 +536,15 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
 
     var search;
     let updateTitleAndState = tunniste => {
-        search.settings.create = x => ({tunniste: x, nimi: x});
-        search.createItem(tunniste);
-        search.settings.create = false;
+        if (tunniste) {
+            search.settings.create = x => ({tunniste: x, nimi: x});
+            search.createItem(tunniste);
+            search.settings.create = false;
+        }
         let objects = search.getValue();
         let title = objects instanceof Array ? objects.join(',') : objects;
         if (persistState) {
-            setSubState(kartanIndeksi(elem.kartta))('sijainti', title);
+            setSubState(kartanIndeksi(map))('sijainti', title);
             container.getElementsByClassName('title')[0].innerText = title;
         }
     };
@@ -553,11 +558,11 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     };
     let poista = tunniste => {
         poistaKartalta(map)(tunniste);
-        updateTitleAndState(tunniste);
+        updateTitleAndState();
     };
     search = initSearch(haku, lisaa, poista);
-    search.disable();
     if (tunniste) {
+        search.disable();
         tunniste.split(',').forEach(x => {
             if (!lisaa(x)) {
                 log("Odotellaan", x);
@@ -607,6 +612,8 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         search.close();
         search.settings.create = false;
     }));
+
+    moveElement(container, () => container.getElementsByClassName('title')[0].innerText);
     
     return container;
 }
@@ -734,7 +741,8 @@ let select = map => {
                     container.style.left = (coord[0] - dx) + 'px';
                     container.style.top = (coord[1] - dy) + 'px';
                     container.classList.add('detached');
-                    dragElement(container);
+                    dragElement(container, undefined, tunniste);
+                    moveElement(container, () => tunniste);
                     map.removeOverlay(overlay);
                 }
             });

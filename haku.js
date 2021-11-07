@@ -33,7 +33,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
         dropdownParent: 'body',
         score: _ => item => item.score,
         render: {
-            item: (item, escape) => '<div class="item">' + item.nimi + '</div>',
+            item: (item, escape) => '<div class="item"><span class="title">' + item.nimi + '</span></div>',
             option: (item, escape) => {
                 let tunniste = item.tunniste;
                 let reitti = onkoReitti(item.tunniste);
@@ -74,7 +74,8 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
             };
             f();
         },
-        onItemAdd: value => {
+        onItemAdd: (value, item) => {
+            moveElement(item[0], () => value);
             if (lisaaPopuppiin) {
                 lisaaPopuppiin(value);
             } else {
@@ -120,6 +121,21 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
         }
     })[0].selectize;
 
+    search.$control[0].addEventListener('dragenter', ev => ev.dataTransfer.getData("rafiikka/tunniste") ? ev.target.classList.add('over') : '');
+    search.$control[0].addEventListener('dragleave', ev => ev.dataTransfer.getData("rafiikka/tunniste") ? ev.target.classList.remove('over') : '');
+    search.$control[0].addEventListener('drop', ev => {
+        let tunniste = ev.dataTransfer.getData("rafiikka/tunniste");
+        let elementid = ev.dataTransfer.getData("rafiikka/elementid");
+        if (lisaaPopuppiin && tunniste) {
+            tunniste.split(",").forEach(lisaaPopuppiin);
+            let source = document.getElementById(elementid);
+            let close = source.getElementsByClassName('close');
+            close.forEach(x => x.dispatchEvent(new MouseEvent('click')));
+        }
+    });
+    search.$control[0].addEventListener('dragover', ev => ev.preventDefault());
+    search.$control.off('mousedown');
+
     if (!lisaaPopuppiin) {
         // laitetaan clickit valumaan varsinaisiin linkkeihin saakka
         search.$dropdown_content.on('mousedown', () => false);
@@ -133,7 +149,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                 }
                 let opt = search.$activeOption[0];
                 prev = opt.querySelector('.karttaikoni');
-                prev.onmouseenter({ pageX: 0, pageY: 0});
+                prev.onmouseenter({ pageX: ev.pageX, pageY: ev.pageY});
             } else {
                 if (prev) {
                     prev.dispatchEvent(new MouseEvent('mouseleave'));

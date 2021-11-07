@@ -1,10 +1,13 @@
 // must use a global variable since webkit-browsers only allow reading of dataTransfer in onDrop...
 var elementDragged;
 
-let kelpaaKohteeksi = ev => ev.target.ondrop && (ev.target.parentElement.id||'') != elementDragged[0] && !ev.target.parentElement.querySelector(':scope #' + elementDragged[0]);
+let kelpaaKohteeksi = ev => elementDragged && (ev.target.parentElement.id||'') != elementDragged[0] && !ev.target.parentElement.querySelector(':scope #' + elementDragged[0]);
 
-let dragstart = ev => {
-    let elem = ev.target.parentElement.classList.contains('dragContext') ? ev.target.parentElement : ev.target;
+let dragstart = tunniste => ev => {
+    if (ev.dataTransfer.getData("rafiikka/tunniste")) {
+        return false;
+    }
+    let elem = ev.target.closest('.dragContext');
     if (!elem.id) {
         elem.id = generateId();
     }
@@ -34,6 +37,10 @@ let dragend = ev => {
 }
 
 let drag = elem => ev => {
+    if (!elem.parentElement) {
+        // ikkuna poistettu
+        return false;
+    }
     let clientX = elementDragged[1];
     let clientY = elementDragged[2];
 
@@ -99,24 +106,46 @@ let drop = (elem, onDrop) => ev => {
     if (kelpaaKohteeksi(ev)) {
         ev.target.classList.remove('over');
         ev.preventDefault();
-        onDrop(document.getElementById(elementDragged[0]), elem, ev);
+        let source = document.getElementById(elementDragged[0]);
+        if (source) {
+            onDrop(source, elem, ev);
+        }
     }
 };
 
-let dragElement = (elem, onDrop) => {
+let dragElement = (elem, onDrop, tunniste) => {
     elem.classList.add('dragContext');
     [elem, ...elem.querySelectorAll('.draghandle')].filter(el => el.matches('.draghandle'))
                                                    .forEach(draghandle => {
         draghandle.setAttribute("draggable", "true");
-        elem.addEventListener('dragstart', dragstart);
+        elem.addEventListener('dragstart', dragstart(tunniste));
         elem.addEventListener('dragend', dragend);
         elem.addEventListener('drag', drag(elem));
 
-        if (onDrop) {
+        /*if (onDrop) {
             draghandle.addEventListener('dragenter', ev => kelpaaKohteeksi(ev) ? ev.target.classList.add('over') : '');
             draghandle.addEventListener('dragover',  ev => ev.preventDefault());
             draghandle.addEventListener('dragleave', ev => kelpaaKohteeksi(ev) ? ev.target.classList.remove('over') : '');
-            draghandle.ondrop = drop(elem, onDrop);
-        }
+            draghandle.addEventListener('drop', drop(elem, onDrop));
+        }*/
     });
 };
+
+let moveElement = (elem, tunnisteFunc) => {
+    if (!elem.id) {
+        elem.id = generateId();
+    }
+    let e = elem.getElementsByClassName('title')[0];
+    e.classList.add('move');
+    e.setAttribute("draggable", "true");
+    e.addEventListener('dragstart', ev => {
+        ev.dataTransfer.setData("rafiikka/tunniste", tunnisteFunc());
+        ev.dataTransfer.setData("rafiikka/elementid", elem.id);
+    });
+    e.addEventListener('drag', ev => {
+        ev.stopPropagation();
+    });
+    e.addEventListener('dragend', ev => {
+        ev.stopPropagation();
+    });
+}

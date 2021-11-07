@@ -143,7 +143,7 @@ ul.ikonit li {
     position: absolute;
     right: 1em;
 }
-.objectfocus, .detach {
+.objectfocus, .detach, .raidekorkeudet {
     position: absolute;
     right: 1.5em;
     width: 1em;
@@ -159,6 +159,9 @@ ul.ikonit li {
 }
 .detached {
     background: rgba(255,255,255,0.5);
+}
+.move {
+    cursor: grabbing !important;
 }
 .snapped.left:not(:hover):not(.dragging),
 .snapped.right:not(:hover):not(.dragging) {
@@ -259,6 +262,9 @@ ul.ikonit li {
 .aikatauluPopup {
     width: 700px;
     height: 500px;
+}
+.raidePopup .raide {
+    height: 100%;
 }
 .tilastoContainer {
     width: 1200px;
