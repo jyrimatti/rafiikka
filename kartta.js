@@ -740,6 +740,15 @@ let select = map => {
             });
             header.appendChild(detach);
 
+            if (onkoRaide(tunniste)) {
+                let raide = document.createElement("div");
+                raide.setAttribute("class", "raidekorkeudet");
+                raide.innerText = '⦧';
+                raide.setAttribute("title", "Avaa raiteen korkeuskäyrä");
+                raide.addEventListener('click', () => luoRaidePopup(tunniste));
+                header.appendChild(raide);
+            }
+
             overlay = new ol.Overlay({
                 element: container
             });

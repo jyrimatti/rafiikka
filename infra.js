@@ -1,14 +1,18 @@
-let ratakmsijaintiComparator = (a,b) => {
-    if (a.ratanumero < b.ratanumero) {
-        return -1;
-    } else if (a.ratanumero > b.ratanumero) {
-        return 1;
-    } else if (a.ratakm*10000+a.etaisyys < b.ratakm*10000+b.etaisyys) {
+let kmsijaintiComparator = (a,b) => {
+    if (a.ratakm*10000+a.etaisyys < b.ratakm*10000+b.etaisyys) {
         return -1;
     } else if (a.ratakm*10000+a.etaisyys > b.ratakm*10000+b.etaisyys) {
         return 1;
     }
     return 0;
+};
+let ratakmsijaintiComparator = (a,b) => {
+    if (a.ratanumero < b.ratanumero) {
+        return -1;
+    } else if (a.ratanumero > b.ratanumero) {
+        return 1;
+    }
+    return kmsijaintiComparator(a,b);
 };
 let valissa = ratakmsijainti => vali => ratakmsijaintiComparator(vali[0],ratakmsijainti) <= 0 && ratakmsijaintiComparator(ratakmsijainti, vali[1]) <= 0;
 

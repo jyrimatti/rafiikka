@@ -154,6 +154,9 @@ ul.ikonit li {
 .detach {
     right: 2.5em;
 }
+.raidekorkeudet {
+    right: 4em;
+}
 .detached {
     background: rgba(255,255,255,0.5);
 }

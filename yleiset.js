@@ -181,6 +181,7 @@ let laituritUrl               = () => infraAPIUrl() + "aikataulupaikat.json?cql_
 
 let elementitUrl              = () => infraAPIUrl() + "elementit.json?propertyName=tunniste,nimi,ratakmsijainnit,objektinVoimassaoloaika&" + infraAikavali();
 let lorajatUrl                = () => infraAPIUrl() + "liikenteenohjauksenrajat.json?propertyName=tunniste,leikkaukset.ratakmsijainnit,objektinVoimassaoloaika&" + infraAikavali();
+let raiteenKorkeudetUrl       = tunniste => infraAPIUrl() + "raiteet/" + tunniste + ".json?propertyName=korkeuspisteet,ratakmvalit,tunnus&" + infraAikavali();
 
 let eiUrlRatanumero = () => tila => etj2APIUrl() + 'ennakkoilmoitukset.json?cql_filter=tila=%27'  + tila + '%27&propertyName=ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa&' + etj2Aikavali();
 let esUrlRatanumero = () => tila => etj2APIUrl() + 'ennakkosuunnitelmat.json?cql_filter=tila=%27' + tila + '%27&propertyName=sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa&' + etj2Aikavali();
@@ -411,7 +412,7 @@ if (onkoSeed) {
     };
 
     seed([ratanumerotUrl(), liikennepaikkavalitUrl(), rautatieliikennepaikatUrl(), liikennepaikanOsatUrl(), raideosuudetUrl(), laituritUrl(),
-     elementitUrl(), lorajatUrl(), infraObjektityypitUrl(),
+     elementitUrl(), lorajatUrl(), raiteenKaltevuudetUrl(), infraObjektityypitUrl(),
      junasijainnitUrl(), junasijainnitGeojsonUrl(), kunnossapitoalueetMetaUrl(), liikenteenohjausalueetMetaUrl(), kayttokeskuksetMetaUrl(), liikennesuunnittelualueetMetaUrl(),
      ratapihapalveluTyypitUrl(), opastinTyypitUrl(), vaihdeTyypitUrl()]
      .concat(eiTilat.flatMap(tila => [eiUrlRatanumero()(tila), eiUrlAikataulupaikka()(tila)]))
@@ -474,6 +475,7 @@ let onkoPmSijainti     = str => str && str.match && str.match(/^(\d+)([+-])(\d+)
 let onkoRatakmVali     = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)\s*-\s*(\d+)[+](\d+)$/);
 let onkoRatanumero     = str => str && str.match && !onkoJeti(str) && !onkoRuma(str) && !onkoWKT(str) && str.match(/^\(([a-zA-Z0-9 ]+|[^a-zA-Z0-9 ]{1,6}(?: [^a-zA-Z0-9 ]{1,3})?)\)$/);
 let onkoReitti         = str => str && str.match && str.match(/^(.*?)\s*((?:=>.*?)*\s*)(?:=>)\s*(.*?)$/);
+let onkoRaide          = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.1\.44\.)([0-9.]+)$/);
 
 let onkoInfra = str => onkoInfraOID(str) ||
                        onkoReitti(str) ||
@@ -725,6 +727,17 @@ let luoAikatauluLinkki = (tunniste) => onkoJuna(tunniste) ? `
     </li>
 ` : '';
 
+let luoRaideLinkki = (tunniste) => onkoRaide(tunniste) ? `
+    <li>
+        <a href=""
+           title='Avaa raiteen korkeuskäyrä'
+           class='infoikoni'
+           onclick='luoRaidePopup("${tunniste}"); return false;' />
+           ⦧
+        </a>
+    </li>
+` : '';
+
 let luoGrafiikkaLinkki = tunniste => {
     let m = onkoRatanumero(tunniste);
     if (m) {
@@ -822,6 +835,7 @@ let luoLinkit = (tyyppi, tunniste, karttaTitle, time) => `
     (tyyppi == 'info'      ? '' : luoInfoLinkki(tunniste, time)) +
     (tyyppi == 'kartta'    ? '' : karttaTitle ? luoKarttaLinkki(tunniste, karttaTitle, time) : '') +
     (tyyppi == 'aikataulu' ? '' : luoAikatauluLinkki(tunniste)) +
+    (tyyppi == 'raide'     ? '' : luoRaideLinkki(tunniste)) +
     luoInfraAPILinkki(tunniste, time) +
     luoEtj2APILinkki(tunniste, time)
 }</ul>`
