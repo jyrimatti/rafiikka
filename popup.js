@@ -28,6 +28,7 @@ let luoIkkuna = (title, offsetX1, offsetY1, offsetX2, offsetY2, onClose) => {
 
     let close = document.createElement("div");
     close.setAttribute("class", "close");
+    close.setAttribute("title", "Sulje ikkuna");
     close.innerText = "x";
     close.addEventListener('click', () => {
         if (onClose) {
@@ -78,7 +79,7 @@ let avaaInfo = (tunniste, offsetX, offsetY, time) => {
         content.setAttribute("class", "info");
         container.appendChild(content);
     
-        dragElement(container, undefined, tunniste);
+        dragElement(container, tunniste);
         moveElement(container, () => tunniste);
 
         if (onkoJuna(tunniste) || onkoRuma(tunniste)) {

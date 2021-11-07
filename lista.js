@@ -15,7 +15,7 @@ let createListview = (elem, onHover, onSelect) => {
     
     let headerFilter = document.createElement('input');
     headerFilter.classList.add("filter");
-    headerFilter.setAttribute("placeholder", "suodata...");
+    headerFilter.setAttribute("placeholder", " suodata...");
     headerFilter.addEventListener('input', () => updateListviewContents(elem, map));
     elemHeader.appendChild(headerFilter);
 
@@ -25,6 +25,8 @@ let createListview = (elem, onHover, onSelect) => {
 
     elem.onHover = onHover;
     elem.onSelect = onSelect;
+
+    initTooltips(elem);
 };
 
 let luoCollapseExpandAll = (hiddenState, onclick) => {

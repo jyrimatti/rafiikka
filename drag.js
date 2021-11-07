@@ -1,8 +1,6 @@
 // must use a global variable since webkit-browsers only allow reading of dataTransfer in onDrop...
 var elementDragged;
 
-let kelpaaKohteeksi = ev => elementDragged && (ev.target.parentElement.id||'') != elementDragged[0] && !ev.target.parentElement.querySelector(':scope #' + elementDragged[0]);
-
 let dragstart = tunniste => ev => {
     if (ev.dataTransfer.getData("rafiikka/tunniste")) {
         return false;
@@ -102,18 +100,7 @@ let drag = elem => ev => {
     ev.stopPropagation();
 };
 
-let drop = (elem, onDrop) => ev => {
-    if (kelpaaKohteeksi(ev)) {
-        ev.target.classList.remove('over');
-        ev.preventDefault();
-        let source = document.getElementById(elementDragged[0]);
-        if (source) {
-            onDrop(source, elem, ev);
-        }
-    }
-};
-
-let dragElement = (elem, onDrop, tunniste) => {
+let dragElement = (elem, tunniste) => {
     elem.classList.add('dragContext');
     [elem, ...elem.querySelectorAll('.draghandle')].filter(el => el.matches('.draghandle'))
                                                    .forEach(draghandle => {
@@ -121,13 +108,6 @@ let dragElement = (elem, onDrop, tunniste) => {
         elem.addEventListener('dragstart', dragstart(tunniste));
         elem.addEventListener('dragend', dragend);
         elem.addEventListener('drag', drag(elem));
-
-        /*if (onDrop) {
-            draghandle.addEventListener('dragenter', ev => kelpaaKohteeksi(ev) ? ev.target.classList.add('over') : '');
-            draghandle.addEventListener('dragover',  ev => ev.preventDefault());
-            draghandle.addEventListener('dragleave', ev => kelpaaKohteeksi(ev) ? ev.target.classList.remove('over') : '');
-            draghandle.addEventListener('drop', drop(elem, onDrop));
-        }*/
     });
 };
 

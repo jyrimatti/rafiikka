@@ -133,7 +133,7 @@ let luoJunaPopup_ = (lahtopaiva, junanumero) => {
     content.setAttribute("class", "junaPopup");
     container.appendChild(content);
 
-    dragElement(container, undefined, tunniste);
+    dragElement(container, tunniste);
 
     window.junapopup = am4core.create(id, am4charts.XYChart);
     junapopup.height = am4core.percent(100);

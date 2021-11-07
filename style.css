@@ -593,6 +593,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
 .listview {
     width: 20%;
+    min-width: 10em;
     height: 50%;
     right: 0;
     bottom: 3em;

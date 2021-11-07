@@ -33,7 +33,7 @@ let luoRaidePopup_ = tunniste => {
     raidepopup.paddingTop = 40;
     raidepopup.events.on("error", errorHandler);
 
-    dragElement(container, undefined, tunniste);
+    dragElement(container, tunniste);
     moveElement(container, () => raidepopup.series.values.map(x => x.name).join(","));
 
     raidepopup.scrollbarX = new am4core.Scrollbar();

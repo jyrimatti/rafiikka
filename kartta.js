@@ -604,14 +604,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         });
     }
 
-    dragElement(container, onDrop(x => {
-        search.disable();
-        search.settings.create = x => ({tunniste: x, nimi: x});
-        search.createItem(x);
-        search.enable();
-        search.close();
-        search.settings.create = false;
-    }));
+    dragElement(container);
 
     moveElement(container, () => container.getElementsByClassName('title')[0].innerText);
     
@@ -715,14 +708,17 @@ let select = map => {
             let focus = document.createElement("div");
             focus.setAttribute("class", "objectfocus");
             focus.innerText = '⌖';
+            focus.setAttribute("title", "Kohdista kartta");
             focus.addEventListener('click', () => fitToView(map)(feature));
             header.appendChild(focus);
 
             let detach = document.createElement("div");
             detach.setAttribute("class", "detach");
             detach.innerText = '↵';
+            detach.setAttribute("title", "Irroita karttapohjasta");
             detach.addEventListener('click', ev => {
                 if (container.classList.contains('detached')) {
+                    detach.setAttribute("title", "Irroita karttapohjasta");
                     container.classList.remove('detached');
                     header.setAttribute("draggable", "false");
                     map.getTarget().removeChild(container);
@@ -734,6 +730,7 @@ let select = map => {
                     });
                     map.addOverlay(overlay);
                 } else {
+                    detach.setAttribute("title", "Kiinnitä karttapohjaan");
                     let dx = ev.target.offsetLeft;
                     let dy = ev.target.offsetTop;
                     let coord = map.getEventPixel(ev);
@@ -741,7 +738,7 @@ let select = map => {
                     container.style.left = (coord[0] - dx) + 'px';
                     container.style.top = (coord[1] - dy) + 'px';
                     container.classList.add('detached');
-                    dragElement(container, undefined, tunniste);
+                    dragElement(container, tunniste);
                     moveElement(container, () => tunniste);
                     map.removeOverlay(overlay);
                 }
@@ -756,7 +753,8 @@ let select = map => {
                 raide.addEventListener('click', () => luoRaidePopup(tunniste));
                 header.appendChild(raide);
             }
-
+            
+            initTooltips(container);
             overlay = new ol.Overlay({
                 element: container
             });
