@@ -412,7 +412,7 @@ if (onkoSeed) {
     };
 
     seed([ratanumerotUrl(), liikennepaikkavalitUrl(), rautatieliikennepaikatUrl(), liikennepaikanOsatUrl(), raideosuudetUrl(), laituritUrl(),
-     elementitUrl(), lorajatUrl(), raiteenKaltevuudetUrl(), infraObjektityypitUrl(),
+     elementitUrl(), lorajatUrl(), raiteenKorkeudetUrl(), infraObjektityypitUrl(),
      junasijainnitUrl(), junasijainnitGeojsonUrl(), kunnossapitoalueetMetaUrl(), liikenteenohjausalueetMetaUrl(), kayttokeskuksetMetaUrl(), liikennesuunnittelualueetMetaUrl(),
      ratapihapalveluTyypitUrl(), opastinTyypitUrl(), vaihdeTyypitUrl()]
      .concat(eiTilat.flatMap(tila => [eiUrlRatanumero()(tila), eiUrlAikataulupaikka()(tila)]))
