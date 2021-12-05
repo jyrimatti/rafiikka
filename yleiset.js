@@ -411,10 +411,11 @@ if (onkoSeed) {
         }
     };
 
-    seed([ratanumerotUrl(), liikennepaikkavalitUrl(), rautatieliikennepaikatUrl(), liikennepaikanOsatUrl(), raideosuudetUrl(), laituritUrl(),
-     elementitUrl(), lorajatUrl(), infraObjektityypitUrl(),
-     junasijainnitUrl(), junasijainnitGeojsonUrl(), kunnossapitoalueetMetaUrl(), liikenteenohjausalueetMetaUrl(), kayttokeskuksetMetaUrl(), liikennesuunnittelualueetMetaUrl(),
-     ratapihapalveluTyypitUrl(), opastinTyypitUrl(), vaihdeTyypitUrl()]
+    seed([]
+     .concat([ratanumerotUrl(), liikennepaikkavalitUrl(), rautatieliikennepaikatUrl(), liikennepaikanOsatUrl(), raideosuudetUrl(), laituritUrl(),
+              elementitUrl(), lorajatUrl(), infraObjektityypitUrl(),
+              junasijainnitUrl(), junasijainnitGeojsonUrl(), kunnossapitoalueetMetaUrl(), liikenteenohjausalueetMetaUrl(), kayttokeskuksetMetaUrl(), liikennesuunnittelualueetMetaUrl(),
+              ratapihapalveluTyypitUrl(), opastinTyypitUrl(), vaihdeTyypitUrl()])
      .concat(eiTilat.flatMap(tila => [eiUrlRatanumero()(tila), eiUrlAikataulupaikka()(tila)]))
      .concat(esTilat.flatMap(tila => [esUrlRatanumero()(tila), esUrlAikataulupaikka()(tila)]))
      .concat(vsTilat.flatMap(tila => [vsUrlRatanumero()(tila), vsUrlAikataulupaikka()(tila)]))
@@ -423,6 +424,8 @@ if (onkoSeed) {
      .concat(hakuUrlitEtj2())
      .concat(hakuUrlitRT())
      .concat(hakuUrlitLR())
+     .concat(muutoksetInfra.map(x => x(document.getElementById('delta1').value + 'P' + document.getElementById('delta2').value + document.getElementById('delta3').value)).flatMap(x => [x.luotuja, x.poistuneita]))
+     .concat(muutoksetEtj2.map(x => x(document.getElementById('delta1').value + 'P' + document.getElementById('delta2').value + document.getElementById('delta3').value)).flatMap(x => [x.luotuja, x.poistuneita]))
      .concat([asiatUrl(), eiUrlTilasto(), esUrlTilasto(), vsUrlTilasto()])
      .concat([ratapihapalvelutUrlTilasto(), toimialueetUrlTilasto(), tilirataosatUrlTilasto(), liikennesuunnittelualueetUrlTilasto(), paikantamismerkitUrlTilasto(),
             kilometrimerkitUrlTilasto(), radatUrlTilasto(), liikennepaikanOsatUrlTilasto(), rautatieliikennepaikatUrlTilasto(), liikennepaikkavalitUrlTilasto(), raideosuudetUrlTilasto(),
