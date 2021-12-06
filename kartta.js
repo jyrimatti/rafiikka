@@ -427,6 +427,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         if (persistState) {
             setSubState(kartanIndeksi(map))('moodi', onkoKaavio() ? 'kaavio' : 'kartta');
         }
+        taustaLayer.setVisible(!onkoKaavio());
         log('Moodi vaihtui arvoon', onkoKaavio(), 'päivitetään layer data');
         flatLayerGroups(map.getLayers().getArray()).forEach(l => l.getSource().refresh());
         Object.values(map.highlightLayers).forEach(x => x.getSource().refresh());
@@ -533,6 +534,26 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     };
 
     createListview(listview, onHover, onSelect);
+
+    if (persistState) {
+        let persistedLayers = flatLayerGroups(map.getLayers().getArray());
+
+        let nakyvatTasot = getSubState(kartanIndeksi(map))('tasot') || [];
+        persistedLayers.forEach(x => {
+            if (nakyvatTasot.indexOf(x.get('shortName')) > -1) {
+                log('Laitetaan näkyviin taso', x.get('title'));
+                x.setVisible(true);
+            }
+        });
+
+        persistedLayers.forEach(l => l.on('change:visible', () => {
+            let toPersist = persistedLayers.filter(x => x.getVisible())
+                                           .map(x => x.get('shortName'))
+                                           .filter(x => x != undefined)
+                                           .filter(x => x.length == 3);
+            setSubState(kartanIndeksi(map))('tasot', toPersist);
+        }));
+    }
 
     var search;
     let updateTitleAndState = tunniste => {

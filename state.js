@@ -35,6 +35,14 @@ let parseInterval = str => {
     return undefined;
 }
 
+let parseLayers = str => {
+    let ret = str.split(',');
+    if (ret.every(x => x.length == 3)) {
+        return ret;
+    }
+    return undefined;
+};
+
 let parseStatePart = str => {
     if (str == hashPlaceholder.substring(1)) {
         return {};
@@ -45,11 +53,16 @@ let parseStatePart = str => {
     } else if (!isNaN(str)) {
         return {rotaatio: parseFloat(str)/360 * 2*Math.PI}
     } else {
-        let interval = parseInterval(str);
-        if (interval) {
-            return {aika: interval};
+        let layers = parseLayers(str);
+        if (layers) {
+            return {tasot: layers};
         } else {
-            return {sijainti: str};
+            let interval = parseInterval(str);
+            if (interval) {
+                return {aika: interval};
+            } else {
+                return {sijainti: str};
+            }
         }
     }
 };
@@ -86,7 +99,7 @@ let defaultAika = () => {
     return [now, dateFns.dateFns.add(now, {hours: 4}), undefined, {hours: 4}];
 };
 
-let defaultState = () => ({moodi:'kartta', aika: defaultAika(), sijainti: '(009)', rotaatio: 0});
+let defaultState = () => ({moodi:'kartta', aika: defaultAika(), sijainti: '(009)', rotaatio: 0, tasot: []});
 
 let parseState = state => {
     let st = {};
@@ -109,10 +122,11 @@ let printDuration = dur => {
     return dur === undefined ? undefined : dateFns.durationFns.toString(dateFns.durationFns.normalize(rounded));
 };
 
-let printState = state => ((state.moodi ? '&' + state.moodi : '') +
+let printState = state => ((state.moodi && state.moodi != defaultState().moodi ? '&' + state.moodi : '') +
                            (state.aika ? '&' + (state.aika[0].getTime() == state.aika[1].getTime() ? toISOStringNoMillis(state.aika[0]) : (printDuration(state.aika[2]) || toISOStringNoMillis(state.aika[0])) + '/' + (printDuration(state.aika[3]) || toISOStringNoMillis(state.aika[1]))) : '') +
                            (state.sijainti ? '&' + (state.sijainti instanceof Array ? state.sijainti.join("-") : state.sijainti) : '') +
-                           (state.rotaatio && state.rotaatio != 0 ? '&' + (state.rotaatio / (2*Math.PI) * 360) : '')
+                           (state.rotaatio && state.rotaatio != 0 ? '&' + (state.rotaatio / (2*Math.PI) * 360) : '') +
+                           (state.tasot && state.tasot instanceof Array && state.tasot.length > 0 ? '&' + state.tasot.join(',') : '')
                           ).substring(1);
 
 let hashPlaceholder = '&loading...';
