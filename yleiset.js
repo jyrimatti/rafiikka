@@ -30,6 +30,8 @@ let logDiff = (msg1, msg2, msg3, msg4, msg5, msg6) => {
     return ret;
 };
 
+let onkoSeed = window.location.hash == '#seed' || window.location.hash.endsWith('&seed');
+
 // https://stackoverflow.com/a/31732310
 let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
                navigator.userAgent &&
@@ -73,8 +75,8 @@ window.revisions = {
 };
 
 // safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
-let infraAPIUrl = skipRevision => 'https://' + (isSafari || isLocal ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/' + (skipRevision === true ? '' : window.revisions.infra);
-let etj2APIUrl  = skipRevision => 'https://' + (isSafari || isLocal ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/' + (skipRevision === true ? '' : window.revisions.etj2);
+let infraAPIUrl = skipRevision => 'https://' + (isSafari || isLocal || onkoSeed ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/' + (skipRevision === true ? '' : window.revisions.infra);
+let etj2APIUrl  = skipRevision => 'https://' + (isSafari || isLocal || onkoSeed ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/' + (skipRevision === true ? '' : window.revisions.etj2);
 let aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
 let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
 
@@ -113,8 +115,6 @@ let progressEnd = type => {
         progress.max = 1;
     }
 };
-
-let onkoSeed = window.location.hash == '#seed' || window.location.hash.endsWith('&seed');
 
 let fetchJson = (url, opts, callback, errorCallback) => {
     let type = url.replace(/[?].*/,'')
