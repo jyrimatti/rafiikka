@@ -35,6 +35,7 @@ let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
                navigator.userAgent &&
                navigator.userAgent.indexOf('CriOS') == -1 &&
                navigator.userAgent.indexOf('FxiOS') == -1;
+let isLocal = window.location.protocol == 'file:';
 
 let toISOStringNoMillis = (d) => {
     let pad = n => n < 10 ? '0' + n : n;
@@ -72,8 +73,8 @@ window.revisions = {
 };
 
 // safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
-let infraAPIUrl = skipRevision => 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/' + (skipRevision === true ? '' : window.revisions.infra);
-let etj2APIUrl  = skipRevision => 'https://' + (isSafari ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/' + (skipRevision === true ? '' : window.revisions.etj2);
+let infraAPIUrl = skipRevision => 'https://' + (isSafari || isLocal ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/' + (skipRevision === true ? '' : window.revisions.infra);
+let etj2APIUrl  = skipRevision => 'https://' + (isSafari || isLocal ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/' + (skipRevision === true ? '' : window.revisions.etj2);
 let aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
 let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
 
@@ -678,7 +679,7 @@ let luoInfoLinkki = (tunniste, time, peek) => onkoInfra(tunniste) || onkoJeti(tu
            title='Avaa tietoja'
            class='infoikoni'
            onclick='avaaInfo("${tunniste}", event.pageX, event.pageY, ${time ? '"' + time + '"' : time}); return false;'
-           ` + (peek ? `onmouseenter='kurkistaInfo(this, "${tunniste}", ([...document.querySelectorAll(".selectize-dropdown").values()].filter(x => x.style.display!="none")[0].offsetLeft + [...document.querySelectorAll(".selectize-dropdown").values()].filter(x => x.style.display!="none")[0].offsetWidth) + "px", (event.pageY-20) + "px", ${time ? '"' + time + '"' : time}); return false;'` : '') + `>
+           ` + (peek ? `onmouseenter='kurkistaInfo(this, "${tunniste}", [...document.querySelectorAll(".selectize-dropdown").values()].filter(x => x.style.display!="none").map(x => (x.offsetLeft + x.offsetWidth) + "px")[0], (event.pageY-20) + "px", ${time ? '"' + time + '"' : time}); return false;'` : '') + `>
             ℹ️
         </a>
     </li>` : '';
@@ -713,7 +714,7 @@ let luoKarttaLinkki = (tunniste, title, time, peek) => onkoInfra(tunniste) || on
            title='Avaa kartalla'
            class='infoikoni karttaikoni'
            onclick='kartta("${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;/g,'')}", ${time ? '"' + time + '"' : time}, true, event.pageX, event.pageY); return false;'
-           ` + (peek ? `onmouseenter='kurkistaKartta(this, "${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;|\n/g,'')}", ${time ? '"' + time + '"' : time}, ([...document.querySelectorAll(".selectize-dropdown").values()].filter(x => x.style.display!="none")[0].offsetLeft + [...document.querySelectorAll(".selectize-dropdown").values()].filter(x => x.style.display!="none")[0].offsetWidth) + "px", (event.pageY-20) + "px"); return false;'` : '') + `/>
+           ` + (peek ? `onmouseenter='kurkistaKartta(this, "${tunniste}", "${title.replaceAll(/<[^>]*>|&lt;.*?&gt;|\n/g,'')}", ${time ? '"' + time + '"' : time}, [...document.querySelectorAll(".selectize-dropdown").values()].filter(x => x.style.display!="none").map(x => (x.offsetLeft + x.offsetWidth) + "px")[0], (event.pageY-20) + "px"); return false;'` : '') + `/>
            🗺
         </a>
     </li>
@@ -803,22 +804,21 @@ let luoGrafiikkaLinkkiJunalle = (lahtopaiva, junanumero) => `
     </li>
 `;
 
-window.asetaEnnakkotietoGrafiikalle = tunniste => {
-    let existingData = seriesEI.data.length > 0 && onkoEI(tunniste)  ? seriesEI.data :
-                       seriesES.data.length > 0 && onkoES(tunniste)  ? seriesES.data :
-                       seriesVS.data.length > 0 && onkoVS(tunniste)  ? seriesVS.data :
-                       seriesLO.data.length > 0 && onkoLOI(tunniste) ? seriesLO.data : undefined;
-    if (existingData) {
-        ratanumeroChanged(existingData.filter(x => x.tunniste == tunniste || x.sisainenTunniste == tunniste)
-                                      .map(x => x.ratakmvali)
-                                      .sort(ratakmvaliComparator)
-                                      .map(x => x.ratanumero)[0]);
-    } else {
-        haeEnnakkotiedonRatanumerotJaVoimassaolo(tunniste, (ratanumero, voimassa) => {
-            ratanumeroChanged(ratanumero);
-            asetaAikavali(voimassa);
-        });
-    }
+window.asetaEnnakkotietoGrafiikalle = (tunniste, f) => {
+    haeEnnakkotiedonRatanumerotJaVoimassaolo(tunniste, (ratanumero, voimassa) => {
+        if (f) {
+            f(ratanumero, voimassa);
+        }
+        ratanumeroChanged(ratanumero);
+        let aikaNyt = getMainState('aika');
+        if (voimassa[0] < aikaNyt[1] && aikaNyt[0] < voimassa[1]) {
+            // voimassaolo leikkaa jo näytettävää aikaväliä
+        } else {
+            setMainState('aika', voimassa[1] <= aikaNyt[0] ? [dateFns.dateFns.add(voimassa[1], {hours: -4}), voimassa[1]]
+                                                           : [voimassa[0], dateFns.dateFns.add(voimassa[0], {hours: 4})]);
+            window.dispatchEvent(new HashChangeEvent("hashchange"));
+        }
+    });
 };
 
 let luoGrafiikkaLinkkiJetille = tunniste => !onkoJeti(tunniste) ? '' : `

@@ -37,7 +37,7 @@ let parseInterval = str => {
 
 let parseLayers = str => {
     let ret = str.split(',');
-    if (ret.every(x => x.length == 3)) {
+    if (ret.every(x => x.length == 2 || x.length == 3)) {
         return ret;
     }
     return undefined;

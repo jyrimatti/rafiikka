@@ -1,7 +1,7 @@
 window.valittuDS = new am4core.DataSource();
 on(aikataulupaikatDS.events, "done", ev => {
-    if (!valittuDS.data && getMainState('sijainti').split("-").length >= 2) {
-        let paikat = getMainState('sijainti').split("-").map(x => Object.values(ev.target.data).find(y => y.lyhenne == x || y.uicKoodi == x));
+    if (!valittuDS.data && getMainState('sijainti').split(',')[0].split("-").length >= 2) {
+        let paikat = getMainState('sijainti').split(',')[0].split("-").map(x => Object.values(ev.target.data).find(y => y.lyhenne == x || y.uicKoodi == x));
         if (paikat.includes(undefined)) {
             log('odotellaan aikataulupaikkojen latautumista...');
             return;
@@ -12,8 +12,9 @@ on(aikataulupaikatDS.events, "done", ev => {
     }
 });
 on(ratanumerotDS.events, "done", () => {
-    if (!valittuDS.data && getMainState('sijainti').split("-").length == 1) {
-        valittuDS.data = getMainState('sijainti');
+    let valittu = getMainState('sijainti').split(',')[0];
+    if (!valittuDS.data && onkoRatanumero(valittu)) {
+        valittuDS.data = valittu;
         log("Alustettu y-akseli:", window.valittuDS.data)
         valittuDS.dispatch("done", {target: {data: valittuDS.data}});
     }
@@ -28,10 +29,10 @@ let valittunaAikataulupaikka = () => valittuDS.data instanceof Array && valittuD
 window.aktiivisetJunatDS = new am4core.DataSource();
 window.aktiivisetJunatDS.data = {};
 
-on(valittuDS.events, "done", _ => setMainState('sijainti', valittuDS.data));
+on(valittuDS.events, "done", _ => setMainState('sijainti', getMainState('sijainti').replace(/[^,]+/, valittuDS.data)));
 
 window.addEventListener('hashchange', () => {
-    let uusiSijainti = getMainState('sijainti').split("-");
+    let uusiSijainti = getMainState('sijainti').split(',')[0].split("-");
     if (uusiSijainti.length == 1) {
         uusiSijainti = uusiSijainti[0];
     } else if (uusiSijainti.every(x => x.match(/\d+/))) {
@@ -685,10 +686,11 @@ window.onload = () => {
         });
 
 
-        let luoEnnakkotietoSeries = (nimi, vari, tilat) => {
+        let luoEnnakkotietoSeries = (nimi, shortName, vari, tilat) => {
             log("Alustetaan", nimi);
 
             let series = new am4charts.ColumnSeries()
+            series.dummyData = {shortName: shortName};
             series.name                  = nimi;
             series.fill                  = vari;
             series.stroke                = vari.lighten(-0.2);
@@ -712,6 +714,9 @@ window.onload = () => {
 
             let ds = tilat.map(t => {
                 let d = new am4core.DataSource();
+                if (t == tilat[0]) {
+                    d.isActive = true;
+                }
                 initDS(d);
                 monitor(d, nimi + "(" + t + ")");
 
@@ -735,14 +740,16 @@ window.onload = () => {
                 on(aktiiviset.itemContainers.template.events, "hit", ev => {
                     let nimi = ev.target.dataItem.dataContext.name;
                     let cache = objectCache[nimi];
-                    log("Näytetään/piilotetaan", nimi);
-                    cache.forEach(x => {
-                        if (x.visible) {
-                            x.hide();
-                        } else {
-                            x.show();
-                        }
-                    });
+                    if (cache) {
+                        log("Näytetään/piilotetaan", nimi);
+                        cache.forEach(x => {
+                            if (x.visible) {
+                                x.hide();
+                            } else {
+                                x.show();
+                            }
+                        });
+                    }
                 });
 
                 on(series.events, "shown", () => {
@@ -750,6 +757,22 @@ window.onload = () => {
                         x.visible = true;
                     });
                     aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
+                });
+
+                getMainState('sijainti').split(',').forEach(mainStateSijainti => {
+                    let match = shortName == 'ei' ? onkoEI(mainStateSijainti) :
+                                shortName == 'es' ? onkoES(mainStateSijainti) :
+                                shortName == 'vs' ? onkoVS(mainStateSijainti) :
+                                shortName == 'loi' ? onkoLOI(mainStateSijainti) :
+                                undefined;
+                    if (match) {
+                        haeEnnakkotiedonRatanumerotJaVoimassaolo(match[0], (ratanumero, voimassa, tunniste, sisainenTunniste) => {
+                            if (!aktiiviset.dataSource.data.find(x => x.name == sisainenTunniste)) {
+                                aktiiviset.dataSource.data.push({name: sisainenTunniste, tunniste: tunniste});
+                                aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
+                            };
+                        });
+                    }
                 });
 
                 on(series.columns.template.events, "hit", ev => {
@@ -839,9 +862,8 @@ window.onload = () => {
                 });
                 leg.dataSource.dispatchImmediately("done", {data: leg.dataSource.data});
                 on(leg.itemContainers.template.events, "ready", ev => {
-                    if (ev.target.dataItem.dataContext.name == tilat[0]) {
-                        ds.find(x => x[0] == ev.target.dataItem.dataContext.name)[1].isActive = true;
-                    } else {
+                    let d = ds.find(x => x[0] == ev.target.dataItem.dataContext.name);
+                    if (!d[1].isActive) {
                         ev.target.setState('active');
                     }
                 });
@@ -850,7 +872,12 @@ window.onload = () => {
             series.dataSource.url = f => {
                 ds.forEach(x => x[1].url = f(x[0]));
             };
-            series.dataSource.load = () => ds.filter(x => x[1].isActive).forEach(x => x[1].load());
+            series.dataSource.load = () => {
+                ds.filter(x => x[1].isActive)
+                  .forEach(x => {
+                      x[1].load();
+                  });
+            };
 
             return series;
         };
@@ -882,51 +909,57 @@ window.onload = () => {
 
             let paivitaUrl = () => {
                 let uusiUrl = valittunaRatanumero() ? urlRatanumero() : valittunaAikataulupaikka() ? urlAikataulupaikka() : undefined;
-                if (series.isReady() && !series.isHidden && uusiUrl && series.dataSource.url != uusiUrl) {
+                if (series.isReady() && !series.isHidden && !series.isHiding && uusiUrl && series.dataSource.url != uusiUrl) {
+                    log('Asetetaan ja ladataan url', uusiUrl);
                     series.dataSource.url(uusiUrl);
                     series.dataSource.load();
                 }
             };
             on(series.events, "shown", paivitaUrl);
             on(valittuDS.events, "done", paivitaUrl);
+
+            if (getMainState('tasot').indexOf(series.dummyData.shortName) > -1) {
+                log('Näytetään työrakodata', series.name);
+                series.show();
+            }
         };
 
-        window.seriesEI = luoEnnakkotietoSeries("Ennakkoilmoitukset", am4core.color("orange"), eiTilat);
+        window.seriesEI = luoEnnakkotietoSeries("Ennakkoilmoitukset", 'ei', am4core.color("orange"), eiTilat);
         on(seriesEI.dataSource.events, "parseended", ev => {
             log("Parsitaan EI");
             ev.target.data = ev.target.data.flatMap(parsiEI).sort(ennakkotietoIntervalComparator);
             log("Parsittu EI:", ev.target.data.length);
         });
 
-        window.seriesLO = luoEnnakkotietoSeries("LOilmoitukset", am4core.color("purple"), loTilat);
+        window.seriesLO = luoEnnakkotietoSeries("LOilmoitukset", 'loi', am4core.color("purple"), loTilat);
         on(seriesLO.dataSource.events, "parseended", ev => {
             log("Parsitaan LO done");
             ev.target.data = ev.target.data.flatMap(parsiLO).sort(ennakkotietoIntervalComparator);
             log("Parsittu LO:", ev.target.data.length);
         });
 
-        window.seriesES = luoEnnakkotietoSeries("Ennakkosuunnitelmat", am4core.color("green"), esTilat);
+        window.seriesES = luoEnnakkotietoSeries("Ennakkosuunnitelmat", 'es', am4core.color("green"), esTilat);
         on(seriesES.dataSource.events, "parseended", ev => {
             log("Parsitaan ES done");
             ev.target.data = ev.target.data.flatMap(parsiES).sort(ennakkotietoIntervalComparator);
             log("Parsittu ES:", ev.target.data.length);
         });
 
-        window.seriesVS = luoEnnakkotietoSeries("Vuosisuunnitelmat", am4core.color("violet"), vsTilat);
+        window.seriesVS = luoEnnakkotietoSeries("Vuosisuunnitelmat", 'vs', am4core.color("violet"), vsTilat);
         on(seriesVS.dataSource.events, "parseended", ev => {
             log("Parsitaan VS done");
             ev.target.data = ev.target.data.flatMap(parsiVS).sort(ennakkotietoIntervalComparator);
             log("Parsittu VS:", ev.target.data.length);
         });
 
-        window.seriesRT = luoEnnakkotietoSeries("Ratatyöt", am4core.color('salmon'), ['ACTIVE', 'PASSIVE', 'SENT', 'FINISHED']);
+        window.seriesRT = luoEnnakkotietoSeries("Ratatyöt", 'rt', am4core.color('salmon'), ['ACTIVE', 'PASSIVE', 'SENT', 'FINISHED']);
         on(seriesRT.dataSource.events, "parseended", ev => {
             log("Parsitaan RT done");
             ev.target.data = ev.target.data.flatMap(parsiRT).sort(ennakkotietoIntervalComparator);
             log("Parsittu RT:", ev.target.data.length);
         });
 
-        window.seriesLR = luoEnnakkotietoSeries("Liikenteenrajoitteet", am4core.color('turquoise'), ['SENT', 'FINISHED']);
+        window.seriesLR = luoEnnakkotietoSeries("Liikenteenrajoitteet", 'lr', am4core.color('turquoise'), ['SENT', 'FINISHED']);
         on(seriesLR.dataSource.events, "parseended", ev => {
             log("Parsitaan LR done");
             ev.target.data = ev.target.data.flatMap(parsiLR).sort(ennakkotietoIntervalComparator);
@@ -1385,27 +1418,45 @@ window.onload = () => {
         }
         kartta(getSubState(i)('sijainti'), undefined, getSubState(i)('time'), true, offsetX1, offsetY1, offsetX2, offsetY2);
     }
-
-    window.asetaAikavali = voimassa => {
-        xAxis.zoomToDates(voimassa[0], voimassa[1]);
-    };
-
+    
     if (getStates().length == 1) {
-        // jos päätilan sijainti on "sopiva", niin avataan se myös kartalle, tai lasketaan siitä sopiva arvaus työrakografiikkaan.
-        getMainState('sijainti')
-            .split(',')
-            .filter(x => !onkoRatanumero(x) && !onkoReitti(x)) // ratanumerot ja reitit avattakoon vain työrakografiikalle, koska ne ovat suoraan käypiä siihen.
-            .slice(0,1)
-            .forEach(tunniste => {
-                if (onkoJeti(tunniste)) {
-                    // Jeteistä voidaan päätellä jotakin sijainnista, ja avata työrakografiikka sopivaan paikkaan
-                    haeEnnakkotiedonRatanumerotJaVoimassaolo(tunniste, (ratanumero, voimassa) => {
-                        ratanumeroChanged(ratanumero);
-                        asetaAikavali(voimassa);
-                    });
-                }
+        on(chart.events, "ready", () => {
+            // jos päätilan sijainti on "sopiva", niin avataan se myös kartalle, tai lasketaan siitä sopiva arvaus työrakografiikkaan.
+            getMainState('sijainti')
+                .split(',')
+                .filter(x => !onkoRatanumero(x) && !onkoReitti(x)) // ratanumerot ja reitit avattakoon vain työrakografiikalle, koska ne ovat suoraan käypiä siihen.
+                .slice(0,1)
+                .forEach(tunniste => {
+                    if (onkoJeti(tunniste)) {
+                        // Jeteistä voidaan päätellä jotakin sijainnista, ja avata työrakografiikka sopivaan paikkaan
+                        asetaEnnakkotietoGrafiikalle(tunniste, ratanumero => {
+                            let mainState = getMainState('sijainti');
+                            if (!mainState.startsWith('(' + ratanumero + '),')) {
+                                setMainState('sijainti', '(' + ratanumero + '),' + mainState);
+                            }
+                        });
+
+                        // asetetaan kyseinen taso näkyviin
+                        [
+                            ['ei', onkoEI],
+                            ['es', onkoES],
+                            ['vs', onkoVS],
+                            ['loi', onkoLOI],
+                            ['rt', onkoRT],
+                            ['lr', onkoLR]
+                        ].forEach(pair => {
+                            if (pair[1](tunniste)) {
+                                chart.series.each(x => {
+                                    if (x.dummyData && x.dummyData.shortName == pair[0]) {
+                                        x.show();
+                                    }
+                                });
+                            }
+                        });
+                    }
+            });
+            let tunniste = getMainState('sijainti');
+            kartta(tunniste, tunniste, undefined, true, '4em', '8em', '4em', '4em');
         });
-        let tunniste = getMainState('sijainti');
-        kartta(tunniste, tunniste, undefined, true, '4em', '8em', '4em', '4em');
     }
 }

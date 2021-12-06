@@ -171,6 +171,6 @@ let haeEnnakkotiedonRatanumerotJaVoimassaolo = (tunniste, callback) => {
                     undefined;
         let ratanumero = kohde.laskennallisetRatakmvalit.sort( (a,b) => ratakmvalinPituus(b) - ratakmvalinPituus(a))[0].ratanumero;
         let voimassa = (data.voimassa || data.ensimmainenAktiivisuusaika + '/' + data.viimeinenAktiivisuusaika).split('/').map(x => new Date(x));
-        callback(ratanumero, voimassa);
+        callback(ratanumero, voimassa, data.tunniste, data.sisainenTunniste);
     });
 };

@@ -550,7 +550,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
             let toPersist = persistedLayers.filter(x => x.getVisible())
                                            .map(x => x.get('shortName'))
                                            .filter(x => x != undefined)
-                                           .filter(x => x.length == 3);
+                                           .filter(x => x.length == 2 || x.length == 3);
             setSubState(kartanIndeksi(map))('tasot', toPersist);
         }));
     }
