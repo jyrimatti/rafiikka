@@ -127,7 +127,7 @@ let fetchJson = (url, opts, callback, errorCallback) => {
             'Content-Type': 'application/json',
             'Digitraffic-User': 'Rafiikka'
         }
-    }).then(response => response.json())
+    }).then(response => opts.method == 'HEAD' ? response.text() : response.json())
       .then(x => {
           progressEnd(type);
           return callback(x);
