@@ -1,0 +1,46 @@
+cabal-version:       2.4
+name:                Rafiikka
+version:             0.1.0.0
+
+executable Rafiikka
+  main-is:             Main.hs
+  build-depends:       base
+   , Shpadoinkle
+   , Shpadoinkle-backend-snabbdom
+   , Shpadoinkle-backend-pardiff
+   , Shpadoinkle-html
+   , jsaddle
+   , text
+   , bytestring
+  
+  if impl(ghcjs)
+    build-depends: ghcjs-base
+
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+
+  other-modules: FFI
+
+  ghc-options:
+    -Wall
+    -Werror
+    -Wcompat
+    -fwarn-redundant-constraints
+    -fwarn-incomplete-uni-patterns
+    -fwarn-tabs
+    -fwarn-incomplete-record-updates
+    -fwarn-identities
+
+  ghcjs-options:
+    -Wall
+    -Werror
+    -Wcompat
+    -fno-warn-missing-home-modules
+    -fwarn-redundant-constraints
+    -fwarn-incomplete-uni-patterns
+    -fwarn-tabs
+    -fwarn-incomplete-record-updates
+    -fwarn-identities
+    -O2
+
+

@@ -6,7 +6,7 @@ let dragstart = tunniste => ev => {
         return false;
     }
     let elem = ev.target.closest('.dragContext');
-    if (!elem.id) {
+    if (!elem.id) {
         elem.id = generateId();
     }
     elem.classList.add('dragging');

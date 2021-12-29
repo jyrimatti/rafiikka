@@ -130,7 +130,6 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
     return true;
 };
 
-window.onload = () => {
     am4core.useTheme(am4themes_animated);
     am4core.ready(() => {
         log("Aloitetaan grafiikan alustus");
@@ -1457,4 +1456,3 @@ window.onload = () => {
             });
         });
     }
-}

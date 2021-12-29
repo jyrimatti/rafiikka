@@ -1,0 +1,1 @@
+initTooltips(document.getElementById('palkki'));
