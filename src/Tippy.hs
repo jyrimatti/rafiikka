@@ -5,16 +5,17 @@ module Tippy (
 ) where
 
 import Language.Javascript.JSaddle (JSM, (#), (!), MakeObject)
-import Data.Text (Text, pack)
+import Universum
+import Data.Text (pack)
 
 tippy, interactive, placement, offset, content :: Text
-tippy = pack "tippy"
-interactive = pack "interactive"
-placement = pack "placement"
-offset = pack "offset"
-content = pack "content"
+tippy = "tippy"
+interactive = "interactive"
+placement = "placement"
+offset = "offset"
+content = "content"
 
 setContent :: MakeObject e => e -> Text -> JSM ()
 setContent reference cnt = do
-    _ <- (reference ! "_tippy") # "setContent" $ cnt
+    _ <- (reference ! pack "_tippy") # pack "setContent" $ cnt
     pure ()

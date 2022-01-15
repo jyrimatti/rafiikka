@@ -1,39 +1,3 @@
-let parseInterval = str => {
-    let instant = dateFns.dateFns.parse(str, "yyyy-MM-dd'T'HH:mm:ssX", new Date(0));
-    if (!isNaN(instant.getTime())) {
-        return [instant, instant, undefined, undefined];
-    }
-    let parts = str.split('/');
-    if (parts.length == 1) {
-        let instant = dateFns.dateFns.parse(parts[0], "yyyy-MM-dd'T'HH:mm:ssX", new Date(0));
-        if (!isNaN(instant.getTime())) {
-            return [instant, instant, undefined, undefined];
-        }
-    } else if (parts.length == 2) {
-        let beginInstant  = dateFns.dateFns.parse(parts[0], "yyyy-MM-dd'T'HH:mm:ssX", new Date(0));
-        let endInstant    = dateFns.dateFns.parse(parts[1], "yyyy-MM-dd'T'HH:mm:ssX", new Date(0));
-        if (!isNaN(beginInstant.getTime()) && !isNaN(endInstant.getTime())) {
-            return [beginInstant, endInstant, undefined, undefined];
-        }
-        
-        let beginDuration;
-        try {
-            beginDuration = dateFns.durationFns.parse(parts[0]);
-        } catch (_) {}
-        let endDuration;
-        try {
-            endDuration = dateFns.durationFns.parse(parts[1]);
-        } catch (_) {}
-        if (!isNaN(beginInstant.getTime()) && endDuration) {
-            let k = dateFns.durationFns.normalize({milliseconds: Math.floor(dateFns.durationFns.toMilliseconds(endDuration))});
-            return [beginInstant, dateFns.dateFns.add(beginInstant, endDuration), undefined, endDuration];
-        } else if (!isNaN(endInstant.getTime()) && beginDuration) {
-            let k = dateFns.durationFns.normalize({milliseconds: Math.floor(dateFns.durationFns.toMilliseconds(beginDuration))});
-            return [dateFns.dateFns.sub(endInstant, beginDuration), endInstant, beginDuration, undefined];
-        }
-    }
-    return undefined;
-}
 
 let parseLayers = str => {
     let ret = str.split(',');
@@ -96,7 +60,7 @@ let startOfMonthUTC = x => {
 
 let defaultAika = () => {
     let now = pyoristaAjanhetki(dateFns.dateFns.sub(new Date(), {hours: 1}));
-    return [now, dateFns.dateFns.add(now, {hours: 4}), undefined, {hours: 4}];
+    return [now, dateFns.dateFns.add(now, {hours: 4}), undefined, 'PT4H'];
 };
 
 let defaultState = () => ({moodi:'kartta', aika: defaultAika(), sijainti: '(009)', rotaatio: 0, tasot: []});
@@ -123,7 +87,7 @@ let printDuration = dur => {
 };
 
 let printState = state => ((state.moodi && state.moodi != defaultState().moodi ? '&' + state.moodi : '') +
-                           (state.aika ? '&' + (state.aika[0].getTime() == state.aika[1].getTime() ? toISOStringNoMillis(state.aika[0]) : (printDuration(state.aika[2]) || toISOStringNoMillis(state.aika[0])) + '/' + (printDuration(state.aika[3]) || toISOStringNoMillis(state.aika[1]))) : '') +
+                           (state.aika ? '&' + (state.aika[0].getTime() == state.aika[1].getTime() ? toISOStringNoMillis(state.aika[0]) : (printDuration(dateFns.durationFns.parse(state.aika[2])) || toISOStringNoMillis(state.aika[0])) + '/' + (printDuration(dateFns.durationFns(state.aika[3])) || toISOStringNoMillis(state.aika[1]))) : '') +
                            (state.sijainti ? '&' + (state.sijainti instanceof Array ? state.sijainti.join("-") : state.sijainti) : '') +
                            (state.rotaatio && state.rotaatio != 0 ? '&' + (state.rotaatio / (2*Math.PI) * 360) : '') +
                            (state.tasot && state.tasot instanceof Array && state.tasot.length > 0 ? '&' + state.tasot.join(',') : '')

@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP, ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints -Wno-incomplete-uni-patterns #-}
+{-# LANGUAGE TypeApplications #-}
 
 module FFI(
   registerGlobalFunctionPure,
@@ -24,16 +25,15 @@ module FFI(
 
 
 #ifndef ghcjs_HOST_OS
-import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, fun, function, Function (Function), call, eval, global, (<#), JSCallAsFunction, valToObject, MakeObject)
-import Control.Monad.IO.Class (liftIO)
-import Data.Text (Text, unpack)
+import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, fun, function, Function (Function), call, eval, global, (<#), JSCallAsFunction, valToObject, MakeObject, JSString)
 import Data.Data (typeOf)
+import Universum
 #else
 import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, JSString, ToJSString(..), JSVal, MonadJSM, liftJSM, Object (Object))
 import GHCJS.Foreign.Callback (Callback, syncCallback', syncCallback1', syncCallback2', syncCallback3', asyncCallback, asyncCallback1, asyncCallback2, asyncCallback3)
 import Control.Applicative (liftA2, liftA3)
-import Data.Text (Text)
 import Data.Data (typeOf)
+import Universum
 #endif
 
 registerGlobalFunctionPure  :: (                                       ToJSVal r) => Text                 ->     r  -> JSM ()
@@ -62,16 +62,16 @@ procedure f = function $ fun $ \_ _ _ -> do
 procedure1 f = function $ fun $ \_ _ [a1] -> do
   v1 <- fromJSVal a1
   case v1 of
-    Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a1) <> " from JSVal"
+    Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a1) <> " from JSVal"
     Just x1 -> f x1
 
 procedure2 f = function $ fun $ \_ _ [a1, a2] -> do
   v1 <- fromJSVal a1
   v2 <- fromJSVal a2
   case v1 of
-    Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
+    Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
     Just x1 -> case v2 of
-      Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
+      Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
       Just x2  -> f x1 x2
 
 procedure3 f = function $ fun $ \_ _ [a1, a2, a3] -> do
@@ -79,11 +79,11 @@ procedure3 f = function $ fun $ \_ _ [a1, a2, a3] -> do
   v2 <- fromJSVal a2
   v3 <- fromJSVal a3
   case v1 of
-    Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
+    Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
     Just x1 -> case v2 of
-      Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
+      Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
       Just x2  -> case v3 of
-        Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a3) <>" from JSVal"
+        Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a3) <>" from JSVal"
         Just x3  -> f x1 x2 x3
 #else
 foreign import javascript unsafe "$r = $1"
@@ -152,7 +152,7 @@ cbPure1 :: (FromJSVal a1, ToJSVal ret) => (a1 -> ret) -> JSCallAsFunction
 cbPure1 f = fun $ \ _ _ [a1, returnValueF] -> do
   v1 <- fromJSVal a1
   case v1 of
-    Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
+    Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
     Just x1 -> doCall returnValueF $ f x1
 
 cbPure2 :: (FromJSVal a1, FromJSVal a2, ToJSVal ret) => (a1 -> a2 -> ret) -> JSCallAsFunction
@@ -160,9 +160,9 @@ cbPure2 f = fun $ \ _ _ [a1, a2, returnValueF] -> do
   v1 <- fromJSVal a1
   v2 <- fromJSVal a2
   case v1 of
-    Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
+    Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
     Just x1 -> case v2 of
-      Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
+      Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
       Just x2 -> doCall returnValueF $ f x1 x2
 
 cbPure3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, ToJSVal ret) => (a1 -> a2 -> a3 -> ret) -> JSCallAsFunction
@@ -171,18 +171,18 @@ cbPure3 f = fun $ \ _ _ [a1, a2, a3, returnValueF] -> do
   v2 <- fromJSVal a2
   v3 <- fromJSVal a3
   case v1 of
-    Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
+    Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
     Just x1 -> case v2 of
-      Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
+      Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
       Just x2 -> case v3 of
-        Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a3) <>" from JSVal"
+        Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a3) <>" from JSVal"
         Just x3 -> doCall returnValueF $ f x1 x2 x3
 
 cb1 :: (FromJSVal a1, ToJSVal ret) => (a1 -> JSM ret) -> JSCallAsFunction
 cb1 f = fun $ \ _ _ [a1, returnValueF] -> do
   v1 <- fromJSVal a1
   case v1 of
-    Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
+    Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
     Just x1 -> doCall returnValueF $ f x1
 
 cb2 :: (FromJSVal a1, FromJSVal a2, ToJSVal ret) => (a1 -> a2 -> JSM ret) -> JSCallAsFunction
@@ -190,9 +190,9 @@ cb2 f = fun $ \ _ _ [a1, a2, returnValueF] -> do
   v1 <- fromJSVal a1
   v2 <- fromJSVal a2
   case v1 of
-    Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
+    Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
     Just x1 -> case v2 of
-      Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
+      Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
       Just x2 -> doCall returnValueF $ f x1 x2
 
 cb3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, ToJSVal ret) => (a1 -> a2 -> a3 -> JSM ret) -> JSCallAsFunction
@@ -201,11 +201,11 @@ cb3 f = fun $ \ _ _ [a1, a2, a3, returnValueF] -> do
   v2 <- fromJSVal a2
   v3 <- fromJSVal a3
   case v1 of
-    Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
+    Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a1) <>" from JSVal"
     Just x1 -> case v2 of
-      Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
+      Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a2) <>" from JSVal"
       Just x2 -> case v3 of
-        Nothing -> liftIO $ putStrLn $ "Error deserializing a " <> show (typeOf a3) <>" from JSVal"
+        Nothing -> putTextLn $ "Error deserializing a " <> show (typeOf a3) <>" from JSVal"
         Just x3 -> doCall returnValueF $ f x1 x2 x3
 #endif
 
@@ -213,29 +213,29 @@ cb3 f = fun $ \ _ _ [a1, a2, a3, returnValueF] -> do
 registerGlobalFunctionPure name = global <# name
 
 registerGlobalFunctionPure1 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> unpack name <> "'] = function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure1 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure1 f]
   pure ()
 
 registerGlobalFunctionPure2 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> unpack name <> "'] = function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure2 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure2 f]
   pure ()
 
 registerGlobalFunctionPure3 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> unpack name <> "'] = function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure3 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure3 f]
   pure ()
 
 registerGlobalFunction name = global <# name
 
 registerGlobalFunction1 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> unpack name <> "'] = function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb1 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb1 f]
   pure ()
 
 registerGlobalFunction2 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> unpack name <> "'] = function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb2 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb2 f]
   pure ()
 
 registerGlobalFunction3 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> unpack name <> "'] = function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb3 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb3 f]
   pure ()
 
 #else
@@ -285,17 +285,17 @@ functionPure1 :: (FromJSVal a1, ToJSVal ret) => (a1 -> ret) -> JSM Function
 functionPure2 :: (FromJSVal a1, FromJSVal a2, ToJSVal ret) => (a1 -> a2 -> ret) -> JSM Function
 functionPure3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, ToJSVal ret) => (a1 -> a2 -> a3 -> ret) -> JSM Function
 
-functionPure1 f = fmap Function . valToObject =<< call (eval "(function(cb) { return function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure1 f]
-functionPure2 f = fmap Function . valToObject =<< call (eval "(function(cb) { return function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure2 f]
-functionPure3 f = fmap Function . valToObject =<< call (eval "(function(cb) { return function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure3 f]
+functionPure1 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure1 f]
+functionPure2 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure2 f]
+functionPure3 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure3 f]
 
 function1 :: (FromJSVal a1, ToJSVal ret) => (a1 -> JSM ret) -> JSM Function
 function2 :: (FromJSVal a1, FromJSVal a2, ToJSVal ret) => (a1 -> a2 -> JSM ret) -> JSM Function
 function3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, ToJSVal ret) => (a1 -> a2 -> a3 -> JSM ret) -> JSM Function
 
-function1 f = fmap Function . valToObject =<< call (eval "(function(cb) { return function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb1 f]
-function2 f = fmap Function . valToObject =<< call (eval "(function(cb) { return function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb2 f]
-function3 f = fmap Function . valToObject =<<  call (eval "(function(cb) { return function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb3 f]
+function1 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb1 f]
+function2 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb2 f]
+function3 f = fmap Function . valToObject =<<  call (eval @JSString "(function(cb) { return function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb3 f]
 #else
 foreign import javascript unsafe "$r = $1"
   makeFunctionWithCallback1 :: Callback (JSVal -> IO JSVal) -> IO Object

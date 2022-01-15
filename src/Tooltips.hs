@@ -1,49 +1,47 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 
 module Tooltips (
     initTooltips
 ) where
 
 import Language.Javascript.JSaddle (JSM, jsg2, Object, (<#), JSVal, (!), obj, FromJSVal (fromJSVal))
-import Data.Text (Text, pack)
+import Universum hiding (Element)
 import FFI (function1)
-import Data.Foldable (forM_)
 import MutationObserver (onTitleChange)
 import JSDOM.Generated.Element (removeAttribute)
 import JSDOM.Types (Element)
 import Tippy (setContent, tippy, interactive, placement, offset, content)
 import JSDOM.Generated.ParentNode (querySelectorAll)
-import Data.Maybe (fromMaybe)
-import Shpadoinkle.Console (debug)
+import Browser (debug)
+import Data.Text (pack)
 
 titleUpdater :: Element -> JSVal -> JSM ()
 titleUpdater reference _ = do
-    debug @Show "titleUpdater"
-    title <- fromJSVal =<< reference ! "title"
-    forM_ title $ \x -> do
+    debug "titleUpdater"
+    title <- fromJSVal =<< reference ! pack "title"
+    whenJust title $ \x -> do
         reference `setContent` x
-        reference `removeAttribute` "title"
+        reference `removeAttribute` pack "title"
 
 contentF :: Element -> JSM Text
 contentF reference = do
-    originalTitle <- fromJSVal =<< reference ! "title"
-    reference `removeAttribute` "title"
+    originalTitle <- fromJSVal =<< reference ! pack "title"
+    reference `removeAttribute` pack "title"
     onTitleChange reference (titleUpdater reference)
-    pure $ fromMaybe (pack "") originalTitle
+    pure $ fromMaybe "" originalTitle
 
 props :: JSM Object
 props = do
     o <- obj
     o <# interactive $ True
-    o <# placement $ "top"
+    o <# placement $ pack "top"
     o <# offset $ [0 :: Int, 20]
     o <# content $ function1 contentF
     pure o
 
 initTooltips :: Element -> JSM ()
 initTooltips context = do
-    debug @Show "initTooltips"
-    elems <- context `querySelectorAll` "[title]"
-    _ <- jsg2 tippy elems props
+    debug "initTooltips"
+    xs <- context `querySelectorAll` pack "[title]"
+    _ <- jsg2 tippy xs props
     pure ()

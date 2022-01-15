@@ -3,14 +3,13 @@
 
 module Main where
 
-import FFI ( registerGlobalFunctionPure, registerGlobalFunction1 )
+import FFI ( registerGlobalFunction1 )
 import Tooltips ( initTooltips )
 import Shpadoinkle ( JSM )
 import Shpadoinkle.Backend.Snabbdom (runSnabbdom, stage)
 import Shpadoinkle.Html ( addMeta, addScriptSrc, addStyle, setTitle )
 import Shpadoinkle.Run              (runJSorWarp, simple, liveWithStaticAndIndex)
 import Prelude hiding (span, div, max)
-import Data.Text (Text)
 import qualified Data.ByteString.Lazy as B
 import Language.Javascript.JSaddle.Run (enableLogging)
 import Data.Maybe (fromJust)
@@ -18,6 +17,7 @@ import Data.Time.Clock (secondsToNominalDiffTime)
 import Browser (setTimeout, getElementById)
 import Frontpage (view)
 import Shpadoinkle.Console (debug)
+import Yleiset (parseInterval_)
 
 main :: IO ()
 main = do
@@ -27,14 +27,14 @@ main = do
 
 dev :: IO ()
 dev = do
-  bs <- B.readFile "./index-debug.html"
+  bs <- B.readFile "./index-dev.html"
   liveWithStaticAndIndex bs 8080 app "./"
 
 app :: JSM ()
 app = do
   enableLogging True
 
-  registerGlobalFunctionPure "ikuisuusAlku2" ("2010-01-01T00:00:00Z" :: Text)
+  registerGlobalFunction1 "parseInterval" parseInterval_
   registerGlobalFunction1 "initTooltips" initTooltips
 
   addMeta [("charset", "UTF-8")]

@@ -12,7 +12,6 @@ import Data.String (IsString)
 scripts :: [Html m a]
 scripts =
   [
-  --, script' [("src", "tooltip.js")]
     script' [("src", "yleiset.js")]
   , script' [("src", "spatial.js")]
   , script' [("src", "popup.js")]
@@ -33,7 +32,6 @@ scripts =
   , script' [("src", "kartta.js")]
   , script' [("src", "tilastot.js")]
   , script' [("src", "muutokset.js")]
-  --, script' [("src", "last.js")]
   ]
 
 styl :: Text -> (Text, Prop m a)
