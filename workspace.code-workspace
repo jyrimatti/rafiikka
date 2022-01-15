@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../shpadoinkle"
+		},
+		{
+			"path": "../jsaddle"
+		}
+	],
+	"settings": {}
+}

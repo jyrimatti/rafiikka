@@ -88,7 +88,7 @@ let aikataulupaikkavali = rkmv => {
         return yhteisetRatanumerot.map(ratanumero => {
             let ap1v = ap1.ratakmSijainnit.find(x => x.ratanumero == ratanumero);
             let ap2v = ap2.ratakmSijainnit.find(x => x.ratanumero == ratanumero);
-            if (ap1v.ratakm < ap2v.ratakm || ap1v.ratakm == ap2v.ratakm && ap1v.etaisyys < ap2v.etaisyys) {
+            if (ap1v.ratakm < ap2v.ratakm || ap1v.ratakm == ap2v.ratakm && ap1v.etaisyys < ap2v.etaisyys) {
                 return { ratanumero: ratanumero, alku: ap1v, loppu: ap2v };
             } else {
                 return { ratanumero: ratanumero, alku: ap2v, loppu: ap1v };

@@ -9,9 +9,14 @@ executable Rafiikka
    , Shpadoinkle-backend-snabbdom
    , Shpadoinkle-backend-pardiff
    , Shpadoinkle-html
+   , Shpadoinkle-console
    , jsaddle
+   , jsaddle-dom
    , text
    , bytestring
+   , aeson
+   , lens
+   , time
   
   if impl(ghcjs)
     build-depends: ghcjs-base
@@ -20,6 +25,11 @@ executable Rafiikka
   default-language:    Haskell2010
 
   other-modules: FFI
+               , Tooltips
+               , MutationObserver
+               , Tippy
+               , Browser
+               , Frontpage
 
   ghc-options:
     -Wall

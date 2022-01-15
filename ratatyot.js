@@ -320,10 +320,10 @@ let groupRumaFeatures = features => {
     let grouped = {};
     features.forEach(f => {
         let props = f.getProperties();
-        if (grouped[props.id || props.notificationId]) {
-            grouped[props.id || props.notificationId].push(f);
+        if (grouped[props.id || props.notificationId]) {
+            grouped[props.id || props.notificationId].push(f);
         } else {
-            grouped[props.id || props.notificationId] = [f];
+            grouped[props.id || props.notificationId] = [f];
         }
     });
     return Object.values(grouped).map(x => {

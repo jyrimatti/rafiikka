@@ -38,7 +38,7 @@ let luoRyhma = (container, luotuja, title) => {
         }
 
         d.forEach(x => {
-            let voimassa = (x.objektinVoimassaoloaika || x.voimassa).split('/');
+            let voimassa = (x.objektinVoimassaoloaika || x.voimassa).split('/');
 
             let li = document.createElement("li");
             ul.appendChild(li);

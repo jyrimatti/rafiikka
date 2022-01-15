@@ -59,7 +59,7 @@ let luoCollapsoitavaLista = (details, titleHTML, hiddenState) => {
     details.appendChild(header);
 
     let ul = document.createElement("ul");
-    if (hiddenState[titleHTML] || hiddenState._default) {
+    if (hiddenState[titleHTML] || hiddenState._default) {
         details.removeAttribute('open');
     }
     header.addEventListener('click', () => hiddenState[titleHTML] = !(hiddenState[titleHTML] || hiddenState._default));
@@ -83,7 +83,7 @@ let updateListviewContents = (listview, map) => logDiff("updateListviewContents"
             container.appendChild(details);
             let ul = luoCollapsoitavaLista(details, title, listview.hiddenState);
 
-            let filterText = listview.querySelector('.filter').value || '';
+            let filterText = listview.querySelector('.filter').value || '';
             if (filterText) {
                 filterText = filterText.trim().toLowerCase();
             }

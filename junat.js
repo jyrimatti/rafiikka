@@ -46,10 +46,11 @@ let paivitaJunienRatakmsijainnit = series => () => {
     }
 };
 
-
-window.junasijainnit = new Paho.MQTT.Client(mqttUrl, mqttPort, "rafiikka_" + parseInt(Math.random() * 10000, 10));
-var junasijainnit_connecting = false;
-junasijainnit.onConnectionLost = errorHandler;
+setTimeout(() => {
+    window.junasijainnit = new Paho.MQTT.Client(mqttUrl, mqttPort, "rafiikka_" + parseInt(Math.random() * 10000, 10));
+    window.junasijainnit_connecting = false;
+    window.junasijainnit.onConnectionLost = errorHandler;
+}, 100);
 let junasijainnitPaalle = juna => {
     if (!junasijainnit_connecting && !junasijainnit.isConnected()) {
         log('Connecting trains');

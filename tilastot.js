@@ -1,5 +1,5 @@
 
-let names = x => Object.values(x).flat().filter(d => !d.nimi || d.nimi.indexOf('(väliaikainen)') == -1).map(d => d.nimi || d.kuvaus).sort();
+let names = x => Object.values(x).flat().filter(d => !d.nimi || d.nimi.indexOf('(väliaikainen)') == -1).map(d => d.nimi || d.kuvaus).sort();
 
 let luoTilastoPopupRatapihapalvelut          = () => luoTilastoPopup('Ratapihapalvelut',          ratapihapalvelutUrlTilasto(),          [''], ratapihapalveluTyypit, ['']);
 let luoTilastoPopupToimialueet               = () => luoTilastoPopup('Toimialueet',               toimialueetUrlTilasto(),               [''], names(ohjausalueet), ['']);
@@ -153,7 +153,7 @@ let luoTilastoPopup_ = (nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari
     };
     
 
-    let togglet = [tilat, tyypit, tyonlajit].find(x => x[0] != '') || [];
+    let togglet = [tilat, tyypit, tyonlajit].find(x => x[0] != '') || [];
     let muut = [tilat, tyypit, tyonlajit].filter(x => x != togglet);
 
     let nakyvat = {};
@@ -356,13 +356,13 @@ let luoTilastoPopup_ = (nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari
 };
 
 let show = x => {
-    if (!x.dummyData || !x.dummyData.subtypes) {
+    if (!x.dummyData || !x.dummyData.subtypes) {
         x.show();
         x.hiddenInLegend = false;
     }
 };
 let hide = x => {
-    if (!x.dummyData || !x.dummyData.subtypes) {
+    if (!x.dummyData || !x.dummyData.subtypes) {
         x.hide();
         x.hiddenInLegend = true;
     }
@@ -439,9 +439,9 @@ let grouping = ryhmittely => series => (tila, tyyppi, tyonlaji) => {
         val.dataItem.groupDataItems
             .forEach(x => (ryhmittely == 'voimassaolo' ? x.dataContext.voimassa : ryhmittely == 'luontiaika' ? x.dataContext.luodut : ryhmittely == 'poistumisaika' ? x.dataContext.poistuneet : undefined)
                 .forEach(y => {
-                    if ((tila_ == '' || y.tila == tila_) &&
-                        (tyyppi_ == '' || y.tyyppi == tyyppi_) &&
-                        (tyonlaji_ == '' || y.tyonlaji == tyonlaji_)) {
+                    if ((tila_ == '' || y.tila == tila_) &&
+                        (tyyppi_ == '' || y.tyyppi == tyyppi_) &&
+                        (tyonlaji_ == '' || y.tyonlaji == tyonlaji_)) {
                       elems.add(y.tunniste);
                     }
                 })

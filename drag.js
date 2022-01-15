@@ -14,7 +14,7 @@ let dragstart = tunniste => ev => {
     elementDragged = [elem.id, ev.clientX, ev.clientY];
     ev.dataTransfer.setDragImage(new Image(), 0, 0);
 
-    if (elem.style.width == 'auto' || elem.style.height == 'auto' || elem.style.bottom != 'auto' || elem.style.right != 'auto') {
+    if (elem.style.width == 'auto' || elem.style.height == 'auto' || elem.style.bottom != 'auto' || elem.style.right != 'auto') {
         log('Ikkuna oli venytetty -> kiinnitetään koko');
         let offsetTop = elem.offsetTop;
         let offsetLeft = elem.offsetLeft;
@@ -48,7 +48,7 @@ let drag = elem => ev => {
     let top = elem.offsetTop + dy;
     let left = elem.offsetLeft + dx;
 
-    let headerHeight = (elem.querySelector(':scope > .header') || {}).offsetHeight || 0;
+    let headerHeight = (elem.querySelector(':scope > .header') || {}).offsetHeight || 0;
 
     if (left <= 1) {
         log("Snap", elem.id, "left");
@@ -112,7 +112,7 @@ let dragElement = (elem, tunniste) => {
 };
 
 let moveElement = (elem, tunnisteFunc) => {
-    if (!elem.id) {
+    if (!elem.id) {
         elem.id = generateId();
     }
     let e = elem.getElementsByClassName('title')[0];

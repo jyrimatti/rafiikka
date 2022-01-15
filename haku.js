@@ -1,20 +1,22 @@
 
-window.objektityypitDS = luoDatasource("Objektityypit", infraObjektityypitUrl, (ret, x) => {
-    ret[x.tyyppinumero] = {fi: x.nimi, en: x.name};
-});
-objektityypitDS.load();
+setTimeout(() => {
+    window.objektityypitDS = luoDatasource("Objektityypit", infraObjektityypitUrl, (ret, x) => {
+        ret[x.tyyppinumero] = {fi: x.nimi, en: x.name};
+    });
+    objektityypitDS.load();
 
-let hakudataHandler = (ret, x) => {
-    ret.hakudata = ret.hakudata || [];
-    if (x instanceof Array) {
-        ret.hakudata = ret.hakudata.concat(x);
-    } else {
-        ret.hakudata.push(x);
-    }
-};
-window.hakuUrlitInfraDS = hakuUrlitInfra()                   .map( (url,i) => luoDatasource("Haku-Infra:" + i, () => url, hakudataHandler));
-window.hakuUrlitEtj2DS  = hakuUrlitEtj2()                    .map( (url,i) => luoDatasource("Haku-Etj2:" + i,  () => url, hakudataHandler));
-window.hakuUrlitRumaDS  = hakuUrlitRT().concat(hakuUrlitLR()).map( (url,i) => luoDatasource("Haku-Ruma:" + i,  () => url, hakudataHandler));
+    let hakudataHandler = (ret, x) => {
+        ret.hakudata = ret.hakudata || [];
+        if (x instanceof Array) {
+            ret.hakudata = ret.hakudata.concat(x);
+        } else {
+            ret.hakudata.push(x);
+        }
+    };
+    window.hakuUrlitInfraDS = hakuUrlitInfra()                   .map( (url,i) => luoDatasource("Haku-Infra:" + i, () => url, hakudataHandler));
+    window.hakuUrlitEtj2DS  = hakuUrlitEtj2()                    .map( (url,i) => luoDatasource("Haku-Etj2:" + i,  () => url, hakudataHandler));
+    window.hakuUrlitRumaDS  = hakuUrlitRT().concat(hakuUrlitLR()).map( (url,i) => luoDatasource("Haku-Ruma:" + i,  () => url, hakudataHandler));
+}, 100);
 
 let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) => {
     let search = $(elem).selectize({
@@ -40,7 +42,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                 if (reitti) {
                     reitti = [reitti[1]].concat(reitti[2] ? reitti[2].split('=>').filter(x => x != '') : []).concat(reitti[3]);
                     reitti = reitti.map(x => !x ? x : Object.values(aikataulupaikatDS.data)
-                                                            .filter(y => x == y.tunniste || ''+x == y.uicKoodi || y.lyhenne && x.toLowerCase() == y.lyhenne.toLowerCase() || y.nimi && x.toLowerCase() == y.nimi.toLowerCase())
+                                                            .filter(y => x == y.tunniste || ''+x == y.uicKoodi || y.lyhenne && x.toLowerCase() == y.lyhenne.toLowerCase() || y.nimi && x.toLowerCase() == y.nimi.toLowerCase())
                                                             .map(x => x.tunniste)
                                                             .find(x => x))
                     if (!reitti.includes(undefined)) {
@@ -242,7 +244,7 @@ let hakuMuodosta = (str, callback, vainJunat) => {
                     score:      91000
                 });
             }
-            m = str.match(/^(\d+)(?:\.\d+)?,[ ]?(\d+)(?:\.\d+)?$/);
+            m = str.match(/^(\d+)(?:\.\d+)?,[ ]?(\d+)(?:\.\d+)?$/);
             if (m) {
                 var srs = undefined;
                 if (m[1] > 999 && m[2] > 999) {
@@ -503,7 +505,7 @@ let osuuko_ = matchers => value => {
                          fieldName.toLowerCase() == 'kaukoohjausnimi' ? -10 :
                          0;
     let row = value instanceof Array ? value[1] : value;
-    if (row === null || row === undefined) {
+    if (row === null || row === undefined) {
         return 0;
     } else if (row instanceof Array) {
         let scores = row.map(osuuko_(matchers));
@@ -528,11 +530,11 @@ let osuuko_ = matchers => value => {
                 // boolean-arvoille matchataan kentän nimeen exact
                 let m = fieldName.match(matcher);
                 return m && m[0] == m.input ? 10 : 0;
-            } else if (numero) {
+            } else if (numero) {
                 // numeroihin vaaditaan exact match
                 let m = r.match(matcher);
                 return m && m[0] == m.input ? 200 : 0;
-            } else if (fieldName && fieldName.toLowerCase() == 'ratanumero') {
+            } else if (fieldName && fieldName.toLowerCase() == 'ratanumero') {
                 // ratanumeroihin vaaditaan exact match
                 let m = r.match(matcher);
                 return m && m[0] == m.input ? 1000 : 0;
@@ -586,7 +588,7 @@ let parsiInfraNimi = (ryhma, row) => {
 let parsiJetiNimi = row => {
     let a = {'sisainen tunniste': row.sisainenTunniste};
     let b = {tila: row.tila};
-    let c = {asia: row.asia, tyyppi: row.tyyppi, 'työ': row.tyo};
+    let c = {asia: row.asia, tyyppi: row.tyyppi, 'työ': row.tyo};
     let d = {voimassa: row.voimassa ? muotoileAikavali(row.voimassa) : undefined};
     let e = {'työn lisätiedot': row.tyonLisatiedot, 'VEK-selite': row.vekSelite, 'ei-VEK-selite': row.eivekSelite, 'työnosat': (row.tyonosat ? row.tyonosat.map(x => x.tyyppi + ': ' + x.selite).join('. ') : undefined)};
     return mkSearchElem([a,b,c,d,e]);

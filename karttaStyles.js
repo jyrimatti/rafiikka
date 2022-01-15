@@ -173,12 +173,14 @@ let lpOsaStyle = feature => {
 };
 let lpValiStyle = styles.line(3.0, 'rgba(42,42,255,0.3)');
 
-let rataStyle = styles.line(1.0, 'rgb(255,42,42)');
-let kmStyle = styles.icon(infraAPIUrl(true) + 'icons/kilometrimerkki.svg');
-let tasoristeysStyle = feature => styles.icon(infraAPIUrl(true) + 'icons/tasoristeys.svg', undefined, feature.getProperties().rotaatio);
-let lorajaStyle      = feature => styles.icon(infraAPIUrl(true) + 'icons/liikenteenohjauksenraja.svg', undefined, feature.getProperties().rotaatio);
-let raiteensulkuStyle = feature => styles.icon(infraAPIUrl(true) + 'icons/raiteensulku' + (feature.getProperties().suistosuunta === 'vasen' ? 'Vasen' : 'Oikea') + (feature.getProperties().kasinAsetettava === true ? 'Kasin' : '') + '.svg', undefined, feature.getProperties().rotaatio);
-let nraStyle = styles.line(1.0, 'rgb(89,161,183)');
+setTimeout(() => {
+    window.rataStyle = styles.line(1.0, 'rgb(255,42,42)');
+    window.kmStyle = styles.icon(infraAPIUrl(true) + 'icons/kilometrimerkki.svg');
+    window.tasoristeysStyle = feature => styles.icon(infraAPIUrl(true) + 'icons/tasoristeys.svg', undefined, feature.getProperties().rotaatio);
+    window.lorajaStyle      = feature => styles.icon(infraAPIUrl(true) + 'icons/liikenteenohjauksenraja.svg', undefined, feature.getProperties().rotaatio);
+    window.raiteensulkuStyle = feature => styles.icon(infraAPIUrl(true) + 'icons/raiteensulku' + (feature.getProperties().suistosuunta === 'vasen' ? 'Vasen' : 'Oikea') + (feature.getProperties().kasinAsetettava === true ? 'Kasin' : '') + '.svg', undefined, feature.getProperties().rotaatio);
+    window.nraStyle = styles.line(1.0, 'rgb(89,161,183)');
+}, 100);
 
 let eristysosuusStyle = styles.line(1.0, 'rgba(0, 0, 255, 0.5)');
 let akselinlaskentaStyle = styles.line(1.0, 'rgba(0, 255, 0, 0.5)');

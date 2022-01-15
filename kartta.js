@@ -101,7 +101,7 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
     slider.onchange = ev => {
         let alku = new Date(alkuaika.value);
         let loppu = new Date(loppuaika.value);
-        if (alku.getTime() == loppu.getTime() || !slider.disabled) {
+        if (alku.getTime() == loppu.getTime() || !slider.disabled) {
             slider.parentElement.title = 'Näytetään ajanhetki ' + dateFns.dateFns.format(dateFns.dateFnsTz.utcToZonedTime(alku, 'Europe/Helsinki'), "dd.MM.yyyy HH:mm");
         } else {
             slider.parentElement.title = 'Näytetään aikaväli ' + dateFns.dateFns.format(alku, "dd.MM.yyyy HH:mm") + ' - ' + dateFns.dateFns.format(loppu, "dd.MM.yyyy HH:mm") + '. Klikkaa valitaksesi ajanhetken.';
@@ -313,7 +313,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
 
     let onkoKaavio = () => kaavioCheck.checked;
     let ajanhetki = () => slider.min && slider.min == slider.max                               ? new Date(parseInt(slider.min)) :
-                          (slider.disabled || slider.value === undefined || slider.value == 0) ? undefined 
+                          (slider.disabled || slider.value === undefined || slider.value == 0) ? undefined 
                                                                                                : new Date(parseInt(slider.value));
     let aikavali = (alku, loppu) => {
         if (alku) {
@@ -327,7 +327,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
                 setSubState(kartanIndeksi(elem.kartta))('aika', [alku, loppu]);
             }
         } else {
-            return slider.min === undefined || slider.min == 0 ? undefined : [new Date(parseInt(slider.min)), new Date(parseInt(slider.max))];
+            return slider.min === undefined || slider.min == 0 ? undefined : [new Date(parseInt(slider.min)), new Date(parseInt(slider.max))];
         }
     }
 
@@ -396,7 +396,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
 
         let update = diff => {
             let e = elem.querySelector('.layer-switcher');
-            e.setAttribute('data-loading', parseInt(e.getAttribute('data-loading') || '0') + diff);
+            e.setAttribute('data-loading', parseInt(e.getAttribute('data-loading') || '0') + diff);
         };
         x.on('loadStart', () => update(1));
         x.on('loadSuccess', () => update(-1));
@@ -419,8 +419,8 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
 
     // muille kuin Jetille kartta globaaliin kontekstiin
     if (!onkoJeti(tunniste)) {
-        map.aikavali(time && new Date(time.split('/')[0]) || persistState && getSubState(kartanIndeksi(map))('aika')[0] || startOfDayUTC(getMainState('aika')[0]),
-                     time && new Date(time.split('/')[1]) || persistState && getSubState(kartanIndeksi(map))('aika')[1] || startOfDayUTC(getMainState('aika')[0])); // mainState ajanhetkeen
+        map.aikavali(time && new Date(time.split('/')[0]) || persistState && getSubState(kartanIndeksi(map))('aika')[0] || startOfDayUTC(getMainState('aika')[0]),
+                     time && new Date(time.split('/')[1]) || persistState && getSubState(kartanIndeksi(map))('aika')[1] || startOfDayUTC(getMainState('aika')[0])); // mainState ajanhetkeen
     }
 
     kaavioCheck.onchange = _ => {
@@ -437,7 +437,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         if (av) {
             let a = av[0];
             let b = av[1];
-            if (a.getTime() == b.getTime() || !slider.disabled) {
+            if (a.getTime() == b.getTime() || !slider.disabled) {
                 slider.parentElement.title = 'Näytetään ajanhetki ' + muotoileAjanhetki(ajanhetki());
             } else {
                 slider.parentElement.title = 'Näytetään aikaväli ' + muotoileAjanhetki(a) + ' - ' + muotoileAjanhetki(b) + '. Klikkaa valitaksesi ajanhetken.';
@@ -538,7 +538,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     if (persistState) {
         let persistedLayers = flatLayerGroups(map.getLayers().getArray());
 
-        let nakyvatTasot = getSubState(kartanIndeksi(map))('tasot') || [];
+        let nakyvatTasot = getSubState(kartanIndeksi(map))('tasot') || [];
         persistedLayers.forEach(x => {
             if (nakyvatTasot.indexOf(x.get('shortName')) > -1) {
                 log('Laitetaan näkyviin taso', x.get('title'));
@@ -550,7 +550,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
             let toPersist = persistedLayers.filter(x => x.getVisible())
                                            .map(x => x.get('shortName'))
                                            .filter(x => x != undefined)
-                                           .filter(x => x.length == 2 || x.length == 3);
+                                           .filter(x => x.length == 2 || x.length == 3);
             setSubState(kartanIndeksi(map))('tasot', toPersist);
         }));
     }
@@ -990,7 +990,7 @@ let korostaEnnakkotieto = (map, tunniste, kaavio, ajanhetki, aikavali) => {
     let prefix = jetiKohdePrefix(tunniste);
     if (prefix) {
         let props = '-laskennallinenKarttapiste,tunniste,voimassa,' + kohdeProps.map(x => prefix + x).join(',');
-        let avain = tunniste + '_' + kaavio() + '-' + (aikavali() || ajanhetki());
+        let avain = tunniste + '_' + kaavio() + '-' + (aikavali() || ajanhetki());
 
         if (highlightLayers[avain]) {
             highlightLayers[avain].setVisible(true);

@@ -549,14 +549,10 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     pointer-events: none;
 }
 
-.layer-switcher[data-loading^='1'] button,
-.layer-switcher[data-loading^='2'] button,
-.layer-switcher[data-loading^='3'] button {
+.layer-switcher[data-loading]:not([data-loading='0']) button {
     animation: round-and-round 1s linear infinite;
 }
-.layer-switcher[data-loading^='1'] button:after,
-.layer-switcher[data-loading^='2'] button:after,
-.layer-switcher[data-loading^='3'] button:after {
+.layer-switcher[data-loading]:not([data-loading='0']) button:after {
     content: 'loading';
     font-size: 1.3em;
     color: Black;

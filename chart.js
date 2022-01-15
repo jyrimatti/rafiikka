@@ -1,24 +1,4 @@
 window.valittuDS = new am4core.DataSource();
-on(aikataulupaikatDS.events, "done", ev => {
-    if (!valittuDS.data && getMainState('sijainti').split(',')[0].split("-").length >= 2) {
-        let paikat = getMainState('sijainti').split(',')[0].split("-").map(x => Object.values(ev.target.data).find(y => y.lyhenne == x || y.uicKoodi == x));
-        if (paikat.includes(undefined)) {
-            log('odotellaan aikataulupaikkojen latautumista...');
-            return;
-        }
-        valittuDS.data = paikat.map((x,i) => [x.uicKoodi, i]);
-        log("Alustettu y-akseli:", valittuDS.data)
-        valittuDS.dispatch("done", {target: {data: valittuDS.data}});
-    }
-});
-on(ratanumerotDS.events, "done", () => {
-    let valittu = getMainState('sijainti').split(',')[0];
-    if (!valittuDS.data && onkoRatanumero(valittu)) {
-        valittuDS.data = valittu;
-        log("Alustettu y-akseli:", window.valittuDS.data)
-        valittuDS.dispatch("done", {target: {data: valittuDS.data}});
-    }
-});
 
 let valittunaRatanumero = () => {
     let x = onkoRatanumero(valittuDS.data);
@@ -28,8 +8,6 @@ let valittunaAikataulupaikka = () => valittuDS.data instanceof Array && valittuD
 
 window.aktiivisetJunatDS = new am4core.DataSource();
 window.aktiivisetJunatDS.data = {};
-
-on(valittuDS.events, "done", _ => setMainState('sijainti', getMainState('sijainti').replace(/[^,]+/, valittuDS.data)));
 
 window.addEventListener('hashchange', () => {
     let uusiSijainti = getMainState('sijainti').split(',')[0].split("-");
@@ -130,9 +108,33 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
     return true;
 };
 
-    am4core.useTheme(am4themes_animated);
-    am4core.ready(() => {
+am4core.useTheme(am4themes_animated);
+am4core.ready(() => {
+    setTimeout(() => {
         log("Aloitetaan grafiikan alustus");
+
+        on(aikataulupaikatDS.events, "done", ev => {
+            if (!valittuDS.data && getMainState('sijainti').split(',')[0].split("-").length >= 2) {
+                let paikat = getMainState('sijainti').split(',')[0].split("-").map(x => Object.values(ev.target.data).find(y => y.lyhenne == x || y.uicKoodi == x));
+                if (paikat.includes(undefined)) {
+                    log('odotellaan aikataulupaikkojen latautumista...');
+                    return;
+                }
+                valittuDS.data = paikat.map((x,i) => [x.uicKoodi, i]);
+                log("Alustettu y-akseli:", valittuDS.data)
+                valittuDS.dispatch("done", {target: {data: valittuDS.data}});
+            }
+        });
+        on(ratanumerotDS.events, "done", () => {
+            let valittu = getMainState('sijainti').split(',')[0];
+            if (!valittuDS.data && onkoRatanumero(valittu)) {
+                valittuDS.data = valittu;
+                log("Alustettu y-akseli:", window.valittuDS.data)
+                valittuDS.dispatch("done", {target: {data: valittuDS.data}});
+            }
+        });
+        on(valittuDS.events, "done", _ => setMainState('sijainti', getMainState('sijainti').replace(/[^,]+/, valittuDS.data)));
+        
         window.chart = am4core.create("chartdiv", am4charts.XYChart);
 
         chart.events.on("error", errorHandler);
@@ -353,7 +355,7 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
 
         let ratanumeroSelect = ratanumeroContainer.createChild(am4core.Label);
         ratanumeroSelect.paddingLeft = 25;
-        on(ratanumerotDS.events, "done", ev => {
+        on(ratanumerotDS.events, "done", ev => {
             if (!ev.target.data || ev.target.data.length == 0) {
                 log("odotellaan ratanumeroiden latautumista...");
                 return false;
@@ -371,7 +373,7 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
         on(chart.events, "ready", paivitaAikataulupaikkavalinta);
         let aikataulupaikkaSelect = aikataulupaikkaContainer.createChild(am4core.Label);
         aikataulupaikkaSelect.paddingLeft = 25;
-        on(aikataulupaikatDS.events, "done", ev => {
+        on(aikataulupaikatDS.events, "done", ev => {
             if (!ev.target.data || ev.target.data.length == 0) {
                 log("odotellaan aikataulupaikkojen latautumista...");
                 return false;
@@ -401,7 +403,7 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
             }
             let mkOption = aikataulupaikat => aikataulupaikat.map(x => "<option>" + x.lyhenne + " (" + x.nimi + ")" + "</option>").join("");
             aikataulupaikkaSelect.html = aikataulupaikkaSelect.html.replace("{1}", mkOption(aikataulupaikat1))
-                                                                   .replace("{2}", mkOption(aikataulupaikat2));
+                                                                    .replace("{2}", mkOption(aikataulupaikat2));
         });
 
         on(valittuDS.events, "done", ev => {
@@ -557,7 +559,7 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
             on(button.events, "hit", () => {
                 let diff = Math.abs(xAxis.maxZoomed - xAxis.minZoomed);
                 xAxis.zoomToDates(new Date(xAxis.minZoomed + deltaMin(diff)),
-                                  new Date(xAxis.maxZoomed + deltaMax(diff)));
+                                    new Date(xAxis.maxZoomed + deltaMax(diff)));
             });
             return button;
         }
@@ -571,7 +573,7 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
         on(nowButton.events, "hit", () => {
             let diff = xAxis.maxZoomed - xAxis.minZoomed;
             xAxis.zoomToDates(new Date(new Date().getTime() - diff/2),
-                              new Date(new Date().getTime() + diff/2));
+                                new Date(new Date().getTime() + diff/2));
         });
 
         luoAikavalinSiirtoButton("-", (x => -0.25 * x), (x =>  0.25 * x), 'Kavenna aikajaksoa').marginLeft = 10;
@@ -873,9 +875,9 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
             };
             series.dataSource.load = () => {
                 ds.filter(x => x[1].isActive)
-                  .forEach(x => {
-                      x[1].load();
-                  });
+                    .forEach(x => {
+                        x[1].load();
+                    });
             };
 
             return series;
@@ -1104,7 +1106,7 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
 
             let segment                 = series.segments.template;
             segment.tooltipText         = series.dummyData.trainType + series.dummyData.trainNumber + ' (' + series.dummyData.departureDate + ")\n" +
-                                          (series.dummyData.commuterLineID ? series.dummyData.commuterLineID + ' ' : '') + series.dummyData.trainCategory + " (" + series.dummyData.operator + ")"; // jostain syystä placeholder-syntax ei näitä löydä...
+                                            (series.dummyData.commuterLineID ? series.dummyData.commuterLineID + ' ' : '') + series.dummyData.trainCategory + " (" + series.dummyData.operator + ")"; // jostain syystä placeholder-syntax ei näitä löydä...
             segment.cloneTooltip        = false;
             segment.tooltipPosition     = "pointer";
             segment.interactionsEnabled = true;
@@ -1399,60 +1401,62 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
         });
 
         log("Grafiikka valmis");
-    });
 
-    for (let i = 1; i < getStates().length; ++i) {
-        let offsetX1;
-        let offsetY1;
-        let offsetX2;
-        let offsetY2;
-        if (getStates().length == 2) {
-            offsetX1 = '4em';
-            offsetY1 = '10em';
-            offsetX2 = '4em';
-            offsetY2 = '4em';
-        } else {
-            offsetX1 = (1 + ((i-1)%2)*60 + Math.random()*5) + '%';
-            offsetY1 = (1 + ((i-1)%4)*20 + Math.random()*5) + '%';
+
+        for (let i = 1; i < getStates().length; ++i) {
+            let offsetX1;
+            let offsetY1;
+            let offsetX2;
+            let offsetY2;
+            if (getStates().length == 2) {
+                offsetX1 = '4em';
+                offsetY1 = '10em';
+                offsetX2 = '4em';
+                offsetY2 = '4em';
+            } else {
+                offsetX1 = (1 + ((i-1)%2)*60 + Math.random()*5) + '%';
+                offsetY1 = (1 + ((i-1)%4)*20 + Math.random()*5) + '%';
+            }
+            kartta(getSubState(i)('sijainti'), undefined, getSubState(i)('time'), true, offsetX1, offsetY1, offsetX2, offsetY2);
         }
-        kartta(getSubState(i)('sijainti'), undefined, getSubState(i)('time'), true, offsetX1, offsetY1, offsetX2, offsetY2);
-    }
-    
-    if (getStates().length == 1) {
-        on(chart.events, "ready", () => {
-            // jos päätilan sijainti on "sopiva", niin avataan se myös kartalle, tai lasketaan siitä sopiva arvaus työrakografiikkaan.
-            getMainState('sijainti')
-                .split(',')
-                .filter(x => !onkoRatanumero(x) && !onkoReitti(x)) // ratanumerot ja reitit avattakoon vain työrakografiikalle, koska ne ovat suoraan käypiä siihen.
-                .slice(0,1)
-                .forEach(tunniste => {
-                    if (onkoJeti(tunniste)) {
-                        // Jeteistä voidaan päätellä jotakin sijainnista, ja avata työrakografiikka sopivaan paikkaan
-                        asetaEnnakkotietoGrafiikalle(tunniste, ratanumero => {
-                            let mainState = getMainState('sijainti');
-                            if (!mainState.startsWith('(' + ratanumero + '),')) {
-                                setMainState('sijainti', '(' + ratanumero + '),' + mainState);
-                            }
-                        });
 
-                        // asetetaan kyseinen taso näkyviin
-                        [
-                            ['ei', onkoEI],
-                            ['es', onkoES],
-                            ['vs', onkoVS],
-                            ['loi', onkoLOI],
-                            ['rt', onkoRT],
-                            ['lr', onkoLR]
-                        ].forEach(pair => {
-                            if (pair[1](tunniste)) {
-                                chart.series.each(x => {
-                                    if (x.dummyData && x.dummyData.shortName == pair[0]) {
-                                        x.show();
-                                    }
-                                });
-                            }
-                        });
-                    }
+        if (getStates().length == 1) {
+            on(chart.events, "ready", () => {
+                // jos päätilan sijainti on "sopiva", niin avataan se myös kartalle, tai lasketaan siitä sopiva arvaus työrakografiikkaan.
+                getMainState('sijainti')
+                    .split(',')
+                    .filter(x => !onkoRatanumero(x) && !onkoReitti(x)) // ratanumerot ja reitit avattakoon vain työrakografiikalle, koska ne ovat suoraan käypiä siihen.
+                    .slice(0,1)
+                    .forEach(tunniste => {
+                        if (onkoJeti(tunniste)) {
+                            // Jeteistä voidaan päätellä jotakin sijainnista, ja avata työrakografiikka sopivaan paikkaan
+                            asetaEnnakkotietoGrafiikalle(tunniste, ratanumero => {
+                                let mainState = getMainState('sijainti');
+                                if (!mainState.startsWith('(' + ratanumero + '),')) {
+                                    setMainState('sijainti', '(' + ratanumero + '),' + mainState);
+                                }
+                            });
+
+                            // asetetaan kyseinen taso näkyviin
+                            [
+                                ['ei', onkoEI],
+                                ['es', onkoES],
+                                ['vs', onkoVS],
+                                ['loi', onkoLOI],
+                                ['rt', onkoRT],
+                                ['lr', onkoLR]
+                            ].forEach(pair => {
+                                if (pair[1](tunniste)) {
+                                    chart.series.each(x => {
+                                        if (x.dummyData && x.dummyData.shortName == pair[0]) {
+                                            x.show();
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                });
             });
-        });
-    }
+        }
+    }, 200);
+});

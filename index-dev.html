@@ -1,5 +1,6 @@
 <!DOCTYPE HTML>
 <html>
+
     <head>
         <meta charset="UTF-8">
         <script src="https://www.amcharts.com/lib/version/4.10.16/core.js"></script>
@@ -16,6 +17,16 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/js/standalone/selectize.min.js"></script>
         <script src="https://unpkg.com/@popperjs/core@2"></script>
         <script src="https://unpkg.com/tippy.js@6"></script>
+        <script>
+            window.foo = function(f,t) {
+                console.log("foo!", f, t);
+                setTimeout(function() {
+                    console.log("time!", f);
+                    f();
+                    console.log("f done!");
+                },t);
+            };
+        </script>
     </head>
     <body>
         <script src="./jsaddle.js"></script>
