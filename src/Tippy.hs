@@ -4,8 +4,8 @@ module Tippy (
     setContent, tippy, interactive, placement, offset, content
 ) where
 
-import Language.Javascript.JSaddle (JSM, (#), (!), MakeObject)
 import Universum
+import Language.Javascript.JSaddle (JSM, (#), (!), MakeObject)
 import Data.Text (pack)
 
 tippy, interactive, placement, offset, content :: Text

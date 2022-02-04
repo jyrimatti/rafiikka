@@ -118,8 +118,8 @@ var connect = function() {
                                 break;
                             case "FreeRefs":
                                 var refsToFree = jsaddle_free.get(d.contents) || [];
-                                //for(var nRef = 0; nRef != refsToFree.length; nRef++)
-                                //    jsaddle_values.delete(refsToFree[nRef]);
+                                for(var nRef = 0; nRef != refsToFree.length; nRef++)
+                                    jsaddle_values.delete(refsToFree[nRef]);
                                 jsaddle_free.delete(d.contents);
                                 break;
                             case "SetPropertyByName":
@@ -191,7 +191,7 @@ var connect = function() {
                                             args[i] = nArg;
                                         }
                                         if(inCallback > 50) {
-                                          throw "Callback limit exceeded"
+                                            console.log("Callback limit exceeded");
                                           ws.send(JSON.stringify({"tag": "Callback", "contents": [lastResults[0], lastResults[1], nFunction, nFunctionInFunc, nThis, args]}));
                                         } else {
                                           console.log('Running sync from batch', _bat);
@@ -203,6 +203,7 @@ var connect = function() {
                                           };
                                           expectedBatch--;
                                           runBatch(modifyBatch((function(){
+                                            lastResults = [lastResults[0], {"tag": "Success", "contents": [callbacksToFree, results]}];
                                             var xhr = new XMLHttpRequest();
                                             xhr.open('POST', '/sync/'+syncKey, false);
                                             xhr.setRequestHeader("Content-type", "application/json");

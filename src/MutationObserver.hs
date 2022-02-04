@@ -8,8 +8,8 @@ module MutationObserver (
     onAttributeMutation
 ) where
 
-import Language.Javascript.JSaddle (JSM, (#), ToJSVal (toJSVal), (<#), new, jsg, FromJSVal (fromJSVal), obj, JSString)
 import Universum
+import Language.Javascript.JSaddle (JSM, (#), ToJSVal (toJSVal), (<#), new, jsg, FromJSVal (fromJSVal), obj, JSString)
 import FFI (procedure1)
 import Data.Maybe ( fromJust )
 import Data.Text (pack)

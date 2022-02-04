@@ -1,13 +1,10 @@
-{-# LANGUAGE OverloadedStrings, TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
 module Frontpage where
 
+import Universum
 import Shpadoinkle
-import Shpadoinkle.Html
-import Prelude hiding (span, div, max)
-import Data.Text (Text, pack)
-import Data.String (IsString)
+import Shpadoinkle.Html as H
 
 scripts :: [Html m a]
 scripts =
@@ -59,14 +56,14 @@ jetiTilastot =
       ["LO-ilmoitukset"]
   ]
 
-data RowType = Plain | Regular 
+data RowType = Plain | Regular
 
 regular :: Text -> Html m a -> Html m a
 regular f txt = jsLink (f <> "()") [className "regular"] [txt]
 
 tilastoRowLisu :: RowType -> Text -> Html m a -> Html m a
 tilastoRowLisu rowType f txt =
-  div "row"
+  H.div "row"
   [
     case rowType of
       Plain   -> txt
@@ -77,7 +74,7 @@ tilastoRowLisu rowType f txt =
 
 tilastoRowKake :: RowType -> Text -> Html m a -> Html m a
 tilastoRowKake rowType f txt =
-  div "row"
+  H.div "row"
   [
     case rowType of
       Plain   -> txt
@@ -88,7 +85,7 @@ tilastoRowKake rowType f txt =
 
 tilastoRowBoth :: RowType -> Text -> Html m a -> Html m a
 tilastoRowBoth rowType f txt =
-  div "row"
+  H.div "row"
   [
     case rowType of
       Plain   -> txt
@@ -123,7 +120,7 @@ infraTilastot =
       ["Liikennepaikkavälit"]
   , jsLink_ "luoTilastoPopupRaideosuudet()"
       ["Raideosuudet"]
-  
+
   , tilastoRowBoth Plain "luoTilastoPopupAkselinlaskija" "Akselinlaskijat"
   , tilastoRowBoth Regular "luoTilastoPopupBaliisi" "Baliisit"
   , tilastoRowBoth Plain "luoTilastoPopupKuumakayntiilmaisin" "Kuumakäynti-ilmaisimet"
@@ -168,25 +165,25 @@ infraTilastot =
   ]
 
 view :: () -> Html m ()
-view _ = 
+view _ =
   div_ $
-  [ 
+  [
     a [ href "https://github.com/jyrimatti/rafiikka/" ]
-    [ 
+    [
       img' [ styl "position: absolute; top: 0; right: 0; border: 0;"
            , src "https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67"
            , alt "Fork me on GitHub"
            , ("data-canonical-src","https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png")
            ]
     ]
-  , progress' [ id' "progress", max "1" ]
-  , h1_ 
+  , progress' [ id' "progress", H.max "1" ]
+  , h1_
     [
       a [ href "" ]
         ["Rafiikka"]
     , " - Rataverkon reaaliaikagrafiikka, työrakografiikka, karttakäyttöliittymä ja tilastopalvelu"
     ]
-  , div [ className "palkki", id' "palkki" ]
+  , H.div [ className "palkki", id' "palkki" ]
     [
       nav "menu"
       [
@@ -217,7 +214,7 @@ view _ =
           , select [id' "delta2"] $
             option [value "1", selected True]
               ["1"]
-            : fmap ((\x -> option [value x] [text x]) . pack . show @Int) [2..20]
+            : fmap ((\x -> option [value x] [text x]) . show) [2..20 :: Int]
           , select [id' "delta3"]
             [
               option [value "D"]
@@ -245,7 +242,7 @@ view _ =
           ]
         ]
       ]
-    , div "hakuohje"
+    , H.div "hakuohje"
       [
         span "trigger"
           ["?"]

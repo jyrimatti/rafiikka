@@ -3,22 +3,31 @@
 module Browser (
     getElementById,
     setTimeout,
-    debug
+    debug,
+    withDebug
 ) where
 
+import Universum
 import FFI (procedure)
 import Language.Javascript.JSaddle (JSM, jsg2, JSString)
 import JSDOM (currentDocument)
-import JSDOM.Types (Element)
+import qualified JSDOM.Types as JSDOM (Element)
 import JSDOM.Generated.ParentNode (querySelector)
-import Universum hiding (Element)
 import Data.Time (NominalDiffTime)
 import qualified Shpadoinkle.Console as SC (debug)
 
 debug :: Text -> JSM ()
 debug = SC.debug @Show
 
-getElementById :: Text -> JSM (Maybe Element)
+
+withDebug :: Text -> JSM b -> JSM b
+withDebug x f = do
+  debug x
+  ret <- f
+  debug $ x <> " end"
+  pure ret
+
+getElementById :: Text -> JSM (Maybe JSDOM.Element)
 getElementById id_ = do
   debug "getElementById"
   Just doc <- currentDocument

@@ -1,21 +1,21 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Tooltips (
     initTooltips
 ) where
 
+import Universum
 import Language.Javascript.JSaddle (JSM, jsg2, Object, (<#), JSVal, (!), obj, FromJSVal (fromJSVal))
-import Universum hiding (Element)
 import FFI (function1)
 import MutationObserver (onTitleChange)
 import JSDOM.Generated.Element (removeAttribute)
-import JSDOM.Types (Element)
+import JSDOM.Types as JSDOM (Element)
 import Tippy (setContent, tippy, interactive, placement, offset, content)
 import JSDOM.Generated.ParentNode (querySelectorAll)
-import Browser (debug)
+import Browser (debug, withDebug)
 import Data.Text (pack)
 
-titleUpdater :: Element -> JSVal -> JSM ()
+titleUpdater :: JSDOM.Element -> JSVal -> JSM ()
 titleUpdater reference _ = do
     debug "titleUpdater"
     title <- fromJSVal =<< reference ! pack "title"
@@ -23,7 +23,7 @@ titleUpdater reference _ = do
         reference `setContent` x
         reference `removeAttribute` pack "title"
 
-contentF :: Element -> JSM Text
+contentF :: JSDOM.Element -> JSM Text
 contentF reference = do
     originalTitle <- fromJSVal =<< reference ! pack "title"
     reference `removeAttribute` pack "title"
@@ -39,9 +39,8 @@ props = do
     o <# content $ function1 contentF
     pure o
 
-initTooltips :: Element -> JSM ()
-initTooltips context = do
-    debug "initTooltips"
+initTooltips :: JSDOM.Element -> JSM ()
+initTooltips context = withDebug "initTooltips" $ do
     xs <- context `querySelectorAll` pack "[title]"
     _ <- jsg2 tippy xs props
     pure ()

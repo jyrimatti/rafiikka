@@ -1,15 +1,15 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, TypeApplications #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Main where
 
-import FFI ( registerGlobalFunction1 )
+import Universum
+import FFI ( registerGlobalFunction1, registerGlobalFunction, registerGlobalFunctionPure1 )
 import Tooltips ( initTooltips )
 import Shpadoinkle ( JSM )
 import Shpadoinkle.Backend.Snabbdom (runSnabbdom, stage)
 import Shpadoinkle.Html ( addMeta, addScriptSrc, addStyle, setTitle )
 import Shpadoinkle.Run              (runJSorWarp, simple, liveWithStaticAndIndex)
-import Prelude hiding (span, div, max)
 import qualified Data.ByteString.Lazy as B
 import Language.Javascript.JSaddle.Run (enableLogging)
 import Data.Maybe (fromJust)
@@ -17,12 +17,13 @@ import Data.Time.Clock (secondsToNominalDiffTime)
 import Browser (setTimeout, getElementById)
 import Frontpage (view)
 import Shpadoinkle.Console (debug)
-import Yleiset (parseInterval_)
+import Yleiset (parseInterval_, startOfDayUTC_, startOfMonthUTC_, laajennaAikavali_, parseState_)
+import State (defaultState)
 
 main :: IO ()
 main = do
-  putStrLn "\nRafiikka"
-  putStrLn "http://localhost:8080\n"
+  putTextLn "\nRafiikka"
+  putTextLn "http://localhost:8080\n"
   runJSorWarp 8080 app
 
 dev :: IO ()
@@ -34,7 +35,12 @@ app :: JSM ()
 app = do
   enableLogging True
 
-  registerGlobalFunction1 "parseInterval" parseInterval_
+  registerGlobalFunctionPure1 "parseInterval" parseInterval_
+  --registerGlobalFunctionPure1 "startOfDayUTC_" startOfDayUTC_
+  --registerGlobalFunctionPure1 "startOfMonthUTC_" startOfMonthUTC_
+  registerGlobalFunctionPure1 "laajennaAikavali" laajennaAikavali_
+  registerGlobalFunction1 "parseState" parseState_
+  registerGlobalFunction "defaultState" defaultState
   registerGlobalFunction1 "initTooltips" initTooltips
 
   addMeta [("charset", "UTF-8")]
@@ -48,7 +54,7 @@ app = do
   addScriptSrc "datefns.js"
   addScriptSrc "drag.js"
 
-  simple runSnabbdom () view stage
+  simple runSnabbdom () Frontpage.view stage
 
   setTimeout (secondsToNominalDiffTime 2) $ (do debug @Show ("cb!" :: [Char]); getElementById "palkki") >>= \x -> do
     debug @Show ("acting!" :: [Char]);
