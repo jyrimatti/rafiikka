@@ -4,20 +4,27 @@ module Browser (
     getElementById,
     setTimeout,
     debug,
-    withDebug
+    withDebug,
+    locationHash
 ) where
 
-import Universum
+import Universum hiding (drop)
 import FFI (procedure)
-import Language.Javascript.JSaddle (JSM, jsg2, JSString)
-import JSDOM (currentDocument)
+import Language.Javascript.JSaddle (JSM, jsg2, JSString, (!), FromJSVal (fromJSVal))
+import JSDOM (currentDocument, currentWindow)
 import qualified JSDOM.Types as JSDOM (Element)
 import JSDOM.Generated.ParentNode (querySelector)
 import Data.Time (NominalDiffTime)
 import qualified Shpadoinkle.Console as SC (debug)
+import Data.Text (drop)
+
+__loggingEnabled :: Bool
+__loggingEnabled = False
 
 debug :: Text -> JSM ()
-debug = SC.debug @Show
+debug t = if __loggingEnabled
+  then SC.debug @Show t
+  else pure ()
 
 
 withDebug :: Text -> JSM b -> JSM b
@@ -38,3 +45,12 @@ setTimeout timeout callback = do
   debug "setTimeout"
   _ <- jsg2 @JSString "setTimeout" (procedure callback) $ round @NominalDiffTime @Int (timeout * 1000)
   pure ()
+
+locationHash :: JSM Text
+locationHash = do
+  debug "locationHash"
+  Just win <- currentWindow
+  hash <- win ! ("location" :: JSString) ! ("hash" :: JSString)
+  Just h <- fromJSVal hash
+  debug $ "locationHash: " <> h
+  pure $ drop 1 h

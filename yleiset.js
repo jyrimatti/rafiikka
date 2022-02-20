@@ -36,13 +36,13 @@
     return undefined;
 }*/
 
-let parseLayers = str => {
+/*let parseLayers = str => {
     let ret = str.split(',');
     if (ret.every(x => x.length == 2 || x.length == 3)) {
         return ret;
     }
     return undefined;
-};
+};*/
 
 /*let parseStatePart = str => {
     if (str == hashPlaceholder.substring(1)) {
@@ -68,15 +68,15 @@ let parseLayers = str => {
     }
 };*/
 
-let pyoristaAjanhetki = x => {
+/*let pyoristaAjanhetki = x => {
     let y = new Date(x.getTime());
     y.setMinutes(0);
     y.setSeconds(0);
     y.setMilliseconds(0);
     return y;
-};
+};*/
 
-let startOfDayUTC = x => {
+/*let startOfDayUTC = x => {
     let y = new Date(x.getTime());
     y.setUTCHours(0);
     y.setUTCMinutes(0);
@@ -93,12 +93,12 @@ let startOfMonthUTC = x => {
     y.setUTCSeconds(0);
     y.setUTCMilliseconds(0);
     return y;
-};
+};*/
 
-let defaultAika = () => {
+/*let defaultAika = () => {
     let now = pyoristaAjanhetki(dateFns.dateFns.sub(new Date(), {hours: 1}));
     return [now, dateFns.dateFns.add(now, {hours: 4}), undefined, 'PT4H'];
-};
+};*/
 
 //let defaultState = () => ({moodi:'kartta', aika: defaultAika(), sijainti: '(009)', rotaatio: 0, tasot: []});
 
@@ -108,7 +108,7 @@ let defaultAika = () => {
     return st;
 }*/
 
-let getStates = () => window.location.hash.substring(1).split('#').filter(x => x != "").map(x => x.split('&')).map(parseState);
+//let getStates = () => window.location.hash.substring(1).split('#').filter(x => x != "").map(x => x.split('&')).map(parseState);
 
 let getState = index => key => {
     let state = getStates()[index];
@@ -162,7 +162,9 @@ window.addEventListener('hashchange', e => {
   }, false);
 
 
-let getMainState = key => getState(0)(key) || defaultState()[key];
+let getMainState = key => {
+    return getState(0)(key) || defaultState()[key];
+};
 let setMainState = setState(0);
 
 let getSubState = index => {

@@ -10,7 +10,7 @@ window.aktiivisetJunatDS = new am4core.DataSource();
 window.aktiivisetJunatDS.data = {};
 
 window.addEventListener('hashchange', () => {
-    let uusiSijainti = getMainState('sijainti').split(',')[0].split("-");
+    let uusiSijainti = (getMainState('sijainti') || '').split(',')[0].split("-");
     if (uusiSijainti.length == 1) {
         uusiSijainti = uusiSijainti[0];
     } else if (uusiSijainti.every(x => x.match(/\d+/))) {
@@ -114,8 +114,8 @@ am4core.ready(() => {
         log("Aloitetaan grafiikan alustus");
 
         on(aikataulupaikatDS.events, "done", ev => {
-            if (!valittuDS.data && getMainState('sijainti').split(',')[0].split("-").length >= 2) {
-                let paikat = getMainState('sijainti').split(',')[0].split("-").map(x => Object.values(ev.target.data).find(y => y.lyhenne == x || y.uicKoodi == x));
+            if (!valittuDS.data && (getMainState('sijainti') || '').split(',')[0].split("-").length >= 2) {
+                let paikat = (getMainState('sijainti') || '').split(',')[0].split("-").map(x => Object.values(ev.target.data).find(y => y.lyhenne == x || y.uicKoodi == x));
                 if (paikat.includes(undefined)) {
                     log('odotellaan aikataulupaikkojen latautumista...');
                     return;
@@ -126,14 +126,14 @@ am4core.ready(() => {
             }
         });
         on(ratanumerotDS.events, "done", () => {
-            let valittu = getMainState('sijainti').split(',')[0];
+            let valittu = (getMainState('sijainti') || '').split(',')[0];
             if (!valittuDS.data && onkoRatanumero(valittu)) {
                 valittuDS.data = valittu;
                 log("Alustettu y-akseli:", window.valittuDS.data)
                 valittuDS.dispatch("done", {target: {data: valittuDS.data}});
             }
         });
-        on(valittuDS.events, "done", _ => setMainState('sijainti', getMainState('sijainti').replace(/[^,]+/, valittuDS.data)));
+        on(valittuDS.events, "done", _ => setMainState('sijainti', (getMainState('sijainti') || '').replace(/[^,]+/, valittuDS.data)));
         
         window.chart = am4core.create("chartdiv", am4charts.XYChart);
 
@@ -382,7 +382,7 @@ am4core.ready(() => {
                                                                             "<select id='aikataulupaikka2' onchange='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value, this.value)'><option></option>{2}</select></label>";
             let aikataulupaikat1 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).sort( (a,b) => a.lyhenne < b.lyhenne ? -1 : a.lyhenne > b.lyhenne ? 1 : 0);
             let aikataulupaikat2 = [...aikataulupaikat1];
-            let sijaintiParams = getMainState('sijainti').split("-");
+            let sijaintiParams = (getMainState('sijainti') || '').split("-");
             let valittu1 = Object.values(ev.target.data).find(x => x.lyhenne == sijaintiParams[0] || x.uicKoodi == sijaintiParams[0]);
             let valittu2 = Object.values(ev.target.data).find(x => x.lyhenne == sijaintiParams[sijaintiParams.length-1] || x.uicKoodi == sijaintiParams[sijaintiParams.length-1]);
             if (valittu1) {
@@ -760,7 +760,7 @@ am4core.ready(() => {
                     aktiiviset.dataSource.dispatchImmediately("done", {data: aktiiviset.dataSource.data}); // pitää laittaa data mukaan, muuten legend ei populoidu :shrug:
                 });
 
-                getMainState('sijainti').split(',').forEach(mainStateSijainti => {
+                (getMainState('sijainti') || '').split(',').forEach(mainStateSijainti => {
                     let match = shortName == 'ei' ? onkoEI(mainStateSijainti) :
                                 shortName == 'es' ? onkoES(mainStateSijainti) :
                                 shortName == 'vs' ? onkoVS(mainStateSijainti) :
@@ -1423,7 +1423,7 @@ am4core.ready(() => {
         if (getStates().length == 1) {
             on(chart.events, "ready", () => {
                 // jos päätilan sijainti on "sopiva", niin avataan se myös kartalle, tai lasketaan siitä sopiva arvaus työrakografiikkaan.
-                getMainState('sijainti')
+                (getMainState('sijainti') || '')
                     .split(',')
                     .filter(x => !onkoRatanumero(x) && !onkoReitti(x)) // ratanumerot ja reitit avattakoon vain työrakografiikalle, koska ne ovat suoraan käypiä siihen.
                     .slice(0,1)
@@ -1431,7 +1431,7 @@ am4core.ready(() => {
                         if (onkoJeti(tunniste)) {
                             // Jeteistä voidaan päätellä jotakin sijainnista, ja avata työrakografiikka sopivaan paikkaan
                             asetaEnnakkotietoGrafiikalle(tunniste, ratanumero => {
-                                let mainState = getMainState('sijainti');
+                                let mainState = (getMainState('sijainti') || '');
                                 if (!mainState.startsWith('(' + ratanumero + '),')) {
                                     setMainState('sijainti', '(' + ratanumero + '),' + mainState);
                                 }

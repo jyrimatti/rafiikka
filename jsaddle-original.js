@@ -155,7 +155,7 @@ var connect = function() {
                        xhr.open('POST', '/sync/'+syncKey, false);
                        xhr.setRequestHeader("Content-type", "application/json");
                        xhr.send(JSON.stringify({"tag": "Callback", "contents": [lastResults[0], lastResults[1], nFunction, nFunctionInFunc, nThis, args]}));
-                       return JSON.parse(xhr.response);})(), syncDepth + 1);
+                       return JSON.parse(xhr.response);})(), 1);
                                         }
                                     };
                                     jsaddle_values.set(nFunction, func);

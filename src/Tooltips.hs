@@ -16,7 +16,7 @@ import Browser (debug, withDebug)
 import Data.Text (pack)
 
 titleUpdater :: JSDOM.Element -> JSVal -> JSM ()
-titleUpdater reference _ = do
+titleUpdater reference _ = withDebug "titleUpdater" $ do
     debug "titleUpdater"
     title <- fromJSVal =<< reference ! pack "title"
     whenJust title $ \x -> do
@@ -24,7 +24,7 @@ titleUpdater reference _ = do
         reference `removeAttribute` pack "title"
 
 contentF :: JSDOM.Element -> JSM Text
-contentF reference = do
+contentF reference = withDebug "contentF" $ do
     originalTitle <- fromJSVal =<< reference ! pack "title"
     reference `removeAttribute` pack "title"
     onTitleChange reference (titleUpdater reference)

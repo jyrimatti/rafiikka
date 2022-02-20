@@ -4,7 +4,7 @@
 module State where
 
 import Universum
-import Data.Text as Text (split, unpack, tail)
+import Data.Text as Text (split, unpack, tail, splitOn)
 import Data.Maybe (fromJust)
 import Data.Generics.Labels ()
 import Data.Time
@@ -12,6 +12,7 @@ import Time (parseInterval, parseInstant, parseDurationFrom, parseDurationTo, ro
 import Data.Time.Lens
 import Control.Lens ((?~), (-~))
 import JSDOM.Types (JSM)
+import Browser (withDebug, locationHash)
 
 newtype Layer = Layer Text
   deriving Show
@@ -42,7 +43,8 @@ defaultTimeSetting = DurationFrom <$> (roundToPreviousHour . (flexDT.hours -~ 1)
                                   <*> pure (fromJust (parseISO "PT4H"))
 
 defaultState :: JSM AppState
-defaultState = AppState Map (Degrees 0) [] <$> liftIO defaultTimeSetting <*> pure Nothing
+defaultState = withDebug "defaultState" $
+  AppState Map (Degrees 0) [] <$> liftIO defaultTimeSetting <*> pure Nothing
 
 parseTimeSetting :: Text -> Maybe TimeSetting
 parseTimeSetting x = Instant              <$> parseInstant x
@@ -97,3 +99,7 @@ parseStatePart txt = let
 
 parseState :: [Text] -> JSM AppState
 parseState parts = foldr parseStatePart <$> defaultState <*> pure parts
+
+getStates :: JSM [AppState]
+getStates = withDebug "getStates" $
+  traverse (parseState . splitOn "&") . filter (not . null) . splitOn "#" =<< locationHash

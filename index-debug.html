@@ -52,19 +52,29 @@ var connect = function() {
         jsaddle_values.set(3, true);
         jsaddle_values.set(4, globalThis);
         var jsaddle_index = 100;
-        window.expectedBatch = 1;
-        window.lastResults = [0, {"tag": "Success", "contents": [[], []]}];
+        var expectedBatch = 1;
+        var lastResults = [0, {"tag": "Success", "contents": [[], []]}];
         var inCallback = 0;
         var asyncBatch = null;
 
+        window.__executed = {};
+
+        var logging = false;
+        var logDebug = logging ? console.debug : function() {};
+        var logLog = logging ? console.log : function() {};
 
         ws0.onmessage = function(e) {
             var batch = JSON.parse(e.data);
+            logDebug('Received async batch:', batch);
             if(inCallback > 0) {
+                if (asyncBatch != null) {
+                    console.error("Asyncbatch already present!", asyncBatch, batch);
+                }
                 asyncBatch = batch;
                 return;
             }
             if(typeof batch === "string") {
+                logLog('batch === string:', batch);
                 syncKey = batch;
                 var ws1 = new WebSocket(wsaddress);
                 ws1.onopen = function(e) {
@@ -83,338 +93,391 @@ var connect = function() {
                 return;
             }
 
-   var runBatch = function(firstBatch, initialSyncDepth) {
-    var processBatch = function(timestamp) {
-      var batch = firstBatch;
-      var callbacksToFree = [];
-      var results = [];
-      var iter = 0;
-      inCallback++;
-      try {
-        syncDepth = initialSyncDepth || 0;
-        console.log('runBatch with syncDepth',syncDepth);
-        for(;;){
-          iter++;
-          if (iter > 50) {
-              throw "whoops";
-          }
-          console.log('Starting batch loop', batch[2], expectedBatch);
-          if(batch[2] === expectedBatch) {            
-            expectedBatch++;
-            var nCommandsLength = batch[0].length;
-            console.log('Executin batch', batch[2], 'with', nCommandsLength, 'commands', batch[0]);
-            for (var nCommand = 0; nCommand != nCommandsLength; nCommand++) {
-                var cmd = batch[0][nCommand];
-                if (cmd.Left) {
-                    var d = cmd.Left;
-                    if (d.tag != 'FreeRef') {
-                        console.log(d.tag);
+            var modifyBatch = function(prevBatch, marker, _batch) {
+                logDebug('Batch', _batch[2], 'with rights', _batch[0].filter(x => x.Right));
+                if (!marker && prevBatch[2] === _batch[2] && prevBatch[0].length == 0) {
+                    logDebug('Nulling batch', _batch[2]);
+                    _batch[0] = [];
+                } else if (marker && prevBatch[2] === _batch[2]) {
+                    logDebug('looking for ' + JSON.stringify(marker) + ' from', _batch[0], _batch[0]);
+                    var thisIndex = _batch[0].findIndex(x => x.Left && JSON.stringify(x.Left) === JSON.stringify(marker));
+                    if (thisIndex > -1) { 
+                        logLog('dropping', thisIndex+1, 'commands:', _batch[0].slice(0, thisIndex+1), 'from batch:', _batch[0], _batch[0]);
+                        _batch[0] = _batch[0].slice(thisIndex+1);
                     }
-                    switch (d.tag) {
-                            case "FreeRef":
-                                var refsToFree = jsaddle_free.get(d.contents[0]) || [];
-                                refsToFree.push(d.contents[1]);
-                                jsaddle_free.set(d.contents[0], refsToFree);
-                                break;
-                            case "FreeRefs":
-                                var refsToFree = jsaddle_free.get(d.contents) || [];
-                                for(var nRef = 0; nRef != refsToFree.length; nRef++)
-                                    jsaddle_values.delete(refsToFree[nRef]);
-                                jsaddle_free.delete(d.contents);
-                                break;
-                            case "SetPropertyByName":
-                                jsaddle_values.get(d.contents[0])[d.contents[1]]=jsaddle_values.get(d.contents[2]);
-                                break;
-                            case "SetPropertyAtIndex":
-                                jsaddle_values.get(d.contents[0])[d.contents[1]]=jsaddle_values.get(d.contents[2]);
-                                break;
-                            case "EvaluateScript":
-                                var n = d.contents[1];
-                                jsaddle_values.set(n, eval(d.contents[0]));
-                                break;
-                            case "StringToValue":
-                                var n = d.contents[1];
-                                jsaddle_values.set(n, d.contents[0]);
-                                break;
-                            case "JSONValueToValue":
-                                var n = d.contents[1];
-                                jsaddle_values.set(n, d.contents[0]);
-                                break;
-                            case "GetPropertyByName":
-                                var n = d.contents[2];
-                                jsaddle_values.set(n, jsaddle_values.get(d.contents[0])[d.contents[1]]);
-                                break;
-                            case "GetPropertyAtIndex":
-                                var n = d.contents[2];
-                                jsaddle_values.set(n, jsaddle_values.get(d.contents[0])[d.contents[1]]);
-                                break;
-                            case "NumberToValue":
-                                var n = d.contents[1];
-                                jsaddle_values.set(n, d.contents[0]);
-                                break;
-                            case "NewEmptyObject":
-                                var n = d.contents;
-                                jsaddle_values.set(n, {});
-                                break;
-                            case "NewAsyncCallback":
-                                (function() {
-                                    var nFunction = d.contents;
-                                    var func = function() {
-                                        var nFunctionInFunc = ++jsaddle_index;
-                                        jsaddle_values.set(nFunctionInFunc, func);
-                                        var nThis = ++jsaddle_index;
-                                        jsaddle_values.set(nThis, this);
-                                        var args = [];
-                                        for (var i = 0; i != arguments.length; i++) {
-                                            var nArg = ++jsaddle_index;
-                                            jsaddle_values.set(nArg, arguments[i]);
-                                            args[i] = nArg;
-                                        }
-                                        ws.send(JSON.stringify({"tag": "Callback", "contents": [lastResults[0], lastResults[1], nFunction, nFunctionInFunc, nThis, args]}));
-                                    };
-                                    jsaddle_values.set(nFunction, func);
-                                })();
-                                break;
-                            case "NewSyncCallback":
-                                (function() {
-                                    var nFunction = d.contents;
-                                    var _bat = batch[2];
-                                    var func = function() {
-                                        var nFunctionInFunc = ++jsaddle_index;
-                                        jsaddle_values.set(nFunctionInFunc, func);
-                                        var nThis = ++jsaddle_index;
-                                        jsaddle_values.set(nThis, this);
-                                        var args = [];
-                                        for (var i = 0; i != arguments.length; i++) {
-                                            var nArg = ++jsaddle_index;
-                                            jsaddle_values.set(nArg, arguments[i]);
-                                            args[i] = nArg;
-                                        }
-                                        if(inCallback > 50) {
-                                            console.log("Callback limit exceeded");
-                                          ws.send(JSON.stringify({"tag": "Callback", "contents": [lastResults[0], lastResults[1], nFunction, nFunctionInFunc, nThis, args]}));
+                } else {
+                    logDebug('Skipping modifyBatch', prevBatch, marker, _batch);
+                }
+                return _batch;
+            };
+            
+            var runBatch = function(firstBatch, initialSyncDepth) {
+                var processBatch = function(timestamp) {
+                    var batch = firstBatch;
+                    var callbacksToFree = [];
+                    var results = [];
+                    inCallback++;
+                    try {
+                        syncDepth = initialSyncDepth || 0;
+                        logDebug('processBatch', {batch: batch[2], initialSyncDepth: initialSyncDepth, syncDepth: syncDepth}, batch);
+                        for(;;){
+                            if(batch[2] === expectedBatch) {
+                                expectedBatch++;
+                                if (window.__executed[batch[2]]) {
+                                    logDebug("Batch already executed -> skipping!", batch);
+                                } else {
+                                    var nCommandsLength = batch[0].length;
+                                    for (var nCommand = 0; nCommand != nCommandsLength; nCommand++) {
+                                        var cmd = batch[0][nCommand];
+                                        if (cmd.Left) {
+                                            var d = cmd.Left;
+                                            if (d.tag != 'FreeRef') {
+                                                logDebug('Executing', d);
+                                            }
+                                            switch (d.tag) {
+                                                    case "FreeRef":
+                                                        var refsToFree = jsaddle_free.get(d.contents[0]) || [];
+                                                        refsToFree.push(d.contents[1]);
+                                                        jsaddle_free.set(d.contents[0], refsToFree);
+                                                        break;
+                                                    case "FreeRefs":
+                                                        var refsToFree = jsaddle_free.get(d.contents) || [];
+                                                        for(var nRef = 0; nRef != refsToFree.length; nRef++)
+                                                            jsaddle_values.delete(refsToFree[nRef]);
+                                                        jsaddle_free.delete(d.contents);
+                                                        break;
+                                                    case "SetPropertyByName":
+                                                        jsaddle_values.get(d.contents[0])[d.contents[1]]=jsaddle_values.get(d.contents[2]);
+                                                        break;
+                                                    case "SetPropertyAtIndex":
+                                                        jsaddle_values.get(d.contents[0])[d.contents[1]]=jsaddle_values.get(d.contents[2]);
+                                                        break;
+                                                    case "EvaluateScript":
+                                                        var n = d.contents[1];
+                                                        jsaddle_values.set(n, eval(d.contents[0]));
+                                                        break;
+                                                    case "StringToValue":
+                                                        var n = d.contents[1];
+                                                        jsaddle_values.set(n, d.contents[0]);
+                                                        break;
+                                                    case "JSONValueToValue":
+                                                        var n = d.contents[1];
+                                                        jsaddle_values.set(n, d.contents[0]);
+                                                        break;
+                                                    case "GetPropertyByName":
+                                                        var n = d.contents[2];
+                                                        jsaddle_values.set(n, jsaddle_values.get(d.contents[0])[d.contents[1]]);
+                                                        break;
+                                                    case "GetPropertyAtIndex":
+                                                        var n = d.contents[2];
+                                                        jsaddle_values.set(n, jsaddle_values.get(d.contents[0])[d.contents[1]]);
+                                                        break;
+                                                    case "NumberToValue":
+                                                        var n = d.contents[1];
+                                                        jsaddle_values.set(n, d.contents[0]);
+                                                        break;
+                                                    case "NewEmptyObject":
+                                                        var n = d.contents;
+                                                        jsaddle_values.set(n, {});
+                                                        break;
+                                                    case "NewAsyncCallback":
+                                                        (function() {
+                                                            var nFunction = d.contents;
+                                                            var func = function() {
+                                                                var nFunctionInFunc = ++jsaddle_index;
+                                                                jsaddle_values.set(nFunctionInFunc, func);
+                                                                var nThis = ++jsaddle_index;
+                                                                jsaddle_values.set(nThis, this);
+                                                                var args = [];
+                                                                for (var i = 0; i != arguments.length; i++) {
+                                                                    var nArg = ++jsaddle_index;
+                                                                    jsaddle_values.set(nArg, arguments[i]);
+                                                                    args[i] = nArg;
+                                                                }
+                                                                ws.send(JSON.stringify({"tag": "Callback", "contents": [lastResults[0], lastResults[1], nFunction, nFunctionInFunc, nThis, args]}));
+                                                            };
+                                                            jsaddle_values.set(nFunction, func);
+                                                        })();
+                                                        break;
+                                                    case "NewSyncCallback":
+                                                        (function() {
+                                                            var nFunction = d.contents;
+                                                            var func = function() {
+                                                                var nFunctionInFunc = ++jsaddle_index;
+                                                                jsaddle_values.set(nFunctionInFunc, func);
+                                                                var nThis = ++jsaddle_index;
+                                                                jsaddle_values.set(nThis, this);
+                                                                var args = [];
+                                                                for (var i = 0; i != arguments.length; i++) {
+                                                                    var nArg = ++jsaddle_index;
+                                                                    jsaddle_values.set(nArg, arguments[i]);
+                                                                    args[i] = nArg;
+                                                                }
+                                                                if(inCallback > 50) {
+                                                                    throw 'Callback limit exceeded. Should this happen?'
+                                                                    ws.send(JSON.stringify({"tag": "Callback", "contents": [lastResults[0], lastResults[1], nFunction, nFunctionInFunc, nThis, args]}));
+                                                                } else {
+                                                                    logLog('NewSyncCallback', syncDepth, '->', syncDepth + 1);
+                                                                    runBatch(modifyBatch(batch, window.__marker, (function(){
+                                                                        var xhr = new XMLHttpRequest();
+                                                                        xhr.open('POST', '/sync/'+syncKey, false);
+                                                                        xhr.setRequestHeader("Content-type", "application/json");
+                                                                        logLog('sending Callback for batch', lastResults[0], lastResults[1]);
+                                                                        xhr.send(JSON.stringify({"tag": "Callback", "contents": [lastResults[0], lastResults[1], nFunction, nFunctionInFunc, nThis, args]}));
+                                                                        return JSON.parse(xhr.response);})()), syncDepth + 1);
+                                                                    logLog('NewSyncCallback returning.', syncDepth + 1, '->', syncDepth);
+                                                                }
+                                                            };
+                                                            jsaddle_values.set(nFunction, func);
+                                                        })();
+                                                        break;
+                                                    case "FreeCallback":
+                                                        callbacksToFree.push(d.contents);
+                                                        break;
+                                                    case "CallAsFunction":
+                                                        window.__marker = d;
+                                                        var n = d.contents[3];
+                                                        var ret = jsaddle_values.get(d.contents[0]).apply(jsaddle_values.get(d.contents[1]),
+                                                            d.contents[2].map(function(arg){return jsaddle_values.get(arg);}));
+                                                        jsaddle_values.set(n, ret);
+                                                        logDebug('CallAsFunction', d, 'returning', ret);
+                                                        window.__marker = undefined;
+                                                        break;
+                                                    case "CallAsConstructor":
+                                                        var n = d.contents[2];
+                                                        var r;
+                                                        var f = jsaddle_values.get(d.contents[0]);
+                                                        var a = d.contents[1].map(function(arg){return jsaddle_values.get(arg);});
+                                                        switch(a.length) {
+                                                            case 0 : r = new f(); break;
+                                                            case 1 : r = new f(a[0]); break;
+                                                            case 2 : r = new f(a[0],a[1]); break;
+                                                            case 3 : r = new f(a[0],a[1],a[2]); break;
+                                                            case 4 : r = new f(a[0],a[1],a[2],a[3]); break;
+                                                            case 5 : r = new f(a[0],a[1],a[2],a[3],a[4]); break;
+                                                            case 6 : r = new f(a[0],a[1],a[2],a[3],a[4],a[5]); break;
+                                                            case 7 : r = new f(a[0],a[1],a[2],a[3],a[4],a[5],a[6]); break;
+                                                            default:
+                                                                var ret;
+                                                                var temp = function() {
+                                                                    ret = f.apply(this, a);
+                                                                };
+                                                                temp.prototype = f.prototype;
+                                                                var i = new temp();
+                                                                if(ret instanceof Object)
+                                                                    r = ret;
+                                                                else {
+                                                                    i.constructor = f;
+                                                                    r = i;
+                                                                }
+                                                        }
+                                                        jsaddle_values.set(n, r);
+                                                        break;
+                                                    case "NewArray":
+                                                        var n = d.contents[1];
+                                                        jsaddle_values.set(n, d.contents[0].map(function(v){return jsaddle_values.get(v);}));
+                                                        break;
+                                                    case "SyncWithAnimationFrame":
+                                                        var n = d.contents;
+                                                        jsaddle_values.set(n, timestamp);
+                                                        break;
+                                                    case "StartSyncBlock":
+                                                        syncDepth++;
+                                                        break;
+                                                    case "EndSyncBlock":
+                                                        if (syncDepth > 0) {
+                                                            syncDepth--;
+                                                        }
+                                                        break;
+                                                    default:
+                                                        ws.send(JSON.stringify({"tag": "ProtocolError", "contents": e.data}));
+                                                        return;
+                                            }
                                         } else {
-                                          console.log('Running sync from batch', _bat);
+                                            var d = cmd.Right;
+                                            logDebug('Executing', d);
+                                            var addResult = function(result) {
+                                                logDebug('new result:', result);
+                                                results.push(result);
+                                            };
+                                            switch (d.tag) {
+                                                    case "ValueToString":
+                                                        var val = jsaddle_values.get(d.contents);
+                                                        var s = val === null ? "null" : val === undefined ? "undefined" : val.toString();
+                                                        addResult({"tag": "ValueToStringResult", "contents": s});
+                                                        break;
+                                                    case "ValueToBool":
+                                                        addResult({"tag": "ValueToBoolResult", "contents": jsaddle_values.get(d.contents) ? true : false});
+                                                        break;
+                                                    case "ValueToNumber":
+                                                        addResult({"tag": "ValueToNumberResult", "contents": Number(jsaddle_values.get(d.contents))});
+                                                        break;
+                                                    case "ValueToJSON":
+                                                        var s = jsaddle_values.get(d.contents) === undefined ? "" : JSON.stringify(jsaddle_values.get(d.contents));
+                                                        addResult({"tag": "ValueToJSONResult", "contents": s});
+                                                        break;
+                                                    case "ValueToJSONValue":
+                                                        addResult({"tag": "ValueToJSONValueResult", "contents": jsaddle_values.get(d.contents)});
+                                                        break;
+                                                    case "DeRefVal":
+                                                        var n = d.contents;
+                                                        var v = jsaddle_values.get(n);
+                                                        var c = (v === null           ) ? [0, ""] :
+                                                                (v === undefined      ) ? [1, ""] :
+                                                                (v === false          ) ? [2, ""] :
+                                                                (v === true           ) ? [3, ""] :
+                                                                (typeof v === "number") ? [-1, v.toString()] :
+                                                                (typeof v === "string") ? [-2, v]
+                                                                                        : [-3, ""];
+                                                        addResult({"tag": "DeRefValResult", "contents": c});
+                                                        break;
+                                                    case "IsNull":
+                                                        addResult({"tag": "IsNullResult", "contents": jsaddle_values.get(d.contents) === null});
+                                                        break;
+                                                    case "IsUndefined":
+                                                        addResult({"tag": "IsUndefinedResult", "contents": jsaddle_values.get(d.contents) === undefined});
+                                                        break;
+                                                    case "InstanceOf":
+                                                        addResult({"tag": "InstanceOfResult", "contents": jsaddle_values.get(d.contents[0]) instanceof jsaddle_values.get(d.contents[1])});
+                                                        break;
+                                                    case "StrictEqual":
+                                                        addResult({"tag": "StrictEqualResult", "contents": jsaddle_values.get(d.contents[0]) === jsaddle_values.get(d.contents[1])});
+                                                        break;
+                                                    case "PropertyNames":
+                                                        var result = [];
+                                                        for (name in jsaddle_values.get(d.contents)) { result.push(name); }
+                                                        addResult({"tag": "PropertyNamesResult", "contents": result});
+                                                        break;
+                                                    case "Sync":
+                                                        addResult({"tag": "SyncResult", "contents": []});
+                                                        break;
+                                                    default:
+                                                        addResult({"tag": "ProtocolError", "contents": e.data});
+                                                }
+                                        }
+                                    }
+                                }
+                                window.__executed[batch[2]] = batch;
 
-                                          var modifyBatch = function(_batch) {
-                                            _batch[0] = _batch[0].slice(nCommand+1);
-                                            console.log("Response from Callback for", lastResults, nFunction, nFunctionInFunc, nThis, args, _batch);
-                                            return _batch;
-                                          };
-                                          expectedBatch--;
-                                          runBatch(modifyBatch((function(){
+                                if(syncDepth <= 0 && inCallback <= 0) {
+                                    lastResults = [batch[2], {"tag": "Success", "contents": [callbacksToFree, results]}];
+                                    logLog('Async sending results for batch', batch[2], results);
+                                    ws.send(JSON.stringify({"tag": "BatchResults", "contents": [lastResults[0], lastResults[1]]}));
+                                    logDebug('Breaking from loop 1', {results: results, callbacksToFree: callbacksToFree});
+                                    break;
+                                } else {
+                                    batch = modifyBatch(batch, window.__marker || (batch[0][batch[0].length-1] ? batch[0][batch[0].length-1].Left || batch[0][batch[0].length-1].Right : undefined), (function(){
+                                            lastResults = [batch[2], {"tag": "Success", "contents": [callbacksToFree, results]}];
+                                            var xhr = new XMLHttpRequest();
+                                            xhr.open('POST', '/sync/'+syncKey, false);
+                                            xhr.setRequestHeader("Content-type", "application/json");
+                                            logLog('sending results for batch', lastResults[0], lastResults[1]);
+                                            xhr.send(JSON.stringify({"tag": "BatchResults", "contents": [lastResults[0], lastResults[1]]}));
+                                            return JSON.parse(xhr.response);})());
+                                    logLog('received batch', batch[2], ':', batch[0]);
+                                    results = [];
+                                    callbacksToFree = [];
+                                    if (batch[2] > expectedBatch) {
+                                        logLog('Setting expectedBatch to', batch[2]);
+                                        expectedBatch = batch[2];
+                                    }
+                                }
+                            } else {
+                                if(syncDepth <= 0) {
+                                    logDebug('Breaking from loop 2', {results: results, callbacksToFree: callbacksToFree, expectedBatch: expectedBatch});
+                                    if (inCallback <= 0) {
+                                        batch = modifyBatch(batch, window.__marker || (batch[0][batch[0].length-1] ? batch[0][batch[0].length-1].Left || batch[0][batch[0].length-1].Right : undefined), (function(){
+                                            lastResults = [batch[2], {"tag": "Success", "contents": [callbacksToFree, results]}];
+                                            var xhr = new XMLHttpRequest();
+                                            xhr.open('POST', '/sync/'+syncKey, false);
+                                            xhr.setRequestHeader("Content-type", "application/json");
+                                            logLog('sending results for batch', lastResults[0], lastResults[1]);
+                                            xhr.send(JSON.stringify({"tag": "BatchResults", "contents": [lastResults[0], lastResults[1]]}));
+                                            return JSON.parse(xhr.response);})());
+                                        logLog('received batch', batch[2], ':', batch[0]);
+                                        results = [];
+                                        callbacksToFree = [];
+                                        logLog('Setting expectedBatch to', batch[2]);
+                                        expectedBatch = batch[2];
+                                    }
+                                    break;
+                                } else {
+                                    if(batch[2] === expectedBatch - 1) {
+                                        var originalBatch = batch;
+                                        batch = modifyBatch(batch, window.__marker || (batch[0][batch[0].length-1] ? batch[0][batch[0].length-1].Left || batch[0][batch[0].length-1].Right : undefined), (function(){
                                             lastResults = [lastResults[0], {"tag": "Success", "contents": [callbacksToFree, results]}];
                                             var xhr = new XMLHttpRequest();
                                             xhr.open('POST', '/sync/'+syncKey, false);
                                             xhr.setRequestHeader("Content-type", "application/json");
-                                            xhr.send(JSON.stringify({"tag": "Callback", "contents": [lastResults[0], lastResults[1], nFunction, nFunctionInFunc, nThis, args]}));
-                                            return JSON.parse(xhr.response);})()), syncDepth + 1);
-                                          console.log('...returned from sync');
-                                          expectedBatch++;
+                                            logLog('sending results for batch', lastResults[0], lastResults[1]);
+                                            xhr.send(JSON.stringify({"tag": "BatchResults", "contents": [lastResults[0], lastResults[1]]}));
+                                            return JSON.parse(xhr.response);})());
+                                        logLog('received batch', batch[2], ':', batch[0]);
+                                        logLog('Setting expectedBatch to', batch[2]);
+                                        expectedBatch = batch[2];
+                                        if (batch[2] === originalBatch[2]) {
+                                            window.__count++;
+                                            if (window.__count > 5) {
+                                                window.__count = 0;
+                                                console.warn('Got same batch 5 times -> breaking away');
+                                                batch[0] = [];
+                                                expectedBatch = batch[2]+1;
+                                                logLog('Setting expectedBatch to', batch[2]);
+                                                break;
+                                            }
+                                        } else {
+                                            window.__count = 0;
                                         }
-                                    };
-                                    jsaddle_values.set(nFunction, func);
-                                })();
-                                break;
-                            case "FreeCallback":
-                                callbacksToFree.push(d.contents);
-                                break;
-                            case "CallAsFunction":
-                                var n = d.contents[3];
-                                var value = jsaddle_values.get(d.contents[0]).apply(jsaddle_values.get(d.contents[1]),
-                                        d.contents[2].map(function(arg){return jsaddle_values.get(arg);}));
-                                console.log('Setting value of', n, 'to', value);
-                                jsaddle_values.set(n, value);
-                                break;
-                            case "CallAsConstructor":
-                                var n = d.contents[2];
-                                var r;
-                                var f = jsaddle_values.get(d.contents[0]);
-                                var a = d.contents[1].map(function(arg){return jsaddle_values.get(arg);});
-                                switch(a.length) {
-                                    case 0 : r = new f(); break;
-                                    case 1 : r = new f(a[0]); break;
-                                    case 2 : r = new f(a[0],a[1]); break;
-                                    case 3 : r = new f(a[0],a[1],a[2]); break;
-                                    case 4 : r = new f(a[0],a[1],a[2],a[3]); break;
-                                    case 5 : r = new f(a[0],a[1],a[2],a[3],a[4]); break;
-                                    case 6 : r = new f(a[0],a[1],a[2],a[3],a[4],a[5]); break;
-                                    case 7 : r = new f(a[0],a[1],a[2],a[3],a[4],a[5],a[6]); break;
-                                    default:
-                                        var ret;
-                                        var temp = function() {
-                                            ret = f.apply(this, a);
-                                        };
-                                        temp.prototype = f.prototype;
-                                        var i = new temp();
-                                        if(ret instanceof Object)
-                                            r = ret;
-                                        else {
-                                            i.constructor = f;
-                                            r = i;
-                                        }
+                                    } else {
+                                        console.error("duplicate!", {batch: batch[2], expectedBatch: expectedBatch, syncDepth: syncDepth, results: results});
+                                        batch = modifyBatch(batch, window.__marker || (batch[0][batch[0].length-1] ? batch[0][batch[0].length-1].Left || batch[0][batch[0].length-1].Right : undefined), (function(){
+                                            var xhr = new XMLHttpRequest();
+                                            xhr.open('POST', '/sync/'+syncKey, false);
+                                            xhr.setRequestHeader("Content-type", "application/json");
+                                            xhr.send(JSON.stringify({"tag": "Duplicate", "contents": [batch[2], expectedBatch]}));
+                                            return JSON.parse(xhr.response);})());
+                                        logLog('received batch', batch[2], ':', batch[0]);
+                                        logLog('Setting expectedBatch to', batch[2]);
+                                        expectedBatch = batch[2];
+                                    }
+                                    results = [];
+                                    callbacksToFree = [];
                                 }
-                                jsaddle_values.set(n, r);
-                                break;
-                            case "NewArray":
-                                var n = d.contents[1];
-                                jsaddle_values.set(n, d.contents[0].map(function(v){return jsaddle_values.get(v);}));
-                                break;
-                            case "SyncWithAnimationFrame":
-                                var n = d.contents;
-                                jsaddle_values.set(n, timestamp);
-                                break;
-                            case "StartSyncBlock":
-                                syncDepth++;
-                                break;
-                            case "EndSyncBlock":
-                                syncDepth--;
-                                break;
-                            default:
-                                ws.send(JSON.stringify({"tag": "ProtocolError", "contents": e.data}));
-                                return;
-                    }
-                } else {
-                    var d = cmd.Right;
-                    console.log(d.tag);
-                    switch (d.tag) {
-                            case "ValueToString":
-                                var val = jsaddle_values.get(d.contents);
-                                var s = val === null ? "null" : val === undefined ? "undefined" : val.toString();
-                                results.push({"tag": "ValueToStringResult", "contents": s});
-                                break;
-                            case "ValueToBool":
-                                results.push({"tag": "ValueToBoolResult", "contents": jsaddle_values.get(d.contents) ? true : false});
-                                break;
-                            case "ValueToNumber":
-                                results.push({"tag": "ValueToNumberResult", "contents": Number(jsaddle_values.get(d.contents))});
-                                break;
-                            case "ValueToJSON":
-                                var s = jsaddle_values.get(d.contents) === undefined ? "" : JSON.stringify(jsaddle_values.get(d.contents));
-                                results.push({"tag": "ValueToJSONResult", "contents": s});
-                                break;
-                            case "ValueToJSONValue":
-                                results.push({"tag": "ValueToJSONValueResult", "contents": jsaddle_values.get(d.contents)});
-                                break;
-                            case "DeRefVal":
-                                var n = d.contents;
-                                var v = jsaddle_values.get(n);
-                                var c = (v === null           ) ? [0, ""] :
-                                        (v === undefined      ) ? [1, ""] :
-                                        (v === false          ) ? [2, ""] :
-                                        (v === true           ) ? [3, ""] :
-                                        (typeof v === "number") ? [-1, v.toString()] :
-                                        (typeof v === "string") ? [-2, v]
-                                                                : [-3, ""];
-                                results.push({"tag": "DeRefValResult", "contents": c});
-                                break;
-                            case "IsNull":
-                                results.push({"tag": "IsNullResult", "contents": jsaddle_values.get(d.contents) === null});
-                                break;
-                            case "IsUndefined":
-                                results.push({"tag": "IsUndefinedResult", "contents": jsaddle_values.get(d.contents) === undefined});
-                                break;
-                            case "InstanceOf":
-                                results.push({"tag": "InstanceOfResult", "contents": jsaddle_values.get(d.contents[0]) instanceof jsaddle_values.get(d.contents[1])});
-                                break;
-                            case "StrictEqual":
-                                results.push({"tag": "StrictEqualResult", "contents": jsaddle_values.get(d.contents[0]) === jsaddle_values.get(d.contents[1])});
-                                break;
-                            case "PropertyNames":
-                                var result = [];
-                                for (name in jsaddle_values.get(d.contents)) { result.push(name); }
-                                results.push({"tag": "PropertyNamesResult", "contents": result});
-                                break;
-                            case "Sync":
-                                results.push({"tag": "SyncResult", "contents": []});
-                                break;
-                            default:
-                                results.push({"tag": "ProtocolError", "contents": e.data});
+                            }
                         }
+                    }
+                    catch (err) {
+                        console.error('Failure');
+                        var n = ++jsaddle_index;
+                        jsaddle_values.set(n, err);
+                        console.log(err);
+                        ws.send(JSON.stringify({"tag": "BatchResults", "contents": [batch[2], {"tag": "Failure", "contents": [callbacksToFree, results, n, String(err)]}]}));
+                    }
+                    if(inCallback == 1) {
+                        while(asyncBatch !== null) {
+                            logLog('inCallback...');
+                            var b = asyncBatch;
+                            asyncBatch = null;
+                            if(b[2] == expectedBatch) runBatch(b);
+                        }
+                    }
+                    inCallback--;
+                };
+                if(batch[1] && (initialSyncDepth || 0) === 0) {
+                    logLog('window.requestAnimationFrame');
+                    window.requestAnimationFrame(processBatch);
                 }
-            }
-            console.log('Commands finished for', batch[2]);
-            if(syncDepth <= 0) {
-              lastResults = [batch[2], {"tag": "Success", "contents": [callbacksToFree, results]}];
-              console.log('Sending result', batch[2], lastResults[0]);
-              ws.send(JSON.stringify({"tag": "BatchResults", "contents": [lastResults[0], lastResults[1]]}));
-              break;
-            } else {
-              lastResults = [batch[2], {"tag": "Success", "contents": [callbacksToFree, results]}];
-              //console.log('sending result', batch[2], lastResults[0]);
-              ws.send(JSON.stringify({"tag": "BatchResults", "contents": [lastResults[0], lastResults[1]]}));
-
-              console.log('Getting new batch for', batch[2], 'with lastResults', lastResults);
-              batch = (function(){
-                       var xhr = new XMLHttpRequest();
-                       xhr.open('POST', '/sync/'+syncKey, false);
-                       xhr.setRequestHeader("Content-type", "application/json");
-                       xhr.send(JSON.stringify({"tag": "BatchResults", "contents": [lastResults[0], lastResults[1]]}));
-                       var res = JSON.parse(xhr.response);
-                       console.log("Got batch", res);
-                       return res;})();
-              results = [];
-              callbacksToFree = [];
-            }
-          } else {
-            if(syncDepth <= 0) {
-              console.log('Breaking', batch[2], lastResults[0]);
-              break;
-            } else {
-              console.log('Elsing', batch[2], expectedBatch);
-              if(batch[2] === expectedBatch - 1) {
-                console.log('Elsing new batch for', batch[2], 'with lastResults', lastResults);
-                batch = (function(){
-                       var xhr = new XMLHttpRequest();
-                       xhr.open('POST', '/sync/'+syncKey, false);
-                       xhr.setRequestHeader("Content-type", "application/json");
-                       xhr.send(JSON.stringify({"tag": "BatchResults", "contents": [lastResults[0], lastResults[1]]}));
-                       var res = JSON.parse(xhr.response);
-                       console.log("Next batch for", lastResults[0], res);
-                       return res;})();
+                else if (batch[0].length > 0) {
+                    logLog('window.performance');
+                    processBatch(window.performance ? window.performance.now() : null);
+                }
+                logDebug('Returning from runBatch', {batch: batch[2], syncDepth: syncDepth});
+            };
+            if (expectedBatch < batch[2]) {
+                logLog('Fixing expectedBatch for runBatch to', batch[2]);
                 expectedBatch = batch[2];
-              } else {
-                console.log('Elsing second for', batch[2], 'with lastResults', lastResults, 'with expectedBatch', expectedBatch);
-                batch = (function(){
-                       var xhr = new XMLHttpRequest();
-                       xhr.open('POST', '/sync/'+syncKey, false);
-                       xhr.setRequestHeader("Content-type", "application/json");
-                       xhr.send(JSON.stringify({"tag": "Duplicate", "contents": [batch[2], expectedBatch]}));
-                       var res = JSON.parse(xhr.response);
-                       console.log("Next batch for Duplicate", res);
-                       return res;})();
-              }
-              results = [];
-              callbacksToFree = [];
             }
-          }
-        }
-        console.log('Exiting', batch[2]);
-      }
-      catch (err) {
-        var n = ++jsaddle_index;
-        jsaddle_values.set(n, err);
-        console.log(err);
-        ws.send(JSON.stringify({"tag": "BatchResults", "contents": [batch[2], {"tag": "Failure", "contents": [callbacksToFree, results, n, String(err)]}]}));
-      }
-      if(inCallback == 1) {
-          while(asyncBatch !== null) {
-              console.log("while asyncBatch");
-              var b = asyncBatch;
-              asyncBatch = null;
-              if(b[2] == expectedBatch) runBatch(b);
-          }
-      }
-      inCallback--;
-    };
-    if(batch[1] && (initialSyncDepth || 0) === 0) {
-        window.requestAnimationFrame(processBatch);
-    }
-    else {
-        processBatch(window.performance ? window.performance.now() : null);
-    }
-  };
-  runBatch(batch);
+            runBatch(batch);
         };
     };
     ws0.onerror = function() {
@@ -542,7 +605,6 @@ function h$byteArrayToBase64String(off, len, ba) {
   return window.btoa(bin);
 }
 connect();
-
 
         </script>
     </body>

@@ -18,7 +18,7 @@ import Browser (setTimeout, getElementById)
 import Frontpage (view)
 import Shpadoinkle.Console (debug)
 import Yleiset (parseInterval_, startOfDayUTC_, startOfMonthUTC_, laajennaAikavali_, parseState_)
-import State (defaultState)
+import State (defaultState, getStates)
 
 main :: IO ()
 main = do
@@ -28,7 +28,7 @@ main = do
 
 dev :: IO ()
 dev = do
-  bs <- B.readFile "./index-dev.html"
+  bs <- B.readFile "./index-debug.html"
   liveWithStaticAndIndex bs 8080 app "./"
 
 app :: JSM ()
@@ -36,10 +36,11 @@ app = do
   enableLogging True
 
   registerGlobalFunctionPure1 "parseInterval" parseInterval_
-  --registerGlobalFunctionPure1 "startOfDayUTC_" startOfDayUTC_
-  --registerGlobalFunctionPure1 "startOfMonthUTC_" startOfMonthUTC_
+  registerGlobalFunctionPure1 "startOfDayUTC" startOfDayUTC_
+  registerGlobalFunctionPure1 "startOfMonthUTC" startOfMonthUTC_
   registerGlobalFunctionPure1 "laajennaAikavali" laajennaAikavali_
   registerGlobalFunction1 "parseState" parseState_
+  registerGlobalFunction "getStates" getStates
   registerGlobalFunction "defaultState" defaultState
   registerGlobalFunction1 "initTooltips" initTooltips
 

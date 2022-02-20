@@ -187,7 +187,7 @@ view _ =
     [
       nav "menu"
       [
-        jsLink "kartta(getMainState('sijainti'), undefined, undefined, true, '4em', '8em', '4em', '4em')" [ styl "font-size: 2em", title "Avaa kartta" ]
+        jsLink "kartta((getMainState('sijainti') || ''), undefined, undefined, true, '4em', '8em', '4em', '4em')" [ styl "font-size: 2em", title "Avaa kartta" ]
           ["🗺"]
       , jsLink "luoJunaPopup()" [ styl "font-size: 1.8em", title "Avaa aikataulu" ]
           ["📅"]

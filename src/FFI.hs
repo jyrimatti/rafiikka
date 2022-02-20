@@ -250,31 +250,31 @@ cb3 f = fun $ \ _ _ [a1, a2, a3, returnValueF] -> do
 registerGlobalFunctionPure name = global <# name
 
 registerGlobalFunctionPure1 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure1 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1) { cb(a1, function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cbPure1 f]
   pure ()
 
 registerGlobalFunctionPure2 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure2 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2) { cb(a1, a2, function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cbPure2 f]
   pure ()
 
 registerGlobalFunctionPure3 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure3 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2, a3) { cb(a1, a2, a3, function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cbPure3 f]
   pure ()
 
 registerGlobalFunction name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function() { var ret = []; cb(function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function() { cb(function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cb f]
   pure ()
 
 registerGlobalFunction1 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb1 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1) { cb(a1, function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cb1 f]
   pure ()
 
 registerGlobalFunction2 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb2 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2) { cb(a1, a2, function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cb2 f]
   pure ()
 
 registerGlobalFunction3 name f = do
-  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb3 f]
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2, a3) { cb(a1, a2, a3, function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cb3 f]
   pure ()
 
 #else
