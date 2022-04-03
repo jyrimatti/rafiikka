@@ -110,15 +110,15 @@ let startOfMonthUTC = x => {
 
 //let getStates = () => window.location.hash.substring(1).split('#').filter(x => x != "").map(x => x.split('&')).map(parseState);
 
-let getState = index => key => {
+/*let getState = index => key => {
     let state = getStates()[index];
     if (!state) {
         return undefined;
     }
     return state[key];
-};
+};*/
 
-let printDuration = dur => {
+/*let printDuration = dur => {
     let rounded = {minutes: Math.floor(dateFns.durationFns.toMinutes(dur))};
     return dur === undefined ? undefined : dateFns.durationFns.toString(dateFns.durationFns.normalize(rounded));
 };
@@ -128,11 +128,11 @@ let printState = state => ((state.moodi && state.moodi != defaultState().moodi ?
                            (state.sijainti ? '&' + (state.sijainti instanceof Array ? state.sijainti.join("-") : state.sijainti) : '') +
                            (state.rotaatio && state.rotaatio != 0 ? '&' + (state.rotaatio / (2*Math.PI) * 360) : '') +
                            (state.tasot && state.tasot instanceof Array && state.tasot.length > 0 ? '&' + state.tasot.join(',') : '')
-                          ).substring(1);
+                          ).substring(1);*/
 
 let hashPlaceholder = '&loading...';
 
-let setState = index => (key, val) => {
+/*let setState = index => (key, val) => {
     log('Setting state', key, 'for', index, 'to', val);
     let states = getStates();
     if (!key) {
@@ -152,7 +152,7 @@ let setState = index => (key, val) => {
         states[index][key] = val;
     }
     window.location.hash = '#' + states.map(s => printState(s)).join('#') + hashPlaceholder;
-};
+};*/
 
 window.addEventListener('hashchange', e => {
     if (e.newURL.indexOf(hashPlaceholder) > -1 || e.oldURL === e.newURL + hashPlaceholder) {
@@ -161,29 +161,21 @@ window.addEventListener('hashchange', e => {
     }
   }, false);
 
-
-let getMainState = key => {
-    return getState(0)(key) || defaultState()[key];
-};
-let setMainState = setState(0);
-
-let getSubState = index => {
+/*let getSubState = index => {
     let state = getState(index);
     if (state) {
-        return key => state(key) || (key == 'aika' ? getMainState(key).map((x,i) => i <= 1 ? startOfDayUTC(x) : x) : getMainState(key));
+        return key => state[key] || (key == 'aika' ? getMainState()[key].map((x,i) => i <= 1 ? startOfDayUTC(x) : x) : getMainState()[key]);
     }
-    return undefined;
-};
-let setSubState = index => (key, val) => {
-    /*if (val instanceof Array && getMainState(key).every( (x,i) => x === val[i] ) ||
-       !(val instanceof Array) && getMainState(key) === val) {
-        setState(index)(key, undefined);
-    } else {*/
-        setState(index)(key, val);
-    //}
-};
-let clearSubState = index => setState(index)(undefined, undefined);
+    return key => getMainState()[key];
+};*/
 
+/*let setSubState = index => (key, val) => {
+    let st = getState(index);
+    st[key] = val;
+    setState(index)(st);
+};*/
+//let clearSubState = index => setSubState(index)(undefined, undefined);
+//let setMainState = setSubState(0);
 
 
 
@@ -237,8 +229,8 @@ let toISOStringNoMillis = (d) => {
     return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + 'T' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()) + 'Z';
 };
 
-window.ikkuna = () => getMainState('aika');
-window.rajat  = () => laajennaAikavali(getMainState('aika').slice(0, 2)); //[dateFns.dateFns.addDays(ikkuna()[0], -3), dateFns.dateFns.addDays(ikkuna()[1], 3)];
+window.ikkuna = () => getMainState().aika;
+window.rajat  = () => laajennaAikavali(getMainState().aika.slice(0, 2)); //[dateFns.dateFns.addDays(ikkuna()[0], -3), dateFns.dateFns.addDays(ikkuna()[1], 3)];
 
 //let laajennaAikavali = x => [startOfMonthUTC(dateFns.dateFns.addMonths(x[0], -1)),
 //                             startOfMonthUTC(dateFns.dateFns.addMonths(x[1], 1))];
@@ -348,11 +340,11 @@ let ikuisuusAlku = '2010-01-01T00:00:00Z';
 let ikuisuusLoppu = '2030-01-01T00:00:00Z';
 let ikuisuusAikavali = 'time=' + ikuisuusAlku + '/' + ikuisuusLoppu;
 // haetaan infra oletuksena päätilan alkuajanhetkellä
-let infraAikavali = () => 'time=' + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[0])) + "/" + toISOStringNoMillis(startOfDayUTC(getMainState('aika')[0]));
+let infraAikavali = () => 'time=' + toISOStringNoMillis(startOfDayUTC(getMainState().aika[0])) + "/" + toISOStringNoMillis(startOfDayUTC(getMainState().aika[0]));
 // haetaan ennakkotiedot oletuksena päätilan aikakonteksti laajennettuna (+- kuukausi tms)
-let etj2Aikavali  = () => 'time=' + laajennaAikavali(getMainState('aika').slice(0,2)).map(toISOStringNoMillis).join("/");
+let etj2Aikavali  = () => 'time=' + laajennaAikavali(getMainState().aika.slice(0,2)).map(toISOStringNoMillis).join("/");
 // haetaan ratatyöt oletuksena tarkasti päätilan aikakontekstilla (ei cachetusta)
-let rumaAikavali  = () => 'start=' + getMainState('aika').slice(0,2).map(startOfDayUTC).map(toISOStringNoMillis).join("&end=");
+let rumaAikavali  = () => 'start=' + getMainState().aika.slice(0,2).map(startOfDayUTC).map(toISOStringNoMillis).join("&end=");
 
 let junienEsitysaikavali = 1000*60*60*24*5;
 
@@ -1003,7 +995,7 @@ window.asetaEnnakkotietoGrafiikalle = (tunniste, f) => {
             f(ratanumero, voimassa);
         }
         ratanumeroChanged(ratanumero);
-        let aikaNyt = getMainState('aika');
+        let aikaNyt = getMainState().aika;
         if (voimassa[0] < aikaNyt[1] && aikaNyt[0] < voimassa[1]) {
             // voimassaolo leikkaa jo näytettävää aikaväliä
         } else {

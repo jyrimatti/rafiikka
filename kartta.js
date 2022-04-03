@@ -292,7 +292,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     var elem;
     let onClose = () => {
         if (persistState) {
-            clearSubState(kartanIndeksi(elem.kartta));
+            removeSubState(kartanIndeksi(elem.kartta));
         }
     };
     let [container, elem_, haku, kaavioCheck, slider, alkuaika, loppuaika, listview] = luoKarttaElementti(tunniste, title || tunniste, offsetX1, offsetY1, offsetX2, offsetY2, onClose);
@@ -324,7 +324,9 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
             alkuaika.value = alku.toISOString().replace('Z','');
             loppuaika.value = loppu.toISOString().replace('Z','');
             if (persistState) {
-                setSubState(kartanIndeksi(elem.kartta))('aika', [alku, loppu]);
+                let st = getState(kartanIndeksi(elem.kartta))
+                st.aika = [alku, loppu];
+                setState(kartanIndeksi(elem.kartta), st);
             }
         } else {
             return slider.min === undefined || slider.min == 0 ? undefined : [new Date(parseInt(slider.min)), new Date(parseInt(slider.max))];
@@ -368,15 +370,21 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     map.getView().on('change:rotation', () => {
         if (persistState) {
             clearTimeout(t);
-            t = setTimeout(() => setSubState(kartanIndeksi(map))('rotaatio', map.getView().getRotation()), 300);
+            t = setTimeout(() => {
+                let st = getState(kartanIndeksi(map));
+                st.rotaatio = map.getView().getRotation();
+                setState(kartanIndeksi(map), st);
+            }, 300);
         }
     });
 
-    kaavioCheck.checked = persistState && getSubState(kartanIndeksi(map))('moodi') == 'kaavio';
+    kaavioCheck.checked = persistState && getState(kartanIndeksi(map)).moodi == 'kaavio';
 
     if (persistState) {
-        map.getView().setRotation(getSubState(kartanIndeksi(map))('rotaatio'));
-        setSubState(kartanIndeksi(map))('sijainti', tunniste);
+        map.getView().setRotation(getState(kartanIndeksi(map)).rotaatio);
+        let st = getState(kartanIndeksi(map));
+        st.sijainti = tunniste;
+        setState(kartanIndeksi(map), st);
     }
 
     initTooltips(container);
@@ -419,13 +427,15 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
 
     // muille kuin Jetille kartta globaaliin kontekstiin
     if (!onkoJeti(tunniste)) {
-        map.aikavali(time && new Date(time.split('/')[0]) || persistState && getSubState(kartanIndeksi(map))('aika')[0] || startOfDayUTC(getMainState('aika')[0]),
-                     time && new Date(time.split('/')[1]) || persistState && getSubState(kartanIndeksi(map))('aika')[1] || startOfDayUTC(getMainState('aika')[0])); // mainState ajanhetkeen
+        map.aikavali(time && new Date(time.split('/')[0]) || persistState && getState(kartanIndeksi(map)).aika[0] || startOfDayUTC(getMainState().aika[0]),
+                     time && new Date(time.split('/')[1]) || persistState && getState(kartanIndeksi(map)).aika[1] || startOfDayUTC(getMainState().aika[0])); // mainState ajanhetkeen
     }
 
     kaavioCheck.onchange = _ => {
         if (persistState) {
-            setSubState(kartanIndeksi(map))('moodi', onkoKaavio() ? 'kaavio' : 'kartta');
+            let st = getState(kartanIndeksi(map));
+            st.moodi = onkoKaavio() ? 'kaavio' : 'kartta';
+            setState(kartanIndeksi(map), st);
         }
         taustaLayer.setVisible(!onkoKaavio());
         log('Moodi vaihtui arvoon', onkoKaavio(), 'päivitetään layer data');
@@ -450,7 +460,9 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     [alkuaika, loppuaika].forEach(x => {
         x.addEventListener("input", () => {
             if (persistState) {
-                setSubState(kartanIndeksi(map))('aika', aikavali());
+                let st = getState(kartanIndeksi(map));
+                st.aika = aikavali();
+                setState(kartanIndeksi(map), st);
             }
             logDiff('Aikaväli vaihtui arvoon', aikavali(), 'päivitetään layer data', () => {
                 paivitaTitle();
@@ -470,7 +482,9 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
             slider.value = lahin.getTime();
         }
         if (persistState) {
-            setSubState(kartanIndeksi(map))('aika', aikavali());
+            let st = getState(kartanIndeksi(map));
+            st.aika = aikavali();
+            setState(kartanIndeksi(map), st);
         }
         logDiff('Aikavalinta vaihtui, renderöidään kartta', () => {
             paivitaTitle();
@@ -538,7 +552,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     if (persistState) {
         let persistedLayers = flatLayerGroups(map.getLayers().getArray());
 
-        let nakyvatTasot = getSubState(kartanIndeksi(map))('tasot') || [];
+        let nakyvatTasot = getState(kartanIndeksi(map)).tasot || [];
         persistedLayers.forEach(x => {
             if (nakyvatTasot.indexOf(x.get('shortName')) > -1) {
                 log('Laitetaan näkyviin taso', x.get('title'));
@@ -551,7 +565,9 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
                                            .map(x => x.get('shortName'))
                                            .filter(x => x != undefined)
                                            .filter(x => x.length == 2 || x.length == 3);
-            setSubState(kartanIndeksi(map))('tasot', toPersist);
+            let st = getState(kartanIndeksi(map));
+            st.tasot = toPersist;
+            setState(kartanIndeksi(map), st);
         }));
     }
 
@@ -565,7 +581,9 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         let objects = search.getValue();
         let title = objects instanceof Array ? objects.join(',') : objects;
         if (persistState) {
-            setSubState(kartanIndeksi(map))('sijainti', title);
+            let st = getState(kartanIndeksi(map));
+            st.sijainti = title;
+            setState(kartanIndeksi(map), st);
             container.getElementsByClassName('title')[0].innerText = title;
         }
     };

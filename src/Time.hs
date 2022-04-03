@@ -1,12 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Time (
     addDuration,
     removeDuration,
-    parseInstant,
-    parseInterval,
-    parseDurationFrom,
-    parseDurationTo,
     showISO,
     parseISO,
     roundToPreviousHour,
@@ -16,22 +15,21 @@ module Time (
 ) where
 
 import Universum
-import Data.Text (unpack, split, pack)
+import Data.Text (unpack, pack)
 import Data.Time (CalendarDiffTime (CalendarDiffTime), addUTCTime, UTCTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM, ISO8601, iso8601Show)
-import Data.Bitraversable (bitraverse)
 import Control.Lens ((+~), (-~))
 import Data.Generics.Labels ()
 import Data.Time.Lens( months, FlexibleDateTime (flexDT), minutes, seconds, hours, days )
 import Data.Time.Calendar.MonthDay ()
 import Data.Time.Calendar.OrdinalDate ()
+import JSDOM.Types (ToJSVal)
+import Language.Javascript.JSaddle (ToJSVal(toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, isUndefined, (!), js0, jsg, new)
+import FFI (deserializationFailure)
+import GHCJS.Foreign (isFunction)
 
 data Interval = Interval UTCTime UTCTime
   deriving Show
-
-parsePair :: [Text] -> Maybe (Text,Text)
-parsePair [x,y] = Just (x,y)
-parsePair _ = Nothing
 
 showISO :: ISO8601 t => t -> Text
 showISO = pack . iso8601Show
@@ -49,26 +47,6 @@ addDuration (CalendarDiffTime ctMonths ctTime) = addUTCTime ctTime . (flexDT.mon
 
 removeDuration :: CalendarDiffTime -> UTCTime -> UTCTime
 removeDuration (CalendarDiffTime ctMonths ctTime) = addUTCTime (-1*ctTime) . (flexDT.months -~ fromIntegral ctMonths)
-
-parseInstant :: Text -> Maybe UTCTime
-parseInstant = parseISO
-
--- | parseInterval
--- import Data.Time
--- >>> parseInterval "2014-02-14T01:02:03Z/2014-02-14T01:02:03Z"
--- Just (Interval 2014-02-14 01:02:03 UTC 2014-02-14 01:02:03 UTC)
--- >>> parseInterval "2014-02-14T01:02:03Z/2014-02-14T01:02:04Z"
--- Just (Interval 2014-02-14 01:02:03 UTC 2014-02-14 01:02:04 UTC)
--- >>> parseInterval "2014-02-14T01:02:03Z/2014-02-14T01:02:02Z"
--- Nothing
-parseInterval :: Text -> Maybe Interval
-parseInterval = fmap (uncurry Interval) . mfilter (uncurry (<=)) . bitraverse parseISO parseISO <=< parsePair . split (== '/')
-
-parseDurationFrom :: Text -> Maybe (UTCTime,CalendarDiffTime)
-parseDurationFrom = bitraverse parseISO parseISO <=< parsePair . split (== '/')
-
-parseDurationTo :: Text -> Maybe (CalendarDiffTime, UTCTime)
-parseDurationTo = bitraverse parseISO parseISO <=< parsePair . split (== '/')
 
 -- | roundToPreviousHour
 -- >>> import Data.Time
@@ -92,3 +70,25 @@ roundToPreviousDay = (hours .~ 0) . (minutes .~ 0) . (seconds .~ 0)
 -- Just (2014-02-14 01:02:03 UTC,2014-02-01 00:00:00 UTC)
 roundToPreviousMonth :: UTCTime -> UTCTime
 roundToPreviousMonth = (days .~ 0) . (hours .~ 0) . (minutes .~ 0) . (seconds .~ 0)
+
+instance FromJSVal UTCTime where
+  fromJSVal x = do
+    undef <- ghcjsPure $ isUndefined x
+    if undef
+      then deserializationFailure x "UTCTime"
+      else do
+        a <- x ! ("toISOString" :: JSString)
+        isFun <- ghcjsPure $ isFunction a
+        if not isFun
+          then deserializationFailure x "UTCTime"
+          else do
+            b <- x ^. js0 ("toISOString" :: JSString)
+            isUndef <- ghcjsPure $ isUndefined b
+            if isUndef
+              then deserializationFailure x "UTCTime"
+              else do
+                a1 <- fromJSVal b
+                pure $ parseISO =<< a1
+
+instance ToJSVal UTCTime where
+  toJSVal = new (jsg @JSString "Date") . showISO 

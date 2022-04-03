@@ -48,6 +48,8 @@ executable Rafiikka
                , Yleiset
                , Time
                , State
+               , StateAccessor
+               , URISerialization
 
   ghc-options:
     -Wall

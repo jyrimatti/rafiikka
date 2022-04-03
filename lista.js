@@ -59,7 +59,7 @@ let luoCollapsoitavaLista = (details, titleHTML, hiddenState) => {
     details.appendChild(header);
 
     let ul = document.createElement("ul");
-    if (hiddenState[titleHTML] || hiddenState._default) {
+    if (hiddenState && (hiddenState[titleHTML] || hiddenState._default)) {
         details.removeAttribute('open');
     }
     header.addEventListener('click', () => hiddenState[titleHTML] = !(hiddenState[titleHTML] || hiddenState._default));

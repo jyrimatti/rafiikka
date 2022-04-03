@@ -237,10 +237,9 @@ var connect = function() {
                                                     case "CallAsFunction":
                                                         window.__marker = d;
                                                         var n = d.contents[3];
-                                                        var ret = jsaddle_values.get(d.contents[0]).apply(jsaddle_values.get(d.contents[1]),
-                                                            d.contents[2].map(function(arg){return jsaddle_values.get(arg);}));
-                                                        jsaddle_values.set(n, ret);
-                                                        logDebug('CallAsFunction', d, 'returning', ret);
+                                                        jsaddle_values.set(n,
+                                                            jsaddle_values.get(d.contents[0]).apply(jsaddle_values.get(d.contents[1]),
+                                                                d.contents[2].map(function(arg){return jsaddle_values.get(arg);})));
                                                         window.__marker = undefined;
                                                         break;
                                                     case "CallAsConstructor":
@@ -357,7 +356,7 @@ var connect = function() {
                                         }
                                     }
                                 }
-                                window.__executed[batch[2]] = batch;
+                                window.__executed[batch[2]] = 1;
 
                                 if(syncDepth <= 0 && inCallback <= 0) {
                                     lastResults = [batch[2], {"tag": "Success", "contents": [callbacksToFree, results]}];
@@ -366,8 +365,8 @@ var connect = function() {
                                     logDebug('Breaking from loop 1', {results: results, callbacksToFree: callbacksToFree});
                                     break;
                                 } else {
+                                    lastResults = [batch[2], {"tag": "Success", "contents": [callbacksToFree, results]}];
                                     batch = modifyBatch(batch, window.__marker || (batch[0][batch[0].length-1] ? batch[0][batch[0].length-1].Left || batch[0][batch[0].length-1].Right : undefined), (function(){
-                                            lastResults = [batch[2], {"tag": "Success", "contents": [callbacksToFree, results]}];
                                             var xhr = new XMLHttpRequest();
                                             xhr.open('POST', '/sync/'+syncKey, false);
                                             xhr.setRequestHeader("Content-type", "application/json");
@@ -377,29 +376,10 @@ var connect = function() {
                                     logLog('received batch', batch[2], ':', batch[0]);
                                     results = [];
                                     callbacksToFree = [];
-                                    if (batch[2] > expectedBatch) {
-                                        logLog('Setting expectedBatch to', batch[2]);
-                                        expectedBatch = batch[2];
-                                    }
                                 }
                             } else {
                                 if(syncDepth <= 0) {
                                     logDebug('Breaking from loop 2', {results: results, callbacksToFree: callbacksToFree, expectedBatch: expectedBatch});
-                                    if (inCallback <= 0) {
-                                        batch = modifyBatch(batch, window.__marker || (batch[0][batch[0].length-1] ? batch[0][batch[0].length-1].Left || batch[0][batch[0].length-1].Right : undefined), (function(){
-                                            lastResults = [batch[2], {"tag": "Success", "contents": [callbacksToFree, results]}];
-                                            var xhr = new XMLHttpRequest();
-                                            xhr.open('POST', '/sync/'+syncKey, false);
-                                            xhr.setRequestHeader("Content-type", "application/json");
-                                            logLog('sending results for batch', lastResults[0], lastResults[1]);
-                                            xhr.send(JSON.stringify({"tag": "BatchResults", "contents": [lastResults[0], lastResults[1]]}));
-                                            return JSON.parse(xhr.response);})());
-                                        logLog('received batch', batch[2], ':', batch[0]);
-                                        results = [];
-                                        callbacksToFree = [];
-                                        logLog('Setting expectedBatch to', batch[2]);
-                                        expectedBatch = batch[2];
-                                    }
                                     break;
                                 } else {
                                     if(batch[2] === expectedBatch - 1) {
@@ -421,8 +401,6 @@ var connect = function() {
                                                 window.__count = 0;
                                                 console.warn('Got same batch 5 times -> breaking away');
                                                 batch[0] = [];
-                                                expectedBatch = batch[2]+1;
-                                                logLog('Setting expectedBatch to', batch[2]);
                                                 break;
                                             }
                                         } else {
@@ -430,15 +408,12 @@ var connect = function() {
                                         }
                                     } else {
                                         console.error("duplicate!", {batch: batch[2], expectedBatch: expectedBatch, syncDepth: syncDepth, results: results});
-                                        batch = modifyBatch(batch, window.__marker || (batch[0][batch[0].length-1] ? batch[0][batch[0].length-1].Left || batch[0][batch[0].length-1].Right : undefined), (function(){
+                                        batch = (function(){
                                             var xhr = new XMLHttpRequest();
                                             xhr.open('POST', '/sync/'+syncKey, false);
                                             xhr.setRequestHeader("Content-type", "application/json");
                                             xhr.send(JSON.stringify({"tag": "Duplicate", "contents": [batch[2], expectedBatch]}));
-                                            return JSON.parse(xhr.response);})());
-                                        logLog('received batch', batch[2], ':', batch[0]);
-                                        logLog('Setting expectedBatch to', batch[2]);
-                                        expectedBatch = batch[2];
+                                            return JSON.parse(xhr.response);})();
                                     }
                                     results = [];
                                     callbacksToFree = [];
@@ -447,7 +422,6 @@ var connect = function() {
                         }
                     }
                     catch (err) {
-                        console.error('Failure');
                         var n = ++jsaddle_index;
                         jsaddle_values.set(n, err);
                         console.log(err);
@@ -464,19 +438,13 @@ var connect = function() {
                     inCallback--;
                 };
                 if(batch[1] && (initialSyncDepth || 0) === 0) {
-                    logLog('window.requestAnimationFrame');
                     window.requestAnimationFrame(processBatch);
                 }
-                else if (batch[0].length > 0) {
-                    logLog('window.performance');
+                else {
                     processBatch(window.performance ? window.performance.now() : null);
                 }
                 logDebug('Returning from runBatch', {batch: batch[2], syncDepth: syncDepth});
             };
-            if (expectedBatch < batch[2]) {
-                logLog('Fixing expectedBatch for runBatch to', batch[2]);
-                expectedBatch = batch[2];
-            }
             runBatch(batch);
         };
     };

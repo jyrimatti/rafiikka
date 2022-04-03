@@ -5,18 +5,20 @@ module Browser (
     setTimeout,
     debug,
     withDebug,
-    locationHash
+    locationHash,
+    setLocationHash
 ) where
 
 import Universum hiding (drop)
 import FFI (procedure)
-import Language.Javascript.JSaddle (JSM, jsg2, JSString, (!), FromJSVal (fromJSVal))
+import Language.Javascript.JSaddle (JSM, jsg2, JSString, (!), FromJSVal (fromJSVal), (<#), JSVal)
 import JSDOM (currentDocument, currentWindow)
 import qualified JSDOM.Types as JSDOM (Element)
 import JSDOM.Generated.ParentNode (querySelector)
 import Data.Time (NominalDiffTime)
 import qualified Shpadoinkle.Console as SC (debug)
 import Data.Text (drop)
+import Data.Maybe (fromJust)
 
 __loggingEnabled :: Bool
 __loggingEnabled = False
@@ -46,11 +48,21 @@ setTimeout timeout callback = do
   _ <- jsg2 @JSString "setTimeout" (procedure callback) $ round @NominalDiffTime @Int (timeout * 1000)
   pure ()
 
+location :: JSM JSVal
+location = (! ("location" :: JSString)) . fromJust =<< currentWindow
+
 locationHash :: JSM Text
-locationHash = do
-  debug "locationHash"
-  Just win <- currentWindow
-  hash <- win ! ("location" :: JSString) ! ("hash" :: JSString)
+locationHash = withDebug "locationHash" $ do
+  loc <- location
+  hash <- loc ! ("hash" :: JSString)
   Just h <- fromJSVal hash
-  debug $ "locationHash: " <> h
   pure $ drop 1 h
+
+setLocationHash :: Text -> JSM ()
+setLocationHash x = withDebug "setLocationHash" $ do
+  loc <- location
+  loc <# ("hash" :: JSString) $ x
+  hash <- locationHash
+  if x /= hash
+    then loc <# ("hash" :: JSString) $ "#" <> x
+    else pure ()

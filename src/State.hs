@@ -1,27 +1,28 @@
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DataKinds, OverloadedLabels #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TypeApplications #-}
 module State where
 
 import Universum
-import Data.Text as Text (split, unpack, tail, splitOn)
 import Data.Maybe (fromJust)
 import Data.Generics.Labels ()
-import Data.Time
-import Time (parseInterval, parseInstant, parseDurationFrom, parseDurationTo, roundToPreviousHour, parseISO, Interval)
-import Data.Time.Lens
-import Control.Lens ((?~), (-~))
+import Data.Time ( UTCTime, CalendarDiffTime, getCurrentTime )
+import Time (showISO, parseISO, Interval (Interval), removeDuration, addDuration, roundToPreviousHour)
+import Language.Javascript.JSaddle (new, jsg, ToJSVal (toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, (!), (<#), obj, jsUndefined, isUndefined)
+import Data.Time.Lens ( hours, FlexibleDateTime(flexDT) )
+import Control.Lens ((-~))
 import JSDOM.Types (JSM)
-import Browser (withDebug, locationHash)
+import Browser (withDebug)
+import FFI (deserializationFailure)
 
 newtype Layer = Layer Text
-  deriving Show
+  deriving (Show, Eq)
 newtype Degrees = Degrees Double
-  deriving Show
+  deriving (Show, Eq)
 newtype Location = Location Text
-  deriving Show
+  deriving (Show)
 data Mode = Map | Diagram
-  deriving Show
+  deriving (Show, Eq)
 
 data AppState = AppState {
   mode        :: Mode,
@@ -36,7 +37,16 @@ data TimeSetting =
   | Span Time.Interval
   | DurationFrom UTCTime CalendarDiffTime
   | DurationTo CalendarDiffTime UTCTime
-  deriving (Show)
+  deriving Show
+
+defaultMode :: Mode
+defaultMode = Map
+
+defaultRotation :: Degrees
+defaultRotation = Degrees 0
+
+defaultLayers :: [Layer]
+defaultLayers = []
 
 defaultTimeSetting :: IO TimeSetting
 defaultTimeSetting = DurationFrom <$> (roundToPreviousHour . (flexDT.hours -~ 1) <$> getCurrentTime)
@@ -44,62 +54,109 @@ defaultTimeSetting = DurationFrom <$> (roundToPreviousHour . (flexDT.hours -~ 1)
 
 defaultState :: JSM AppState
 defaultState = withDebug "defaultState" $
-  AppState Map (Degrees 0) [] <$> liftIO defaultTimeSetting <*> pure Nothing
-
-parseTimeSetting :: Text -> Maybe TimeSetting
-parseTimeSetting x = Instant              <$> parseInstant x
-                 <|> Span                 <$> parseInterval x
-                 <|> uncurry DurationFrom <$> parseDurationFrom x
-                 <|> uncurry DurationTo   <$> parseDurationTo x
-
+  AppState defaultMode defaultRotation defaultLayers <$> liftIO defaultTimeSetting <*> pure Nothing
 
 hashPlaceholder :: Text
 hashPlaceholder = "&loading..."
 
--- | parseLayers
--- >>> parseLayers ""
--- []
--- >>> parseLayers "ab"
--- [Layer "ab"]
--- >>> parseLayers "ab,cde"
--- [Layer "ab",Layer "cde"]
--- >>> parseLayers "abcd"
--- []
-parseLayers :: Text -> [Layer]
-parseLayers x =
-  let xs       = split (== ',') x
-      allValid = all ((||) <$> (== 2) . length <*> (==3) . length) xs
-  in if allValid then Layer <$> xs else []
+getStart :: TimeSetting -> UTCTime
+getStart (Instant x)           = x
+getStart (Span (Interval x _)) = x
+getStart (DurationFrom x _)    = x
+getStart (DurationTo d x)      = removeDuration d x
 
--- | parseDegrees
--- >>> parseDegrees "0"
--- Just (Degrees 0.0)
--- >>> parseDegrees "360"
--- Just (Degrees 360.0)
--- >>> parseDegrees "-1"
--- Nothing
--- >>> parseDegrees "360.1"
--- Nothing
-parseDegrees :: Text -> Maybe Degrees
-parseDegrees = fmap Degrees . mfilter (<= 360) . mfilter (>= 0) . readMaybe @Double . unpack
+getEnd :: TimeSetting -> UTCTime
+getEnd (Instant x)           = x
+getEnd (Span (Interval _ x)) = x
+getEnd (DurationFrom x d)    = addDuration d x
+getEnd (DurationTo _ x)      = x
 
-parseStatePart :: Text -> AppState -> AppState
-parseStatePart txt = let
-    parsedDegrees = parseDegrees txt
-    parsedLayers  = parseLayers txt
-    parsedTime    = parseTimeSetting txt
-  in case txt of
-    x | x == Text.tail hashPlaceholder -> id
-    x | x `elem` ["kartta", "map"]     -> #mode .~ Map
-    x | x `elem` ["kaavio", "diagram"] -> #mode .~ Diagram
-    _ | isJust parsedDegrees           -> #rotation .~ fromJust parsedDegrees
-    _ | not (null parsedLayers)        -> #layers .~ parsedLayers
-    _ | isJust parsedTime              -> #timeSetting .~ fromJust parsedTime
-    x                                  -> #location ?~ Location x
+getDurationFrom :: TimeSetting -> Maybe CalendarDiffTime
+getDurationFrom (DurationFrom _ x) = Just x
+getDurationFrom _ = Nothing
 
-parseState :: [Text] -> JSM AppState
-parseState parts = foldr parseStatePart <$> defaultState <*> pure parts
+getDurationTo :: TimeSetting -> Maybe CalendarDiffTime
+getDurationTo (DurationTo x _ ) = Just x
+getDurationTo _ = Nothing
 
-getStates :: JSM [AppState]
-getStates = withDebug "getStates" $
-  traverse (parseState . splitOn "&") . filter (not . null) . splitOn "#" =<< locationHash
+instance FromJSVal TimeSetting where
+  fromJSVal jsval = do
+    aa <- fromJSVal jsval
+    case aa of
+      Just [start, end] -> do
+        s <- fromJSVal start
+        e <- fromJSVal end
+        case (s,e) of
+            (Just ss, Just ee) | ss == ee -> pure $ Just $ Instant ss
+            (Just ss, Just ee)            -> pure $ Just $ Span $ Interval ss ee
+            _ -> deserializationFailure jsval "TimeSetting"
+      Just [start, end, dur1, dur2] -> do
+        dur1undef <- ghcjsPure $ isUndefined dur1
+        dur2undef <- ghcjsPure $ isUndefined dur2
+        if not dur1undef then do
+          s <- fromJSVal start
+          d <- fromJSVal dur1
+          case (s,d) of
+            (Just ss, Just dd) -> do
+              let ddd = parseISO dd
+              case ddd of
+                Just dddd -> pure $ Just $ DurationFrom ss dddd
+                _ -> deserializationFailure jsval "TimeSetting"
+            _ -> deserializationFailure jsval "TimeSetting"
+        else if not dur2undef then do
+          e <- fromJSVal end
+          d <- fromJSVal dur2
+          case (e,d) of
+            (Just ee, Just dd) -> do
+              let ddd = parseISO dd
+              case ddd of
+                Just dddd -> pure $ Just $ DurationTo dddd ee
+                _ -> deserializationFailure jsval "TimeSetting"
+            _ -> deserializationFailure jsval "TimeSetting"
+        else do
+          s <- fromJSVal start
+          e <- fromJSVal end
+          case (s,e) of
+            (Just ss, Just ee) | ss == ee -> pure $ Just $ Instant ss
+            (Just ss, Just ee)            -> pure $ Just $ Span $ Interval ss ee
+            _ -> deserializationFailure jsval "TimeSetting"
+      _ -> deserializationFailure jsval "TimeSetting"
+
+instance ToJSVal TimeSetting where
+  toJSVal x = toJSVal $ case x of
+    t@(DurationFrom _ d) -> do
+      start <- new (jsg @JSString "Date") . showISO $ getStart t
+      end   <- new (jsg @JSString "Date") . showISO $ getEnd t
+      dur   <- toJSVal $ showISO d
+      pure [start, end, dur, jsUndefined]
+    t@(DurationTo d _) -> do
+      start <- new (jsg @JSString "Date") . showISO $ getStart t
+      end   <- new (jsg @JSString "Date") . showISO $ getEnd t
+      dur   <- toJSVal $ showISO d
+      pure [start, end, jsUndefined, dur]
+    t -> do
+      start <- new (jsg @JSString "Date") . showISO $ getStart t
+      end   <- new (jsg @JSString "Date") . showISO $ getEnd t
+      pure [start, end, jsUndefined, jsUndefined]
+      
+instance ToJSVal AppState where
+  toJSVal (AppState m (Degrees r) l t loc) = do
+    o <- obj
+    o <# ("moodi" :: JSString) $ case m of Map -> "map" :: Text; Diagram -> "diagram"
+    whenJust loc $
+      (o <# ("sijainti" :: JSString)) . (\(Location x) -> x)
+    o <# ("rotaatio" :: JSString) $ show @Text r
+    o <# ("tasot" :: JSString) $ show @Text <$> l
+    o <# ("aika" :: JSString) $ t
+    toJSVal o
+
+instance FromJSVal AppState where
+  fromJSVal o = do
+    moodi    <- fromJSVal =<< o ! ("moodi" :: JSString)
+    rotaatio <- fromJSVal =<< o ! ("rotaatio" :: JSString)
+    tasot    <- fromJSVal =<< o ! ("tasot" :: JSString)
+    aika     <- fromJSVal =<< o ! ("aika" :: JSString)
+    sijainti <- fromJSVal =<< o ! ("sijainti" :: JSString)
+    case (moodi,rotaatio,tasot,aika,sijainti) of
+      (Just m,Just r,Just t,Just a,s) -> pure $ Just $ AppState (case m :: Text of "map" -> Map; _ -> Diagram) (Degrees r) (Layer <$> t) a (Location <$> s)
+      _ -> deserializationFailure o "AppState"

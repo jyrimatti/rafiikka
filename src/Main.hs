@@ -4,7 +4,7 @@
 module Main where
 
 import Universum
-import FFI ( registerGlobalFunction1, registerGlobalFunction, registerGlobalFunctionPure1 )
+import FFI ( registerGlobalFunction1, registerGlobalFunction, registerGlobalFunctionPure1, registerGlobalFunction2 )
 import Tooltips ( initTooltips )
 import Shpadoinkle ( JSM )
 import Shpadoinkle.Backend.Snabbdom (runSnabbdom, stage)
@@ -17,8 +17,9 @@ import Data.Time.Clock (secondsToNominalDiffTime)
 import Browser (setTimeout, getElementById)
 import Frontpage (view)
 import Shpadoinkle.Console (debug)
-import Yleiset (parseInterval_, startOfDayUTC_, startOfMonthUTC_, laajennaAikavali_, parseState_)
-import State (defaultState, getStates)
+import Yleiset (parseInterval_, startOfDayUTC_, startOfMonthUTC_, laajennaAikavali_)
+import StateAccessor (getStates, getState, getMainState, setState, setMainState, removeSubState)
+import State (defaultState)
 
 main :: IO ()
 main = do
@@ -39,10 +40,14 @@ app = do
   registerGlobalFunctionPure1 "startOfDayUTC" startOfDayUTC_
   registerGlobalFunctionPure1 "startOfMonthUTC" startOfMonthUTC_
   registerGlobalFunctionPure1 "laajennaAikavali" laajennaAikavali_
-  registerGlobalFunction1 "parseState" parseState_
   registerGlobalFunction "getStates" getStates
   registerGlobalFunction "defaultState" defaultState
   registerGlobalFunction1 "initTooltips" initTooltips
+  registerGlobalFunction1 "getState" getState
+  registerGlobalFunction2 "setState" setState
+  registerGlobalFunction "getMainState" getMainState
+  registerGlobalFunction1 "setMainState" setMainState
+  registerGlobalFunction1 "removeSubState" removeSubState
 
   addMeta [("charset", "UTF-8")]
   setTitle "Rafiikka"
