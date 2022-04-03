@@ -184,7 +184,7 @@ window.addEventListener('hashchange', e => {
 
 
 
-let log = (msg1, msg2, msg3, msg4, msg5, msg6) => {
+window.log = (msg1, msg2, msg3, msg4, msg5, msg6) => {
     if (console && console.log) {
         console.log(dateFns.dateFns.format(new Date(), 'yyyy-MM-dd HH:mm:ss.SSS'), "      :",
                     msg1 == undefined ? '' : msg1,
@@ -269,7 +269,7 @@ let mqttUrl = "rata.digitraffic.fi";
 let mqttPort = 443;
 let mqttTopic = juna => 'train-locations/' + (juna ? juna.departureDate + '/' + juna.trainNumber : '#');
 
-let errorHandler = error => log("Virhe!", error, error.stack, new Error().stack);
+//let errorHandler = error => log("Virhe!", error, error.stack, new Error().stack);
 
 let loggingDelegate = f => (a, b, c) => {
     try {
@@ -282,7 +282,7 @@ let loggingDelegate = f => (a, b, c) => {
 
 window.progress = document.getElementById('progress');
 
-let progressStart = type => {
+/*let progressStart = type => {
     progress.title += " " + type;
     
     progress.max += 1;
@@ -299,13 +299,13 @@ let progressEnd = type => {
         progress.removeAttribute('value');
         progress.max = 1;
     }
-};
+};*/
 
 let fetchJson = (url, opts, callback, errorCallback) => {
     let type = url.replace(/[?].*/,'')
                   .replace(/[.][^/]+$/, '')
                   .replace(/.*\/([^\/]+)$/, '$1');
-    progressStart(type);
+    //progressStart(type);
     return fetch(url, {
         ...opts,
         headers: {
@@ -314,18 +314,18 @@ let fetchJson = (url, opts, callback, errorCallback) => {
         }
     }).then(response => opts.method == 'HEAD' ? response.text() : response.json())
       .then(x => {
-          progressEnd(type);
+          //progressEnd(type);
           return callback(x);
        })
       .catch(x => {
-          progressEnd(type);
+          //progressEnd(type);
           return (errorCallback || errorHandler)(x);
        });
 }
 
-let getJson  = (url,       callback, signal, errorCallback) => onkoSeed ? null : fetchJson(url, {method: 'GET', signal: signal}             , callback, errorCallback);
-let headJson = (url,       callback, signal, errorCallback) =>                   fetchJson(url, {method: 'HEAD', signal: signal}            , callback, errorCallback);
-let postJson = (url, body, callback, signal, errorCallback) => onkoSeed ? null : fetchJson(url, {method: 'POST', signal: signal, body: body}, callback, errorCallback);
+window.GET  = (url, callback, signal, errorCallback) => onkoSeed ? null : fetchJson(url, {method: 'GET', signal: signal}             , callback, errorCallback);
+window.HEAD = (url, callback, signal, errorCallback) =>                   fetchJson(url, {method: 'HEAD', signal: signal}            , callback, errorCallback);
+window.POST = (url, callback, signal, errorCallback, body) => onkoSeed ? null : fetchJson(url, {method: 'POST', signal: signal, body: body}, callback, errorCallback);
 
 getJson(infraAPIUrl() + 'revisions.json?count=1', data => {
     window.revisions.infra = data[0].revisio + '/';
@@ -624,15 +624,15 @@ if (onkoSeed) {
             kytkentaryhmatUrlTilasto()]));
 };
 
-let on   = (obj, event, f) => obj.on(event,   loggingDelegate(f));
-let once = (obj, event, f) => obj.once(event, loggingDelegate(f));
-let add  = (obj, name,  f) => obj.add(name,   loggingDelegate(f));
+window.on   = (obj, event, f) => obj.on(event,   loggingDelegate(f));
+window.once = (obj, event, f) => obj.once(event, loggingDelegate(f));
+window.add  = (obj, name,  f) => obj.add(name,   loggingDelegate(f));
 
-let monitor = (ds, type) => {
+/*let monitor = (ds, type) => {
     ds.events.on("error", errorHandler);
     on(ds.events, "started", () => progressStart(type));
     on(ds.events, "ended", () => progressEnd(type));
-}
+}*/
 
 let luoDatasource = (type, urlF, f) => {
     let ds = new am4core.DataSource();
@@ -999,8 +999,10 @@ window.asetaEnnakkotietoGrafiikalle = (tunniste, f) => {
         if (voimassa[0] < aikaNyt[1] && aikaNyt[0] < voimassa[1]) {
             // voimassaolo leikkaa jo näytettävää aikaväliä
         } else {
-            setMainState('aika', voimassa[1] <= aikaNyt[0] ? [dateFns.dateFns.add(voimassa[1], {hours: -4}), voimassa[1]]
-                                                           : [voimassa[0], dateFns.dateFns.add(voimassa[0], dateFns.durationFns.toString({hours: 4}))]);
+            let st = getMainState();
+            st.aika = voimassa[1] <= aikaNyt[0] ? [dateFns.dateFns.add(voimassa[1], {hours: -4}), voimassa[1]]
+                                                : [voimassa[0], dateFns.dateFns.add(voimassa[0], dateFns.durationFns.toString({hours: 4}))];
+            setMainState(st);
             window.dispatchEvent(new HashChangeEvent("hashchange"));
         }
     });

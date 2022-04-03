@@ -30,6 +30,7 @@ executable Rafiikka
    , generic-lens
    , lens-datetime
    , cabal-doctest
+   , network-uri
   
   if impl(ghcjs)
     build-depends: ghcjs-base
@@ -50,6 +51,9 @@ executable Rafiikka
                , State
                , StateAccessor
                , URISerialization
+               , Fetch
+               , Amcharts.DataSource
+               , Amcharts.Events
 
   ghc-options:
     -Wall
@@ -73,12 +77,13 @@ executable Rafiikka
     -fwarn-identities
     -O2
 
-Test-Suite doctests
-  type:          exitcode-stdio-1.0
-  ghc-options:   -threaded
-  main-is:          doctest.hs
-  hs-source-dirs:   tests
-  default-language: Haskell2010
-  build-depends: base, universum, doctest, QuickCheck
-  default-extensions: NoImplicitPrelude, OverloadedStrings, TypeFamilies
+if impl(ghc)
+  Test-Suite doctests
+    type:          exitcode-stdio-1.0
+    ghc-options:   -threaded
+    main-is:          doctest.hs
+    hs-source-dirs:   tests
+    default-language: Haskell2010
+    build-depends: base, universum, doctest, QuickCheck
+    default-extensions: NoImplicitPrelude, OverloadedStrings, TypeFamilies
 

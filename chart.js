@@ -133,7 +133,11 @@ am4core.ready(() => {
                 valittuDS.dispatch("done", {target: {data: valittuDS.data}});
             }
         });
-        on(valittuDS.events, "done", _ => setMainState('sijainti', (getMainState().sijainti || '').replace(/[^,]+/, valittuDS.data)));
+        on(valittuDS.events, "done", _ => {
+            let st = getMainState();
+            st.sijainti = (getMainState().sijainti || '').replace(/[^,]+/, valittuDS.data);
+            setMainState(st);
+        });
         
         window.chart = am4core.create("chartdiv", am4charts.XYChart);
 
@@ -1373,7 +1377,9 @@ am4core.ready(() => {
                 // I don't know why amcharts does this...
                 return;
             }
-            setMainState('aika', [new Date(start), new Date(end)]);
+            let st = getMainState();
+            st.aika = [new Date(start), new Date(end)];
+            setMainState(st);
         });
 
         on(xAxis.events, "startendchanged", ev => {
@@ -1433,7 +1439,9 @@ am4core.ready(() => {
                             asetaEnnakkotietoGrafiikalle(tunniste, ratanumero => {
                                 let mainState = (getMainState().sijainti || '');
                                 if (!mainState.startsWith('(' + ratanumero + '),')) {
-                                    setMainState('sijainti', '(' + ratanumero + '),' + mainState);
+                                    let st = getMainState();
+                                    st.sijainti = '(' + ratanumero + '),' + mainState;
+                                    setMainState(st);
                                 }
                             });
 

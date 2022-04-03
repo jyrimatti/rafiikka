@@ -46,6 +46,7 @@ let
       # Haskell specific overlay (for you to extend)
       haskell-overlay = hself: hsuper: {
         "happy" = pkgs.haskell.lib.dontCheck hsuper.happy;
+        "universum" = pkgs.haskell.lib.dontCheck hsuper.universum;
 
         # https://github.com/ghcjs/jsaddle/issues/123
         jsaddle = pkgs.haskell.lib.overrideCabal hsuper.jsaddle (drv: {

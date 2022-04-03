@@ -93,7 +93,11 @@ let lataaAikatauluRest = (paiva, callback) => {
 };
 
 let lataaAikatauluGraphQL = (paiva, callback) =>
-    postJson(graphQLUrl, aikataulutGraphQL(paiva), data => callback(parsiAikataulu(paiva, data.data.viewer.getTrainsByDepartureDateUsingGET)));
+    postJson(graphQLUrl,
+             data => callback(parsiAikataulu(paiva, data.data.viewer.getTrainsByDepartureDateUsingGET)),
+             undefined,
+             undefined,
+             aikataulutGraphQL(paiva));
 
 let lataaAikataulu = lataaAikatauluRest;
 //let lataaAikataulu = lataaAikatauluGraphQL;

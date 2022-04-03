@@ -4,7 +4,7 @@
 module Main where
 
 import Universum
-import FFI ( registerGlobalFunction1, registerGlobalFunction, registerGlobalFunctionPure1, registerGlobalFunction2 )
+import FFI ( registerGlobalFunction1, registerGlobalFunction, registerGlobalFunctionPure1, registerGlobalFunction2, registerGlobalFunction4, function1, procedure1, registerGlobalFunction3 )
 import Tooltips ( initTooltips )
 import Shpadoinkle ( JSM )
 import Shpadoinkle.Backend.Snabbdom (runSnabbdom, stage)
@@ -14,12 +14,18 @@ import qualified Data.ByteString.Lazy as B
 import Language.Javascript.JSaddle.Run (enableLogging)
 import Data.Maybe (fromJust)
 import Data.Time.Clock (secondsToNominalDiffTime)
-import Browser (setTimeout, getElementById)
+import Browser (setTimeout, getElementById, withDebug)
 import Frontpage (view)
 import Shpadoinkle.Console (debug)
-import Yleiset (parseInterval_, startOfDayUTC_, startOfMonthUTC_, laajennaAikavali_)
+import Yleiset (parseInterval_, startOfDayUTC_, startOfMonthUTC_, laajennaAikavali_, DataType (Infra, Other), errorHandler)
 import StateAccessor (getStates, getState, getMainState, setState, setMainState, removeSubState)
 import State (defaultState)
+import Fetch (getJson, headJson)
+import JSDOM.Types (Callback(Callback), JSVal, Function, FromJSVal (fromJSVal))
+import Network.URI (URI)
+import Data.Aeson
+import Language.Javascript.JSaddle ((#), call, global, ToJSVal (toJSVal))
+import Amcharts.DataSource (monitor)
 
 main :: IO ()
 main = do
@@ -31,6 +37,22 @@ dev :: IO ()
 dev = do
   bs <- B.readFile "./index-debug.html"
   liveWithStaticAndIndex bs 8080 app "./"
+
+getJson_ :: URI -> JSVal -> Maybe JSVal -> JSVal -> JSM ()
+getJson_ uri fa signal fb = withDebug "getJson_" $ do
+  let cb :: Value -> JSM ()
+      cb aa = void $ call fa global aa
+  let errCb :: Text -> JSM ()
+      errCb bb = void $ call fb global bb
+  getJson Other uri cb signal errCb
+
+headJson_ :: URI -> JSVal -> Maybe JSVal -> JSVal -> JSM ()
+headJson_ uri fa signal fb = do
+  let cb :: Value -> JSM ()
+      cb aa = void $ call fa global aa
+  let errCb :: Text -> JSM ()
+      errCb bb = void $ call fb global bb
+  headJson Other uri cb signal errCb
 
 app :: JSM ()
 app = do
@@ -48,6 +70,10 @@ app = do
   registerGlobalFunction "getMainState" getMainState
   registerGlobalFunction1 "setMainState" setMainState
   registerGlobalFunction1 "removeSubState" removeSubState
+  registerGlobalFunction2 "monitor" monitor
+  registerGlobalFunction4 "getJson" getJson_
+  registerGlobalFunction4 "headJson" headJson_
+  registerGlobalFunction1 "errorHandler" errorHandler
 
   addMeta [("charset", "UTF-8")]
   setTitle "Rafiikka"

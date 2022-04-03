@@ -1,9 +1,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Yleiset where
 
-import Universum
+import Universum hiding (get)
 import Data.Time (UTCTime)
 import Data.Time.Calendar.MonthDay ()
 import Data.Time.Calendar.OrdinalDate ()
@@ -13,6 +14,28 @@ import Data.Time.Lens (months, FlexibleDateTime (flexDT))
 import Data.List.NonEmpty (fromList)
 import URISerialization (FromURIFragment(fromURIFragment))
 import State (TimeSetting)
+import Data.JSString (JSString)
+import Language.Javascript.JSaddle (JSVal, JSM, (!), jsg, new, jsg3, FromJSVal)
+import Network.URI (URI, parseURI)
+import GHCJS.Marshal (FromJSVal(fromJSVal))
+import FFI (deserializationFailure)
+
+data DataType = Other | Infra
+  deriving Show
+
+instance FromJSVal DataType where
+  fromJSVal _ = pure $ Just Other
+  -- FIXME
+
+instance FromJSVal URI where
+  fromJSVal x = do
+    str :: Maybe String <- fromJSVal x
+    case str of
+      Just s -> case parseURI s of
+        Just u -> pure $ Just u
+        Nothing -> deserializationFailure x "URI" 
+      Nothing -> deserializationFailure x "URI"
+    
 
 parseInterval_ :: Text -> Maybe TimeSetting 
 parseInterval_ = fromURIFragment
@@ -34,3 +57,10 @@ laajennaAikavali_ xs = case toList xs of
       (Interval a3 b3) = expandInterval $ Interval start end
     in fromList [a3, b3]
   _ -> xs
+
+errorHandler :: JSVal -> JSM ()
+errorHandler err = do
+  errorStack <- err ! ("stack" :: JSString)
+  stack <- new (jsg @JSString "Error") () ! ("stack" :: JSString)
+  _ <- jsg3 @JSString "log" err errorStack stack
+  pure ()

@@ -8,20 +8,25 @@ module FFI(
   registerGlobalFunctionPure1,
   registerGlobalFunctionPure2,
   registerGlobalFunctionPure3,
+  registerGlobalFunctionPure4,
   registerGlobalFunction,
   registerGlobalFunction1,
   registerGlobalFunction2,
   registerGlobalFunction3,
+  registerGlobalFunction4,
   functionPure1,
   functionPure2,
   functionPure3,
+  functionPure4,
   function1,
   function2,
   function3,
+  function4,
   procedure,
   procedure1,
   procedure2,
   procedure3,
+  procedure4,
   deserializationFailure_,
   deserializationFailure
 ) where
@@ -33,7 +38,7 @@ import Data.Data (typeOf)
 import Data.List.NonEmpty (fromList)
 import GHCJS.Foreign (jsTypeOf)
 #else
-import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, JSString, ToJSString(..), JSVal, MonadJSM, liftJSM, Object (Object))
+import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, JSString, ToJSString(..), JSVal, MonadJSM, liftJSM, Object (Object), MakeArgs)
 import GHCJS.Foreign.Callback (Callback, syncCallback', syncCallback1', syncCallback2', syncCallback3', asyncCallback, asyncCallback1, asyncCallback2, asyncCallback3)
 import Control.Applicative (liftA2, liftA3)
 import Data.Data (typeOf)
@@ -43,11 +48,13 @@ registerGlobalFunctionPure  :: (                                       ToJSVal r
 registerGlobalFunctionPure1 :: (FromJSVal a,                           ToJSVal r) => Text -> (a           ->     r) -> JSM ()
 registerGlobalFunctionPure2 :: (FromJSVal a, FromJSVal b,              ToJSVal r) => Text -> (a -> b      ->     r) -> JSM ()
 registerGlobalFunctionPure3 :: (FromJSVal a, FromJSVal b, FromJSVal c, ToJSVal r) => Text -> (a -> b -> c ->     r) -> JSM ()
+registerGlobalFunctionPure4 :: (FromJSVal a, FromJSVal b, FromJSVal c, FromJSVal d, ToJSVal r) => Text -> (a -> b -> c -> d -> r) -> JSM ()
 
 registerGlobalFunction      :: (                                       ToJSVal r) => Text                 -> JSM r  -> JSM ()
 registerGlobalFunction1     :: (FromJSVal a,                           ToJSVal r) => Text -> (a           -> JSM r) -> JSM ()
 registerGlobalFunction2     :: (FromJSVal a, FromJSVal b,              ToJSVal r) => Text -> (a -> b      -> JSM r) -> JSM ()
 registerGlobalFunction3     :: (FromJSVal a, FromJSVal b, FromJSVal c, ToJSVal r) => Text -> (a -> b -> c -> JSM r) -> JSM ()
+registerGlobalFunction4     :: (FromJSVal a, FromJSVal b, FromJSVal c, FromJSVal d, ToJSVal r) => Text -> (a -> b -> c -> d -> JSM r) -> JSM ()
 
 warn :: MakeArgs a => a -> JSM JSVal
 warn = jsg @JSString "console" # ("warn" :: JSString)
@@ -88,6 +95,7 @@ procedure  :: JSM () -> JSM Function
 procedure1 :: (FromJSVal a1) => (a1 -> JSM ()) -> JSM Function
 procedure2 :: (FromJSVal a1, FromJSVal a2) => (a1 -> a2 -> JSM ()) -> JSM Function
 procedure3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3) => (a1 -> a2 -> a3 -> JSM ()) -> JSM Function
+procedure4 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4) => (a1 -> a2 -> a3 -> a4 -> JSM ()) -> JSM Function
 
 procedure f = function $ fun $ \_ _ _ -> do
   f
@@ -118,6 +126,21 @@ procedure3 f = function $ fun $ \_ _ [a1, a2, a3] -> do
       Just x2  -> case v3 of
         Nothing -> deserializationFailure_ a3 $ show (typeOf a3)
         Just x3  -> f x1 x2 x3
+
+procedure4 f = function $ fun $ \_ _ [a1, a2, a3, a4] -> do
+  v1 <- fromJSVal a1
+  v2 <- fromJSVal a2
+  v3 <- fromJSVal a3
+  v4 <- fromJSVal a4
+  case v1 of
+    Nothing -> deserializationFailure_ a1 ""
+    Just x1 -> case v2 of
+      Nothing -> deserializationFailure_ a2 $ show (typeOf a2)
+      Just x2  -> case v3 of
+        Nothing -> deserializationFailure_ a3 $ show (typeOf a3)
+        Just x3  -> case v4 of
+          Nothing -> deserializationFailure_ a4 $ show (typeOf a4)
+          Just x4  -> f x1 x2 x3 x4
 #else
 foreign import javascript unsafe "$r = $1"
   makeProcedureWithCallback  :: Callback (IO ()) -> IO Object
@@ -130,6 +153,9 @@ foreign import javascript unsafe "$r = $1"
 
 foreign import javascript unsafe "$r = $1"
   makeProcedureWithCallback3 :: Callback (JSVal -> JSVal -> JSVal -> IO ()) -> IO Object
+
+foreign import javascript unsafe "$r = $1"
+  makeProcedureWithCallback4 :: Callback (JSVal -> JSVal -> JSVal -> JSVal -> IO ()) -> IO Object
 
 wrapJS_ :: (MonadJSM m) => JSM () -> m ()
 wrapJS_ = liftJSM
@@ -164,15 +190,33 @@ wrapJS3_ f a1 a2 a3 = liftJSM $ do
         Nothing -> deserializationFailure_ a3 $ show (typeOf a3)
         Just x3 -> f x1 x2 x3
 
+wrapJS4_ :: (MonadJSM m, FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4) => (a1 -> a2 -> a3 -> a4 -> JSM ()) -> (JSVal -> JSVal -> JSVal -> JSVal -> m ())
+wrapJS4_ f a1 a2 a3 a4 = liftJSM $ do
+  v1 <- fromJSVal a1
+  v2 <- fromJSVal a2
+  v3 <- fromJSVal a3
+  v4 <- fromJSVal a4
+  case v1 of
+    Nothing -> deserializationFailure_ a1 ""
+    Just x1 -> case v2 of
+      Nothing -> deserializationFailure_ a2 $ show (typeOf a2)
+      Just x2 -> case v3 of
+        Nothing -> deserializationFailure_ a3 $ show (typeOf a3)
+        Just x3 -> case v4 of
+          Nothing -> deserializationFailure_ a4 $ show (typeOf a4)
+          Just x4 -> f x1 x2 x3 x4
+
 procedure  :: JSM () -> JSM Object
 procedure1 :: (FromJSVal a1) => (a1 -> JSM ()) -> JSM Object
 procedure2 :: (FromJSVal a1, FromJSVal a2) => (a1 -> a2 -> JSM ()) -> JSM Object
 procedure3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3) => (a1 -> a2 -> a3 -> JSM ()) -> JSM Object
+procedure4 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4) => (a1 -> a2 -> a3 -> a4 -> JSM ()) -> JSM Object
 
 procedure  f = makeProcedureWithCallback  =<< asyncCallback  (wrapJS_ f)
 procedure1 f = makeProcedureWithCallback1 =<< asyncCallback1 (wrapJS1_ f)
 procedure2 f = makeProcedureWithCallback2 =<< asyncCallback2 (wrapJS2_ f)
 procedure3 f = makeProcedureWithCallback3 =<< asyncCallback3 (wrapJS3_ f)
+procedure4 f = makeProcedureWithCallback4 =<< asyncCallback4 (wrapJS4_ f)
 #endif
 
 #ifndef ghcjs_HOST_OS
@@ -211,6 +255,22 @@ cbPure3 f = fun $ \ _ _ [a1, a2, a3, returnValueF] -> do
         Nothing -> deserializationFailure_ a3 $ show (typeOf a3)
         Just x3 -> doCall returnValueF $ f x1 x2 x3
 
+cbPure4 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4, ToJSVal ret) => (a1 -> a2 -> a3 -> a4 -> ret) -> JSCallAsFunction
+cbPure4 f = fun $ \ _ _ [a1, a2, a3, a4, returnValueF] -> do
+  v1 <- fromJSVal a1
+  v2 <- fromJSVal a2
+  v3 <- fromJSVal a3
+  v4 <- fromJSVal a4
+  case v1 of
+    Nothing -> deserializationFailure_ a1 ""
+    Just x1 -> case v2 of
+      Nothing -> deserializationFailure_ a2 $ show (typeOf a2)
+      Just x2 -> case v3 of
+        Nothing -> deserializationFailure_ a3 $ show (typeOf a3)
+        Just x3 -> case v4 of
+          Nothing -> deserializationFailure_ a4 $ show (typeOf a4)
+          Just x4 -> doCall returnValueF $ f x1 x2 x3 x4
+
 cb :: (ToJSVal ret) => JSM ret -> JSCallAsFunction
 cb f = fun $ \ _ _ [returnValueF] -> do
   doCall returnValueF f
@@ -244,6 +304,22 @@ cb3 f = fun $ \ _ _ [a1, a2, a3, returnValueF] -> do
       Just x2 -> case v3 of
         Nothing -> deserializationFailure_ a3 $ show (typeOf a3)
         Just x3 -> doCall returnValueF $ f x1 x2 x3
+
+cb4 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4, ToJSVal ret) => (a1 -> a2 -> a3 -> a4 -> JSM ret) -> JSCallAsFunction
+cb4 f = fun $ \ _ _ [a1, a2, a3, a4, returnValueF] -> do
+  v1 <- fromJSVal a1
+  v2 <- fromJSVal a2
+  v3 <- fromJSVal a3
+  v4 <- fromJSVal a4
+  case v1 of
+    Nothing -> deserializationFailure_ a1 ""
+    Just x1 -> case v2 of
+      Nothing -> deserializationFailure_ a2 $ show (typeOf a2)
+      Just x2 -> case v3 of
+        Nothing -> deserializationFailure_ a3 $ show (typeOf a3)
+        Just x3 -> case v4 of
+          Nothing -> deserializationFailure_ a4 $ show (typeOf a4)
+          Just x4 -> doCall returnValueF $ f x1 x2 x3 x4
 #endif
 
 #ifndef ghcjs_HOST_OS
@@ -261,6 +337,10 @@ registerGlobalFunctionPure3 name f = do
   _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2, a3) { window.__temp_" <> name <> " = undefined; cb(a1, a2, a3, function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cbPure3 f]
   pure ()
 
+registerGlobalFunctionPure4 name f = do
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2, a3, a4) { window.__temp_" <> name <> " = undefined; cb(a1, a2, a3, a4, function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cbPure4 f]
+  pure ()
+
 registerGlobalFunction name f = do
   _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function() { window.__temp_" <> name <> " = undefined; cb(function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cb f]
   pure ()
@@ -275,6 +355,10 @@ registerGlobalFunction2 name f = do
 
 registerGlobalFunction3 name f = do
   _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2, a3) { window.__temp_" <> name <> " = undefined; cb(a1, a2, a3, function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cb3 f]
+  pure ()
+
+registerGlobalFunction4 name f = do
+  _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1, a2, a3, a4) { window.__temp_" <> name <> " = undefined; cb(a1, a2, a3, a4, function(r) { window.__temp_" <> name <> " = r; }); return window.__temp_" <> name <> "; }; })") global [cb4 f]
   pure ()
 
 #else
@@ -296,6 +380,9 @@ wrapJSPure2 f x1 x2 = liftJSM $ toJSVal =<< liftA2 f <$> fromJSVal x1 <*> fromJS
 wrapJSPure3 :: (MonadJSM m, FromJSVal a1, FromJSVal a2, FromJSVal a3, ToJSVal ret) => (a1 -> a2 -> a3 -> ret) -> (JSVal -> JSVal -> JSVal -> m JSVal)
 wrapJSPure3 f x1 x2 x3 = liftJSM $ toJSVal =<< liftA3 f <$> fromJSVal x1 <*> fromJSVal x2 <*> fromJSVal x3
 
+wrapJSPure4 :: (MonadJSM m, FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4, ToJSVal ret) => (a1 -> a2 -> a3 -> a4 -> ret) -> (JSVal -> JSVal -> JSVal -> JSVal -> m JSVal)
+wrapJSPure4 f x1 x2 x3 x4 = liftJSM $ toJSVal =<< liftA4 f <$> fromJSVal x1 <*> fromJSVal x2 <*> fromJSVal x3 <*> fromJSVal x4
+
 wrapJS :: (MonadJSM m, ToJSVal ret) => ret -> m JSVal
 wrapJS = liftJSM . toJSVal
 
@@ -308,33 +395,42 @@ wrapJS2 f x1 x2 = liftJSM $ toJSVal =<< liftA2 f <$> fromJSVal x1 <*> fromJSVal 
 wrapJS3 :: (MonadJSM m, FromJSVal a1, FromJSVal a2, FromJSVal a3, ToJSVal ret) => (a1 -> a2 -> a3 -> JSM ret) -> (JSVal -> JSVal -> JSVal -> m JSVal)
 wrapJS3 f x1 x2 x3 = liftJSM $ toJSVal =<< liftA3 f <$> fromJSVal x1 <*> fromJSVal x2 <*> fromJSVal x3
 
+wrapJS4 :: (MonadJSM m, FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4, ToJSVal ret) => (a1 -> a2 -> a3 -> a4 ->JSM ret) -> (JSVal -> JSVal -> JSVal -> JSVal -> m JSVal)
+wrapJS4 f x1 x2 x3 x4 = liftJSM $ toJSVal =<< liftA4 f <$> fromJSVal x1 <*> fromJSVal x2 <*> fromJSVal x3 <*> fromJSVal x4
+
 registerGlobalFunctionPure  name f = liftJSM $ js_registerGlobalValue    (toJSString name) =<< wrapJSPure f
 registerGlobalFunctionPure1 name f = liftJSM $ js_registerGlobalFunction (toJSString name) =<< syncCallback1' (wrapJSPure1 f)
 registerGlobalFunctionPure2 name f = liftJSM $ js_registerGlobalFunction (toJSString name) =<< syncCallback2' (wrapJSPure2 f)
 registerGlobalFunctionPure3 name f = liftJSM $ js_registerGlobalFunction (toJSString name) =<< syncCallback3' (wrapJSPure3 f)
+registerGlobalFunctionPure4 name f = liftJSM $ js_registerGlobalFunction (toJSString name) =<< syncCallback3' (wrapJSPure4 f)
 
 registerGlobalFunction  name f = liftJSM $ js_registerGlobalFunction (toJSString name) =<< syncCallback'  (wrapJS f)
 registerGlobalFunction1 name f = liftJSM $ js_registerGlobalFunction (toJSString name) =<< syncCallback1' (wrapJS1 f)
 registerGlobalFunction2 name f = liftJSM $ js_registerGlobalFunction (toJSString name) =<< syncCallback2' (wrapJS2 f)
 registerGlobalFunction3 name f = liftJSM $ js_registerGlobalFunction (toJSString name) =<< syncCallback3' (wrapJS3 f)
+registerGlobalFunction4 name f = liftJSM $ js_registerGlobalFunction (toJSString name) =<< syncCallback3' (wrapJS4 f)
 #endif
 
 #ifndef ghcjs_HOST_OS
 functionPure1 :: (FromJSVal a1, ToJSVal ret) => (a1 -> ret) -> JSM Function
 functionPure2 :: (FromJSVal a1, FromJSVal a2, ToJSVal ret) => (a1 -> a2 -> ret) -> JSM Function
 functionPure3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, ToJSVal ret) => (a1 -> a2 -> a3 -> ret) -> JSM Function
+functionPure4 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4, ToJSVal ret) => (a1 -> a2 -> a3 -> a4 -> ret) -> JSM Function
 
 functionPure1 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure1 f]
 functionPure2 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure2 f]
 functionPure3 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure3 f]
+functionPure4 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1, a2, a3, a4) { var ret = []; cb(a1, a2, a3, a4, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure4 f]
 
 function1 :: (FromJSVal a1, ToJSVal ret) => (a1 -> JSM ret) -> JSM Function
 function2 :: (FromJSVal a1, FromJSVal a2, ToJSVal ret) => (a1 -> a2 -> JSM ret) -> JSM Function
 function3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, ToJSVal ret) => (a1 -> a2 -> a3 -> JSM ret) -> JSM Function
+function4 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4, ToJSVal ret) => (a1 -> a2 -> a3 -> a4 -> JSM ret) -> JSM Function
 
 function1 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb1 f]
 function2 f = fmap Function . valToObject =<< call (eval @JSString "(function(cb) { return function(a1, a2) { var ret = []; cb(a1, a2, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb2 f]
 function3 f = fmap Function . valToObject =<<  call (eval @JSString "(function(cb) { return function(a1, a2, a3) { var ret = []; cb(a1, a2, a3, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb3 f]
+function4 f = fmap Function . valToObject =<<  call (eval @JSString "(function(cb) { return function(a1, a2, a3, a4) { var ret = []; cb(a1, a2, a3, a4, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cb4 f]
 #else
 foreign import javascript unsafe "$r = $1"
   makeFunctionWithCallback1 :: Callback (JSVal -> IO JSVal) -> IO Object
@@ -345,19 +441,26 @@ foreign import javascript unsafe "$r = $1"
 foreign import javascript unsafe "$r = $1"
   makeFunctionWithCallback3 :: Callback (JSVal -> JSVal -> JSVal -> IO JSVal) -> IO Object
 
+foreign import javascript unsafe "$r = $1"
+  makeFunctionWithCallback4 :: Callback (JSVal -> JSVal -> JSVal -> JSVal -> IO JSVal) -> IO Object
+
 functionPure1 :: (FromJSVal a1, ToJSVal ret) => (a1 -> ret) -> JSM Object
 functionPure2 :: (FromJSVal a1, FromJSVal a2, ToJSVal ret) => (a1 -> a2 -> ret) -> JSM Object
 functionPure3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, ToJSVal ret) => (a1 -> a2 -> a3 -> ret) -> JSM Object
+functionPure4 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4, ToJSVal ret) => (a1 -> a2 -> a3 -> a4 -> ret) -> JSM Object
 
 functionPure1 f = makeFunctionWithCallback1 =<< syncCallback1' (wrapJSPure1 f)
 functionPure2 f = makeFunctionWithCallback2 =<< syncCallback2' (wrapJSPure2 f)
 functionPure3 f = makeFunctionWithCallback3 =<< syncCallback3' (wrapJSPure3 f)
+functionPure4 f = makeFunctionWithCallback4 =<< syncCallback4' (wrapJSPure4 f)
 
 function1 :: (FromJSVal a1, ToJSVal ret) => (a1 -> JSM ret) -> JSM Object
 function2 :: (FromJSVal a1, FromJSVal a2, ToJSVal ret) => (a1 -> a2 -> JSM ret) -> JSM Object
 function3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, ToJSVal ret) => (a1 -> a2 -> a3 -> JSM ret) -> JSM Object
+function4 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3, FromJSVal a4, ToJSVal ret) => (a1 -> a2 -> a3 -> a4 -> JSM ret) -> JSM Object
 
 function1 f = makeFunctionWithCallback1 =<< syncCallback1' (wrapJS1 f)
 function2 f = makeFunctionWithCallback2 =<< syncCallback2' (wrapJS2 f)
 function3 f = makeFunctionWithCallback3 =<< syncCallback3' (wrapJS3 f)
+function4 f = makeFunctionWithCallback4 =<< syncCallback4' (wrapJS4 f)
 #endif
