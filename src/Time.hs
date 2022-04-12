@@ -14,7 +14,7 @@ module Time (
     Interval(..)
 ) where
 
-import Universum
+import Universum hiding (unlessM, whenM, unless, when)
 import Data.Text (unpack, pack)
 import Data.Time (CalendarDiffTime (CalendarDiffTime), addUTCTime, UTCTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM, ISO8601, iso8601Show)
@@ -24,9 +24,8 @@ import Data.Time.Lens( months, FlexibleDateTime (flexDT), minutes, seconds, hour
 import Data.Time.Calendar.MonthDay ()
 import Data.Time.Calendar.OrdinalDate ()
 import JSDOM.Types (ToJSVal)
-import Language.Javascript.JSaddle (ToJSVal(toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, isUndefined, (!), js0, jsg, new)
-import FFI (deserializationFailure)
-import GHCJS.Foreign (isFunction)
+import Language.Javascript.JSaddle (ToJSVal(toJSVal), JSString, FromJSVal (fromJSVal), jsg, new)
+import Monadic (doFromJSVal, guardP, isDefined, invoke)
 
 data Interval = Interval UTCTime UTCTime
   deriving Show
@@ -72,23 +71,11 @@ roundToPreviousMonth :: UTCTime -> UTCTime
 roundToPreviousMonth = (days .~ 0) . (hours .~ 0) . (minutes .~ 0) . (seconds .~ 0)
 
 instance FromJSVal UTCTime where
-  fromJSVal x = do
-    undef <- ghcjsPure $ isUndefined x
-    if undef
-      then deserializationFailure x "UTCTime"
-      else do
-        a <- x ! ("toISOString" :: JSString)
-        isFun <- ghcjsPure $ isFunction a
-        if not isFun
-          then deserializationFailure x "UTCTime"
-          else do
-            b <- x ^. js0 ("toISOString" :: JSString)
-            isUndef <- ghcjsPure $ isUndefined b
-            if isUndef
-              then deserializationFailure x "UTCTime"
-              else do
-                a1 <- fromJSVal b
-                pure $ parseISO =<< a1
+  fromJSVal = doFromJSVal "UTCTime" $ \x -> do
+    a <- invoke x "toISOString"
+    guardP $ isDefined a
+    c <- MaybeT $ fromJSVal a
+    hoistMaybe $ parseISO c
 
 instance ToJSVal UTCTime where
   toJSVal = new (jsg @JSString "Date") . showISO 

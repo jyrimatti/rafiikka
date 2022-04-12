@@ -31,6 +31,7 @@ executable Rafiikka
    , lens-datetime
    , cabal-doctest
    , network-uri
+   , control-bool
   
   if impl(ghcjs)
     build-depends: ghcjs-base
@@ -52,6 +53,7 @@ executable Rafiikka
                , StateAccessor
                , URISerialization
                , Fetch
+               , Monadic
                , Amcharts.DataSource
                , Amcharts.Events
 
