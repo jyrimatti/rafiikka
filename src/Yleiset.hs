@@ -18,7 +18,7 @@ import Data.JSString (JSString)
 import Language.Javascript.JSaddle (JSVal, JSM, (!), jsg, new, jsg3, FromJSVal)
 import Network.URI (URI, parseURI)
 import GHCJS.Marshal (FromJSVal(fromJSVal))
-import FFI (deserializationFailure)
+import Monadic (doFromJSVal)
 
 data DataType = Other | Infra
   deriving Show
@@ -28,13 +28,9 @@ instance FromJSVal DataType where
   -- FIXME
 
 instance FromJSVal URI where
-  fromJSVal x = do
-    str :: Maybe String <- fromJSVal x
-    case str of
-      Just s -> case parseURI s of
-        Just u -> pure $ Just u
-        Nothing -> deserializationFailure x "URI" 
-      Nothing -> deserializationFailure x "URI"
+  fromJSVal = doFromJSVal "URI" $ \x -> do
+    str <- MaybeT $ fromJSVal x
+    hoistMaybe $ parseURI str
     
 
 parseInterval_ :: Text -> Maybe TimeSetting 

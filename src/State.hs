@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE LambdaCase #-}
 module State where
 
 import Universum
@@ -8,12 +9,13 @@ import Data.Maybe (fromJust)
 import Data.Generics.Labels ()
 import Data.Time ( UTCTime, CalendarDiffTime, getCurrentTime )
 import Time (showISO, parseISO, Interval (Interval), removeDuration, addDuration, roundToPreviousHour)
-import Language.Javascript.JSaddle (new, jsg, ToJSVal (toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, (!), (<#), obj, jsUndefined, isUndefined)
+import Language.Javascript.JSaddle (new, jsg, ToJSVal (toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, (!), (<#), obj, jsUndefined)
 import Data.Time.Lens ( hours, FlexibleDateTime(flexDT) )
 import Control.Lens ((-~))
 import JSDOM.Types (JSM)
 import Browser (withDebug)
-import FFI (deserializationFailure)
+import Monadic (doFromJSVal, isDefined)
+import Control.Lens.Traversal (both)
 
 newtype Layer = Layer Text
   deriving (Show, Eq)
@@ -23,6 +25,17 @@ newtype Location = Location Text
   deriving (Show)
 data Mode = Map | Diagram
   deriving (Show, Eq)
+
+instance FromJSVal Mode where
+  fromJSVal = doFromJSVal "Mode" $ \x -> do
+    MaybeT (fromJSVal @Text x) >>= \case
+     "map" -> pure Map
+     "diagram" -> pure Diagram
+     _ -> mzero
+
+instance ToJSVal Mode where
+  toJSVal Map     = toJSVal @Text "map"
+  toJSVal Diagram = toJSVal @Text "diagram"
 
 data AppState = AppState {
   mode        :: Mode,
@@ -80,47 +93,29 @@ getDurationTo (DurationTo x _ ) = Just x
 getDurationTo _ = Nothing
 
 instance FromJSVal TimeSetting where
-  fromJSVal jsval = do
-    aa <- fromJSVal jsval
-    case aa of
-      Just [start, end] -> do
-        s <- fromJSVal start
-        e <- fromJSVal end
-        case (s,e) of
-            (Just ss, Just ee) | ss == ee -> pure $ Just $ Instant ss
-            (Just ss, Just ee)            -> pure $ Just $ Span $ Interval ss ee
-            _ -> deserializationFailure jsval "TimeSetting"
-      Just [start, end, dur1, dur2] -> do
-        dur1undef <- ghcjsPure $ isUndefined dur1
-        dur2undef <- ghcjsPure $ isUndefined dur2
-        if not dur1undef then do
-          s <- fromJSVal start
-          d <- fromJSVal dur1
-          case (s,d) of
-            (Just ss, Just dd) -> do
-              let ddd = parseISO dd
-              case ddd of
-                Just dddd -> pure $ Just $ DurationFrom ss dddd
-                _ -> deserializationFailure jsval "TimeSetting"
-            _ -> deserializationFailure jsval "TimeSetting"
-        else if not dur2undef then do
-          e <- fromJSVal end
-          d <- fromJSVal dur2
-          case (e,d) of
-            (Just ee, Just dd) -> do
-              let ddd = parseISO dd
-              case ddd of
-                Just dddd -> pure $ Just $ DurationTo dddd ee
-                _ -> deserializationFailure jsval "TimeSetting"
-            _ -> deserializationFailure jsval "TimeSetting"
-        else do
-          s <- fromJSVal start
-          e <- fromJSVal end
-          case (s,e) of
-            (Just ss, Just ee) | ss == ee -> pure $ Just $ Instant ss
-            (Just ss, Just ee)            -> pure $ Just $ Span $ Interval ss ee
-            _ -> deserializationFailure jsval "TimeSetting"
-      _ -> deserializationFailure jsval "TimeSetting"
+  fromJSVal = doFromJSVal "TimeSetting" $ \x -> do
+    MaybeT (fromJSVal x) >>= \case
+      [start, end] -> do
+        s <- MaybeT $ fromJSVal start
+        e <- MaybeT $ fromJSVal end
+        pure $ if s == e then Instant s else Span $ Interval s e
+      [start, end, dur1, dur2] -> do
+        both (lift . ghcjsPure . isDefined) (dur1,dur2) >>= \case
+          (True,False) -> do
+            s <- MaybeT $ fromJSVal start
+            d <- MaybeT $ fromJSVal dur1
+            ddd <- hoistMaybe $ parseISO d
+            pure $ DurationFrom s ddd
+          (False,True) -> do
+            e <- MaybeT $ fromJSVal end
+            d <- MaybeT $ fromJSVal dur2
+            ddd <- hoistMaybe $ parseISO d
+            pure $ DurationTo ddd e
+          _ -> do
+            s <- MaybeT $ fromJSVal start
+            e <- MaybeT $ fromJSVal end
+            pure $ if s == e then Instant s else Span $ Interval s e
+      _ -> mzero
 
 instance ToJSVal TimeSetting where
   toJSVal x = toJSVal $ case x of
@@ -142,7 +137,7 @@ instance ToJSVal TimeSetting where
 instance ToJSVal AppState where
   toJSVal (AppState m (Degrees r) l t loc) = do
     o <- obj
-    o <# ("moodi" :: JSString) $ case m of Map -> "map" :: Text; Diagram -> "diagram"
+    o <# ("moodi" :: JSString) $ toJSVal m
     whenJust loc $
       (o <# ("sijainti" :: JSString)) . (\(Location x) -> x)
     o <# ("rotaatio" :: JSString) $ show @Text r
@@ -151,12 +146,10 @@ instance ToJSVal AppState where
     toJSVal o
 
 instance FromJSVal AppState where
-  fromJSVal o = do
-    moodi    <- fromJSVal =<< o ! ("moodi" :: JSString)
-    rotaatio <- fromJSVal =<< o ! ("rotaatio" :: JSString)
-    tasot    <- fromJSVal =<< o ! ("tasot" :: JSString)
-    aika     <- fromJSVal =<< o ! ("aika" :: JSString)
-    sijainti <- fromJSVal =<< o ! ("sijainti" :: JSString)
-    case (moodi,rotaatio,tasot,aika,sijainti) of
-      (Just m,Just r,Just t,Just a,s) -> pure $ Just $ AppState (case m :: Text of "map" -> Map; _ -> Diagram) (Degrees r) (Layer <$> t) a (Location <$> s)
-      _ -> deserializationFailure o "AppState"
+  fromJSVal = doFromJSVal "AppState" $ \x -> do
+    moodi    <- MaybeT $ fromJSVal =<< x ! ("moodi" :: JSString)
+    rotaatio <- MaybeT $ fromJSVal =<< x ! ("rotaatio" :: JSString)
+    tasot    <- MaybeT $ fromJSVal =<< x ! ("tasot" :: JSString)
+    aika     <- MaybeT $ fromJSVal =<< x ! ("aika" :: JSString)
+    sijainti <- MaybeT $ fromJSVal =<< x ! ("sijainti" :: JSString)
+    pure $ AppState moodi (Degrees rotaatio) (Layer <$> tasot) aika (Location <$> sijainti)
