@@ -7,8 +7,8 @@ module State where
 import Universum
 import Data.Maybe (fromJust)
 import Data.Generics.Labels ()
-import Data.Time ( UTCTime, CalendarDiffTime, getCurrentTime )
-import Time (showISO, parseISO, Interval (Interval), removeDuration, addDuration, roundToPreviousHour)
+import Data.Time ( UTCTime, getCurrentTime, CalendarDiffTime )
+import Time (showISO, parseISO, Interval (Interval), removeDuration, addDuration, roundToPreviousHour, roundToPreviousDay, roundCalendarDiffTimeToPreviousDay)
 import Language.Javascript.JSaddle (new, jsg, ToJSVal (toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, (!), (<#), obj, jsUndefined)
 import Data.Time.Lens ( hours, FlexibleDateTime(flexDT) )
 import Control.Lens ((-~))
@@ -51,6 +51,18 @@ data TimeSetting =
   | DurationFrom UTCTime CalendarDiffTime
   | DurationTo CalendarDiffTime UTCTime
   deriving Show
+
+toInterval :: TimeSetting -> Interval
+toInterval (Instant t) = Interval t t
+toInterval (Span i)    = i
+toInterval (DurationFrom t d) = Interval t $ addDuration d t
+toInterval (DurationTo d t) = Interval (removeDuration d t) t
+
+roundTimeSettingToPreviousDay :: TimeSetting -> TimeSetting
+roundTimeSettingToPreviousDay (Instant t)           = Instant $ roundToPreviousDay t
+roundTimeSettingToPreviousDay (Span (Interval s e)) = Span $ Interval (roundToPreviousDay s) (roundToPreviousDay e)
+roundTimeSettingToPreviousDay (DurationFrom t d)    = DurationFrom (roundToPreviousDay t) (roundCalendarDiffTimeToPreviousDay d)
+roundTimeSettingToPreviousDay (DurationTo d t)      = DurationTo (roundCalendarDiffTimeToPreviousDay d) (roundToPreviousDay t)
 
 defaultMode :: Mode
 defaultMode = Map

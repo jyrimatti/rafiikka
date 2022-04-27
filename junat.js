@@ -47,7 +47,7 @@ let paivitaJunienRatakmsijainnit = series => () => {
 };
 
 setTimeout(() => {
-    window.junasijainnit = new Paho.MQTT.Client(mqttUrl, mqttPort, "rafiikka_" + parseInt(Math.random() * 10000, 10));
+    window.junasijainnit = new Paho.MQTT.Client(mqttHost, mqttPort, "rafiikka_" + parseInt(Math.random() * 10000, 10));
     window.junasijainnit_connecting = false;
     window.junasijainnit.onConnectionLost = errorHandler;
 }, 100);

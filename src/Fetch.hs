@@ -8,7 +8,7 @@ module Fetch (
 ) where
 
 import Universum
-import Network.URI (URI, uriToString)
+import Text.URI (URI, render)
 import Yleiset (DataType)
 import Language.Javascript.JSaddle (JSM, JSString, JSVal, jsg5)
 import FFI (function1)
@@ -17,17 +17,17 @@ import Data.Text (pack)
 import Amcharts.DataSource (progressStart, progressEnd)
 import Browser (withDebug)
 
-headJson :: FromJSON a => DataType -> URI -> (a -> JSM ()) -> Maybe JSVal -> (Text -> JSM ()) -> JSM ()
+headJson :: FromJSON a => DataType -> URI -> Maybe JSVal -> (Text -> JSM ()) -> (a -> JSM ()) -> JSM ()
 headJson = fetchJson "HEAD" (Nothing :: Maybe ())
 
-getJson :: FromJSON a => DataType -> URI -> (a -> JSM ()) -> Maybe JSVal -> (Text -> JSM ()) -> JSM ()
+getJson :: FromJSON a => DataType -> URI -> Maybe JSVal -> (Text -> JSM ()) -> (a -> JSM ()) -> JSM ()
 getJson = fetchJson "GET" (Nothing :: Maybe ())
 
-postJson :: (FromJSON a, ToJSON payload) => payload -> DataType -> URI -> (a -> JSM ()) -> Maybe JSVal -> (Text -> JSM ()) -> JSM ()
+postJson :: (FromJSON a, ToJSON payload) => payload -> DataType -> URI -> Maybe JSVal -> (Text -> JSM ()) -> (a -> JSM ()) -> JSM ()
 postJson payload = fetchJson "POST" (Just payload)
 
-fetchJson :: (FromJSON a, ToJSON payload) => JSString -> Maybe payload -> DataType -> URI -> (a -> JSM ()) -> Maybe JSVal -> (Text -> JSM ()) -> JSM ()
-fetchJson method payload datatype uri cb signal errCb = withDebug "fetchJson" $ do
+fetchJson :: (FromJSON a, ToJSON payload) => JSString -> Maybe payload -> DataType -> URI -> Maybe JSVal -> (Text -> JSM ()) -> (a -> JSM ()) -> JSM ()
+fetchJson method payload datatype uri signal errCb cb = withDebug "fetchJson" $ do
   let cb2 :: Value -> JSM ()
       cb2 value = do
         case fromJSON value of
@@ -43,5 +43,5 @@ fetchJson method payload datatype uri cb signal errCb = withDebug "fetchJson" $ 
         errCb msg
 
   progressStart datatype
-  void $ jsg5 method (uriToString id uri "") (function1 cb2) signal (function1 errCb2) (toJSON payload)
+  void $ jsg5 method (render uri) signal (function1 errCb2) (function1 cb2) (toJSON payload)
 

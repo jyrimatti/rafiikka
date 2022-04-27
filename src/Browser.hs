@@ -6,19 +6,23 @@ module Browser (
     debug,
     withDebug,
     locationHash,
-    setLocationHash
+    setLocationHash,
+    isSeed,
+    isSafari,
+    isLocal
 ) where
 
 import Universum hiding (drop)
 import FFI (procedure)
-import Language.Javascript.JSaddle (JSM, jsg2, JSString, (!), FromJSVal (fromJSVal), (<#), JSVal)
+import Language.Javascript.JSaddle (JSM, jsg2, JSString, (!), FromJSVal (fromJSVal), (<#), JSVal, ghcjsPure)
 import JSDOM (currentDocument, currentWindow)
 import qualified JSDOM.Types as JSDOM (Element)
 import JSDOM.Generated.ParentNode (querySelector)
 import Data.Time (NominalDiffTime)
 import qualified Shpadoinkle.Console as SC (debug)
-import Data.Text (drop)
+import Data.Text (drop, isInfixOf, isSuffixOf)
 import Data.Maybe (fromJust)
+import Monadic (isDefined)
 
 __loggingEnabled :: Bool
 __loggingEnabled = False
@@ -51,6 +55,9 @@ setTimeout timeout callback = do
 location :: JSM JSVal
 location = (! ("location" :: JSString)) . fromJust =<< currentWindow
 
+navigator :: JSM JSVal
+navigator = (! ("navigator" :: JSString)) . fromJust =<< currentWindow
+
 locationHash :: JSM Text
 locationHash = withDebug "locationHash" $ do
   loc <- location
@@ -66,3 +73,39 @@ setLocationHash x = withDebug "setLocationHash" $ do
   if x /= hash
     then loc <# ("hash" :: JSString) $ "#" <> x
     else pure ()
+
+isSeed :: JSM Bool
+isSeed = withDebug "isSeed" $ do
+  hash <- locationHash
+  pure $ hash == "#seed" || "&seed" `isSuffixOf` hash
+
+-- // https://stackoverflow.com/a/31732310
+isSafari :: JSM Bool
+isSafari = do
+  nav <- navigator
+  
+  vendor    <- nav ! ("vendor" :: JSString)
+  userAgent <- nav ! ("userAgent" :: JSString)
+  
+  vendorDef    <- ghcjsPure $ isDefined vendor
+  userAgentDef <- ghcjsPure $ isDefined userAgent
+  
+  if vendorDef && userAgentDef
+    then do
+      Just v <- fromJSVal vendor
+      Just u <- fromJSVal userAgent
+      pure $ "Apple" `isInfixOf` v &&
+             not ("CriOS" `isInfixOf` u) &&
+             not ("FxiOS" `isInfixOf` u)
+    else pure False
+
+isLocal :: JSM Bool
+isLocal = do
+  loc <- location
+  protocol <- loc ! ("protocol" :: JSString)
+  protocolDef <- ghcjsPure $ isDefined protocol
+  if protocolDef
+    then do
+      Just p <- fromJSVal protocol
+      pure $ p == ("file:" :: Text)
+    else pure False

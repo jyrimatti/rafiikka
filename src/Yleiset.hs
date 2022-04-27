@@ -8,17 +8,16 @@ import Universum hiding (get)
 import Data.Time (UTCTime)
 import Data.Time.Calendar.MonthDay ()
 import Data.Time.Calendar.OrdinalDate ()
-import Time (roundToPreviousDay, roundToPreviousMonth, Interval (Interval))
+import Time (Interval (Interval))
 import Control.Lens ((+~), (-~))
 import Data.Time.Lens (months, FlexibleDateTime (flexDT))
 import Data.List.NonEmpty (fromList)
-import URISerialization (FromURIFragment(fromURIFragment))
-import State (TimeSetting)
 import Data.JSString (JSString)
-import Language.Javascript.JSaddle (JSVal, JSM, (!), jsg, new, jsg3, FromJSVal)
-import Network.URI (URI, parseURI)
+import Language.Javascript.JSaddle (JSVal, JSM, (!), jsg, new, jsg3, FromJSVal, ToJSVal)
+import Text.URI (URI, mkURI, render)
 import GHCJS.Marshal (FromJSVal(fromJSVal))
 import Monadic (doFromJSVal)
+import Language.Javascript.JSaddle.Classes (ToJSVal(toJSVal))
 
 data DataType = Other | Infra
   deriving Show
@@ -27,20 +26,20 @@ instance FromJSVal DataType where
   fromJSVal _ = pure $ Just Other
   -- FIXME
 
+instance FromJSVal Natural where
+  fromJSVal = doFromJSVal "Natural" $ \x -> do
+    MaybeT $ fromJSVal x
+
+instance ToJSVal Natural where
+  toJSVal = toJSVal @Int . fromIntegral
+
 instance FromJSVal URI where
   fromJSVal = doFromJSVal "URI" $ \x -> do
     str <- MaybeT $ fromJSVal x
-    hoistMaybe $ parseURI str
-    
+    hoistMaybe $ mkURI str
 
-parseInterval_ :: Text -> Maybe TimeSetting 
-parseInterval_ = fromURIFragment
-
-startOfDayUTC_ :: UTCTime -> UTCTime
-startOfDayUTC_ = roundToPreviousDay
-
-startOfMonthUTC_ :: UTCTime -> UTCTime
-startOfMonthUTC_ = roundToPreviousMonth
+instance ToJSVal URI where
+  toJSVal = toJSVal . render
 
 expandInterval :: Interval -> Interval
 expandInterval (Interval start end) = Interval ((flexDT.months -~ 1) start)

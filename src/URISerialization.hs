@@ -8,7 +8,7 @@ module URISerialization (
 ) where
 
 import Universum hiding (drop)
-import Data.Time (UTCTime, CalendarDiffTime)
+import Data.Time (UTCTime, CalendarDiffTime, Day)
 import Data.Text (split, toLower, unpack)
 import Time (Interval (Interval), parseISO, showISO)
 import State (Mode, AppState (..), Layer (Layer), Degrees (Degrees), Location (Location), TimeSetting (..), defaultRotation, defaultLayers, defaultMode)
@@ -26,7 +26,14 @@ parsePair :: [Text] -> Maybe (Text,Text)
 parsePair [x,y] = Just (x,y)
 parsePair _ = Nothing
 
+instance ToURIFragment Text where
+  toURIFragment = id
 
+instance ToURIFragment Natural where
+  toURIFragment = show
+
+instance ToURIFragment Int where
+  toURIFragment = show
 
 -- Time.hs
 
@@ -37,7 +44,6 @@ instance ToURIFragment UTCTime where
   toURIFragment = showISO
 
 -- | fromURIFragment
--- import Data.Time
 -- >>> :set -XTypeApplications
 -- >>> fromURIFragment @Interval  "2014-02-14T01:02:03Z/2014-02-14T01:02:03Z"
 -- Just (Interval 2014-02-14 01:02:03 UTC 2014-02-14 01:02:03 UTC)
@@ -62,6 +68,13 @@ instance FromURIFragment (CalendarDiffTime, UTCTime) where
 
 instance ToURIFragment (CalendarDiffTime, UTCTime) where
   toURIFragment (a,b) = showISO a <> "/" <> showISO b
+
+-- | ToURIFragment Day
+-- >>> import Data.Time.Calendar
+-- >>> toURIFragment (fromGregorian 2014 02 14)
+-- "2014-02-14"
+instance ToURIFragment Day where
+  toURIFragment = showISO
 
 -- State.hs
 

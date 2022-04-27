@@ -175,10 +175,10 @@ let lpValiStyle = styles.line(3.0, 'rgba(42,42,255,0.3)');
 
 setTimeout(() => {
     window.rataStyle = styles.line(1.0, 'rgb(255,42,42)');
-    window.kmStyle = styles.icon(infraAPIUrl(true) + 'icons/kilometrimerkki.svg');
-    window.tasoristeysStyle = feature => styles.icon(infraAPIUrl(true) + 'icons/tasoristeys.svg', undefined, feature.getProperties().rotaatio);
-    window.lorajaStyle      = feature => styles.icon(infraAPIUrl(true) + 'icons/liikenteenohjauksenraja.svg', undefined, feature.getProperties().rotaatio);
-    window.raiteensulkuStyle = feature => styles.icon(infraAPIUrl(true) + 'icons/raiteensulku' + (feature.getProperties().suistosuunta === 'vasen' ? 'Vasen' : 'Oikea') + (feature.getProperties().kasinAsetettava === true ? 'Kasin' : '') + '.svg', undefined, feature.getProperties().rotaatio);
+    window.kmStyle = styles.icon(baseInfraAPIUrl(true) + 'icons/kilometrimerkki.svg');
+    window.tasoristeysStyle = feature => styles.icon(baseInfraAPIUrl(true) + 'icons/tasoristeys.svg', undefined, feature.getProperties().rotaatio);
+    window.lorajaStyle      = feature => styles.icon(baseInfraAPIUrl(true) + 'icons/liikenteenohjauksenraja.svg', undefined, feature.getProperties().rotaatio);
+    window.raiteensulkuStyle = feature => styles.icon(baseInfraAPIUrl(true) + 'icons/raiteensulku' + (feature.getProperties().suistosuunta === 'vasen' ? 'Vasen' : 'Oikea') + (feature.getProperties().kasinAsetettava === true ? 'Kasin' : '') + '.svg', undefined, feature.getProperties().rotaatio);
     window.nraStyle = styles.line(1.0, 'rgb(89,161,183)');
 }, 100);
 
@@ -222,7 +222,7 @@ let elemStyle = (feature, resolution) => {
                     elemType == 'pysaytyslaite' ? 'pysaytyslaite' + (props.pysaytyslaite.suojaussuunta === 'molemmat' ? 'Molemmat' : '') + (props.pysaytyslaite.kasinAsetettava === true ? 'Kasin' : '') :
                     elemType == 'vaihde' ? 'vaihde_' + props.vaihde.tyyppi + (props.vaihde.kasikaantoisyys == 'ei' ? '' : '_' + props.vaihde.kasikaantoisyys) + (props.vaihde.risteyssuhde == null || parseFloat(props.vaihde.risteyssuhde.split(':')[1]) <= 10 ? '' : parseFloat(props.vaihde.risteyssuhde.split(':')[1]) <= 18 ? '_keskinopea' : '_nopea' ) :
                     elemType;
-    let style = styles.icon(infraAPIUrl(true) + 'icons/' + icon4elem + '.svg', false, props.rotaatio, anchor, scales[resolutions.findIndex(x => x <= resolution)]);
+    let style = styles.icon(baseInfraAPIUrl(true) + 'icons/' + icon4elem + '.svg', false, props.rotaatio, anchor, scales[resolutions.findIndex(x => x <= resolution)]);
     if (anchor) {
         style = [style, styles.circle(2.0, 'rgba(0,255,0,0.5)')];
     }
@@ -235,7 +235,7 @@ let ratapihapalveluStyle = (feature, resolution) => {
     let anchor = null;
     let icon4elem = elemType == 'sahkokeskus' ? 'sahkokeskus_' + props.sahkokeskus.sahkokeskustyyppi.replace(/\/.*/,'').toLowerCase() :
                     elemType;
-    return styles.icon(infraAPIUrl(true) + 'icons/' + icon4elem + '.svg', false, props.rotaatio, anchor, scales[resolutions.findIndex(x => x <= resolution)]);
+    return styles.icon(baseInfraAPIUrl(true) + 'icons/' + icon4elem + '.svg', false, props.rotaatio, anchor, scales[resolutions.findIndex(x => x <= resolution)]);
 };
 
 let pmStyle = feature => {
@@ -245,7 +245,7 @@ let pmStyle = feature => {
             let sij = sijainnit[i];
             if (JSON.stringify(sij[0]) == JSON.stringify(coords)) {
                 sijainnit.splice(i, 1);
-                let iconStyle = styles.icon(infraAPIUrl(true) + 'icons/paikantamismerkki_' + sij[1] + '.svg', sij[1] == 'nouseva');
+                let iconStyle = styles.icon(baseInfraAPIUrl(true) + 'icons/paikantamismerkki_' + sij[1] + '.svg', sij[1] == 'nouseva');
                 let textStyle = styles.text('white', '' + feature.getProperties().numero);
                 iconStyle.zIndex = index;
                 textStyle.zIndex = index;
@@ -320,11 +320,11 @@ let esStyle = feature => {
     let props = feature.getProperties();
     let propTila = props.tila;
     if (propTila == 'poistettu') {
-        return styles.icon(etj2APIUrl(true) + 'icons/ennakkosuunnitelma_poistettu.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
+        return styles.icon(baseEtj2APIUrl(true) + 'icons/ennakkosuunnitelma_poistettu.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
     } else if (propTila == 'hyväksytty') {
-        return styles.icon(etj2APIUrl(true) + 'icons/ennakkosuunnitelma.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
+        return styles.icon(baseEtj2APIUrl(true) + 'icons/ennakkosuunnitelma.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
     } else {
-        return styles.icon(etj2APIUrl(true) + 'icons/ennakkosuunnitelma_kesken.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
+        return styles.icon(baseEtj2APIUrl(true) + 'icons/ennakkosuunnitelma_kesken.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
     }
 };
 
@@ -332,11 +332,11 @@ let eiStyle = feature => {
     let props = feature.getProperties();
     let propTila = props.tila;
     if (propTila == 'poistettu') {
-        return styles.icon(etj2APIUrl(true) + 'icons/ennakkoilmoitus_poistettu.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
+        return styles.icon(baseEtj2APIUrl(true) + 'icons/ennakkoilmoitus_poistettu.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
     } else if (propTila == 'hyväksytty') {
-        return styles.icon(etj2APIUrl(true) + 'icons/ennakkoilmoitus.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
+        return styles.icon(baseEtj2APIUrl(true) + 'icons/ennakkoilmoitus.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
     } else {
-        return styles.icon(etj2APIUrl(true) + 'icons/ennakkoilmoitus_kesken.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
+        return styles.icon(baseEtj2APIUrl(true) + 'icons/ennakkoilmoitus_kesken.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
     }
 };
 
@@ -344,18 +344,18 @@ let vsStyle = feature => {
     let props = feature.getProperties();
     let propTila = props.tila;
     if (propTila == 'poistettu') {
-        return styles.icon(etj2APIUrl(true) + 'icons/vuosisuunnitelma_poistettu.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
+        return styles.icon(baseEtj2APIUrl(true) + 'icons/vuosisuunnitelma_poistettu.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
     } else {
-        return styles.icon(etj2APIUrl(true) + 'icons/vuosisuunnitelma.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
+        return styles.icon(baseEtj2APIUrl(true) + 'icons/vuosisuunnitelma.svg', null, null, jetiAnchor, null, ennakkotietoOpacity(props.voimassa));
     }
 };
 
 let loStyle = feature => {
     let propTila = feature.getProperties().tila;
     if (propTila == 'poistettu') {
-        return styles.icon(etj2APIUrl(true) + 'icons/loilmoitus_poistettu.svg', null, null, jetiAnchor);
+        return styles.icon(baseEtj2APIUrl(true) + 'icons/loilmoitus_poistettu.svg', null, null, jetiAnchor);
     } else {
-        return styles.icon(etj2APIUrl(true) + 'icons/loilmoitus.svg', null, null, jetiAnchor);
+        return styles.icon(baseEtj2APIUrl(true) + 'icons/loilmoitus.svg', null, null, jetiAnchor);
     }
 };
 

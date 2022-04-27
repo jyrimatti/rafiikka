@@ -30,7 +30,7 @@ executable Rafiikka
    , generic-lens
    , lens-datetime
    , cabal-doctest
-   , network-uri
+   , modern-uri
    , control-bool
   
   if impl(ghcjs)
@@ -54,6 +54,8 @@ executable Rafiikka
                , URISerialization
                , Fetch
                , Monadic
+               , URI
+               , Types
                , Amcharts.DataSource
                , Amcharts.Events
 

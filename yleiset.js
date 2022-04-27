@@ -215,15 +215,6 @@ let logDiff = (msg1, msg2, msg3, msg4, msg5, msg6) => {
     return ret;
 };
 
-let onkoSeed = window.location.hash == '#seed' || window.location.hash.endsWith('&seed');
-
-// https://stackoverflow.com/a/31732310
-let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
-               navigator.userAgent &&
-               navigator.userAgent.indexOf('CriOS') == -1 &&
-               navigator.userAgent.indexOf('FxiOS') == -1;
-let isLocal = window.location.protocol == 'file:';
-
 let toISOStringNoMillis = (d) => {
     let pad = n => n < 10 ? '0' + n : n;
     return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + 'T' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()) + 'Z';
@@ -260,14 +251,14 @@ window.revisions = {
 };
 
 // safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
-let infraAPIUrl = skipRevision => 'https://' + (isSafari || isLocal || onkoSeed ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/' + (skipRevision === true ? '' : window.revisions.infra);
-let etj2APIUrl  = skipRevision => 'https://' + (isSafari || isLocal || onkoSeed ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/' + (skipRevision === true ? '' : window.revisions.etj2);
-let aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
-let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
+// let infraAPIUrl = skipRevision => 'https://' + (isSafari || isLocal || onkoSeed ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/' + (skipRevision === true ? '' : window.revisions.infra);
+// let etj2APIUrl  = skipRevision => 'https://' + (isSafari || isLocal || onkoSeed ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/' + (skipRevision === true ? '' : window.revisions.etj2);
+// let aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
+// let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
 
-let mqttUrl = "rata.digitraffic.fi";
-let mqttPort = 443;
-let mqttTopic = juna => 'train-locations/' + (juna ? juna.departureDate + '/' + juna.trainNumber : '#');
+// let mqttHost = "rata.digitraffic.fi";
+// let mqttPort = 443;
+// let mqttTopic = juna => 'train-locations/' + (juna ? juna.departureDate + '/' + juna.trainNumber : '#');
 
 //let errorHandler = error => log("Virhe!", error, error.stack, new Error().stack);
 
@@ -323,30 +314,28 @@ let fetchJson = (url, opts, callback, errorCallback) => {
        });
 }
 
-window.GET  = (url, callback, signal, errorCallback) => onkoSeed ? null : fetchJson(url, {method: 'GET', signal: signal}             , callback, errorCallback);
-window.HEAD = (url, callback, signal, errorCallback) =>                   fetchJson(url, {method: 'HEAD', signal: signal}            , callback, errorCallback);
-window.POST = (url, callback, signal, errorCallback, body) => onkoSeed ? null : fetchJson(url, {method: 'POST', signal: signal, body: body}, callback, errorCallback);
+window.GET  = (url, signal, errorCallback, callback, _) => onkoSeed() ? null : fetchJson(url, signal ? {method: 'GET', signal: signal} : {method: 'GET'}             , callback, errorCallback);
+window.HEAD = (url, signal, errorCallback, callback, _) =>                   fetchJson(url, signal ? {method: 'HEAD', signal: signal} : {method: 'HEAD'}            , callback, errorCallback);
+window.POST = (url, signal, errorCallback, callback, body) => onkoSeed() ? null : fetchJson(url, signal ? {method: 'POST', signal: signal, body: body} : {method: 'POST', body: body}, callback, errorCallback);
 
-getJson(infraAPIUrl() + 'revisions.json?count=1', data => {
+/*getJson(infraAPIUrl() + 'revisions.json?count=1', data => {
     window.revisions.infra = data[0].revisio + '/';
     log("Saatiin infra-revisioksi", window.revisions.infra);
 });
 getJson(etj2APIUrl() + 'revisions.json?count=1', data => {
     window.revisions.etj2 = data[0].revisio + '/';
     log("Saatiin etj2-revisioksi", window.revisions.etj2);
-});
+});*/
 
-let ikuisuusAlku = '2010-01-01T00:00:00Z';
-let ikuisuusLoppu = '2030-01-01T00:00:00Z';
-let ikuisuusAikavali = 'time=' + ikuisuusAlku + '/' + ikuisuusLoppu;
+//let ikuisuusAlku = '2010-01-01T00:00:00Z';
+//let ikuisuusLoppu = '2030-01-01T00:00:00Z';
+let ikuisuusAikavali = 'time=' + toISOStringNoMillis(ikuisuusAlku) + '/' + toISOStringNoMillis(ikuisuusLoppu);
 // haetaan infra oletuksena päätilan alkuajanhetkellä
 let infraAikavali = () => 'time=' + toISOStringNoMillis(startOfDayUTC(getMainState().aika[0])) + "/" + toISOStringNoMillis(startOfDayUTC(getMainState().aika[0]));
 // haetaan ennakkotiedot oletuksena päätilan aikakonteksti laajennettuna (+- kuukausi tms)
 let etj2Aikavali  = () => 'time=' + laajennaAikavali(getMainState().aika.slice(0,2)).map(toISOStringNoMillis).join("/");
 // haetaan ratatyöt oletuksena tarkasti päätilan aikakontekstilla (ei cachetusta)
 let rumaAikavali  = () => 'start=' + getMainState().aika.slice(0,2).map(startOfDayUTC).map(toISOStringNoMillis).join("&end=");
-
-let junienEsitysaikavali = 1000*60*60*24*5;
 
 let ratanumeroUrl             = (ratanumero, time) => infraAPIUrl() + "radat.json?cql_filter=ratanumero='" + ratanumero + "'&" + (time ? 'time=' + time : infraAikavali());
 let ratanumerotUrl            = () => infraAPIUrl() + "radat.json?propertyName=ratakilometrit,ratanumero,objektinVoimassaoloaika&" + infraAikavali();
@@ -438,16 +427,16 @@ let eiUrlTilasto = () => etj2APIUrl() + 'ennakkoilmoitukset.json?propertyName=as
 let esUrlTilasto = () => etj2APIUrl() + 'ennakkosuunnitelmat.json?propertyName=luontiaika,tila,tunniste,tyyppi,voimassa&' + ikuisuusAikavali;
 let vsUrlTilasto = () => etj2APIUrl() + 'vuosisuunnitelmat.json?propertyName=alustavakapasiteettivaraus,luontiaika,tila,tunniste,tyo,tyonlaji,voimassa&' + ikuisuusAikavali;
 
-let luotujaInfraUrl = (path, duration, typeNames) => infraAPIUrl(true) + path + '.json?cql_filter=start(objektinVoimassaoloaika)>=start(time)+AND+start(objektinVoimassaoloaika)<end(time)&propertyName=objektinVoimassaoloaika,tunniste&' + (typeNames ? 'typeNames=' + typeNames + '&' : '') + 'duration=' + duration;
-let poistuneitaInfraUrl = (path, duration, typeNames) => infraAPIUrl(true) + path + '.json?cql_filter=end(objektinVoimassaoloaika)>=start(time)+AND+end(objektinVoimassaoloaika)<end(time)&propertyName=objektinVoimassaoloaika,tunniste&' + (typeNames ? 'typeNames=' + typeNames + '&' : '') + 'duration=' + duration;
+let luotujaInfraUrl = (path, duration, typeNames) => baseInfraAPIUrl(true) + path + '.json?cql_filter=start(objektinVoimassaoloaika)>=start(time)+AND+start(objektinVoimassaoloaika)<end(time)&propertyName=objektinVoimassaoloaika,tunniste&' + (typeNames ? 'typeNames=' + typeNames + '&' : '') + 'duration=' + duration;
+let poistuneitaInfraUrl = (path, duration, typeNames) => baseInfraAPIUrl(true) + path + '.json?cql_filter=end(objektinVoimassaoloaika)>=start(time)+AND+end(objektinVoimassaoloaika)<end(time)&propertyName=objektinVoimassaoloaika,tunniste&' + (typeNames ? 'typeNames=' + typeNames + '&' : '') + 'duration=' + duration;
 let infraMuutoksetUrl = (name, path, typeNames) => duration => ({
     nimi:        name,
     luotuja:     luotujaInfraUrl(path, duration, typeNames),
     poistuneita: poistuneitaInfraUrl(path, duration, typeNames)
 });
 
-let luotujaEtj2Url = (path, duration) => etj2APIUrl(true) + path + '.json?cql_filter=start(voimassa)>=start(time)+AND+start(voimassa)<end(time)&propertyName=sisainenTunniste,tunniste,voimassa&duration=' + duration;
-let poistuneitaEtj2Url = (path, duration) => etj2APIUrl(true) + path + '.json?cql_filter=end(voimassa)>=start(time)+AND+end(voimassa)<end(time)&propertyName=sisainenTunniste,tunniste,voimassa&duration=' + duration;
+let luotujaEtj2Url = (path, duration) => baseEtj2APIUrl(true) + path + '.json?cql_filter=start(voimassa)>=start(time)+AND+start(voimassa)<end(time)&propertyName=sisainenTunniste,tunniste,voimassa&duration=' + duration;
+let poistuneitaEtj2Url = (path, duration) => baseEtj2APIUrl(true) + path + '.json?cql_filter=end(voimassa)>=start(time)+AND+end(voimassa)<end(time)&propertyName=sisainenTunniste,tunniste,voimassa&duration=' + duration;
 let etj2MuutoksetUrl = (name, path) => duration => ({
     nimi:        name,
     luotuja:     luotujaEtj2Url(path, duration),
@@ -521,7 +510,7 @@ let lrUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/traff
 let lrSingleUrl        = (tunniste) => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications/'         + tunniste + '/latest.json';
 let lrGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 
-let infraObjektityypitUrl = () => infraAPIUrl(true) + "objektityypit.json";
+let infraObjektityypitUrl = () => baseInfraAPIUrl(true) + "objektityypit.json";
 let hakuUrlitInfra = () => [ infraAPIUrl() + "ratapihapalvelut.json?propertyName=kuvaus,nimi,ratakmsijainnit,sahkokeskus.sahkokeskustyyppi,tunniste,tyyppi"
                            , infraAPIUrl() + "toimialueet.json?propertyName=nimi,rttunnusvali,tunniste,valit.ratakmvali"
                            , infraAPIUrl() + "tilirataosat.json?propertyName=nimi,numero,ratakmvalit,tunniste"
@@ -587,7 +576,7 @@ let esTilat = ['hyväksytty', 'lähetetty', 'lisätietopyyntö', 'luonnos', 'per
 let vsTilat = ['alustava', 'toteutuu', 'tehty', 'poistettu', 'vuosiohjelmissa (tila poistunut käytöstä)', 'käynnissä (tila poistunut käytöstä)'];
 let loTilat = ['aktiivinen', 'poistettu'];
 
-if (onkoSeed) {
+if (onkoSeed()) {
     let seed = urls => {
         if (urls.length > 0) {
             log("seedataan", urls[0]);
@@ -636,7 +625,7 @@ window.add  = (obj, name,  f) => obj.add(name,   loggingDelegate(f));
 
 let luoDatasource = (type, urlF, f) => {
     let ds = new am4core.DataSource();
-    if (!onkoSeed) {
+    if (!onkoSeed()) {
         ds.url = urlF();
         add(ds.adapter, "url", () => urlF());
     }
@@ -691,29 +680,32 @@ let onkoLR    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.7\.2\.
 let onkoWKT = str => str && str.match && str.match(/^(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)(.*)$/);
 
 let luoInfraAPIUrl = (str, time) => {
+    return withTime(luoInfraAPIUrl_(str), time);
+}
+let luoInfraAPIUrl_ = str => {
     let m = onkoInfraOID(str);
     if (m) {
-        return infraAPIUrl()+ m[0] + '.json?' + (time ? 'time=' + time : infraAikavali());
+        return infraAPIUrl()+ m[0] + '.json';
     }
     m = onkoRatakmSijainti(str);
     if (m) {
-        return ratakmSijaintiUrl(m[1], m[2], m[3], time);
+        return ratakmSijaintiUrl(m[1], m[2], m[3]);
     }
     m = onkoRatakmVali(str);
     if (m) {
-        return ratakmValiUrl(m[1], m[2], m[3], m[4], m[5], time);
+        return ratakmValiUrl(m[1], m[2], m[3], m[4], m[5]);
     }
     m = onkoRatanumero(str);
     if (m) {
-        return ratanumeroUrl(m[1], time);
+        return ratanumeroUrl(m[1]);
     }
     m = onkoPmSijainti(str);
     if (m) {
-        return pmSijaintiUrl(m[1],m[2],m[3], time);
+        return pmSijaintiUrl(m[1],m[2],m[3]);
     }
     m = onkoReitti(str);
     if (m) {
-        return reittiUrl(m[1], (m[2] ? m[2].split('=>').filter(x => x != '') : []), m[3], time);
+        return reittiUrl(m[1], (m[2] ? m[2].split('=>').filter(x => x != '') : []), m[3]);
     }
     m = onkoKoordinaatti(str);
     if (m) {
@@ -728,11 +720,11 @@ let luoInfraAPIUrl = (str, time) => {
             // crs:84
             srs = 'srsName=crs:84';
         }
-        return koordinaattiUrl(m[1] + ',' + m[2],  srs, time);
+        return koordinaattiUrl(m[1] + ',' + m[2],  srs);
     }
     m = onkoTREXOID(str);
     if (m) {
-        return infraAPIUrl() + m[0] + '.json?' + (time ? 'time=' + time : infraAikavali());
+        return infraAPIUrl() + m[0] + '.json';
     }
 }
 
@@ -743,7 +735,7 @@ let luoEtj2APIUrl = (str, time) => {
     }
     m = onkoJeti(str);
     if (m) {
-        return etj2APIUrl(true) + m[0] + '.json?' + (time ? 'time=' + time : '');
+        return baseEtj2APIUrl(true) + m[0] + '.json?' + (time ? 'time=' + time : '');
     }
 }
 

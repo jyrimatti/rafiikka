@@ -414,6 +414,7 @@ var connect = function() {
                                             xhr.setRequestHeader("Content-type", "application/json");
                                             xhr.send(JSON.stringify({"tag": "Duplicate", "contents": [batch[2], expectedBatch]}));
                                             return JSON.parse(xhr.response);})();
+                                        throw new Error("Duplicate");
                                     }
                                     results = [];
                                     callbacksToFree = [];
