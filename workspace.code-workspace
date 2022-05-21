@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../jsaddle"
+		},
+		{
+			"path": "../servant-client-js"
 		}
 	],
 	"settings": {}

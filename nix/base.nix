@@ -1,8 +1,8 @@
 let
   f =
     build-or-shell:
-    { chan ? "e426655e91b96030e068aebd19d5e744a15b5de4"
-    , compiler ? "ghc8107"
+    { chan ? "bd971a241687401bba9c1332a4047453e9cc22ec"
+    , compiler ? "ghc902"
     , withHoogle ? false
     , doHoogle ? false
     , doHaddock ? false
@@ -12,17 +12,17 @@ let
     , isJS ? false
     , system ? builtins.currentSystem
     , optimize ? true
-    , shpadoinkle-path ? ../../Shpadoinkle
+    , shpadoinkle-path ? ../../shpadoinkle
     }:
     let
 
 
       # It's a shpadoinkle day
-      shpadoinkle = if shpadoinkle-path != null then shpadoinkle-path else builtins.fetchGit {
+      shpadoinkle = shpadoinkle-path; /*if shpadoinkle-path != null then shpadoinkle-path else builtins.fetchGit {
         url    = https://gitlab.com/platonic/shpadoinkle.git;
         ref    = "ghc8107";
         rev    = "bbc22adb29bcb7f655d54ee8a73be2bd20437c62";
-      };
+      };*/
 
 
       # Get some utilities
@@ -48,15 +48,23 @@ let
         "happy" = pkgs.haskell.lib.dontCheck hsuper.happy;
         "universum" = pkgs.haskell.lib.dontCheck hsuper.universum;
 
+        bsb-http-chunked = pkgs.haskell.lib.dontCheck hsuper.bsb-http-chunked;
+        compactable = pkgs.haskell.lib.dontCheck hsuper.compactable;
+
+        attoparsec = pkgs.haskell.lib.dontCheck hsuper.attoparsec;
+
+        http2 = pkgs.haskell.lib.dontCheck hsuper.http2;
+
         # https://github.com/ghcjs/jsaddle/issues/123
-        jsaddle = pkgs.haskell.lib.overrideCabal hsuper.jsaddle (drv: {
+        /*jsaddle = pkgs.haskell.lib.overrideCabal hsuper.jsaddle (drv: {
            # lift conditional version constraint on ref-tf
            postPatch = ''
              sed -i 's/ref-tf.*,/ref-tf,/' jsaddle.cabal
            '' + (drv.postPatch or "");
-         });
+         });*/
 
-         stm = if isJS then hsuper.stm_2_5_0_2 else hsuper.stm;
+         #stm = if isJS then hsuper.stm_2_5_0_2 else hsuper.stm;
+         stm = hsuper.stm;
       };
 
 
@@ -87,8 +95,9 @@ let
 
       ghcTools = with pkgs.haskell.packages.${compiler};
         [ cabal-install
+          haskell-language-server
           ghcid
-        ] ++ (if isJS then [] else [ stylish-haskell ]);
+        ] ++ (if isJS then [] else [ /*stylish-haskell*/ ]);
 
 
       # We can name him George
