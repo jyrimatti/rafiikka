@@ -14,6 +14,7 @@ import Time (Interval (Interval), parseISO, showISO)
 import State (Mode, AppState (..), Layer (Layer), Degrees (Degrees), Location (Location), TimeSetting (..), defaultRotation, defaultLayers, defaultMode)
 import qualified Data.Text as Text
 import Data.Bitraversable (Bitraversable(bitraverse))
+import Types (Distance (Distance, meters), Pmsijainti (Pmsijainti), Direction (Inc, Dec), Kmetaisyys (Kmetaisyys), OID (OID), SRSName (EPSG3067, CRS84), EITila (EILuonnos, EIHyvaksytty, EIPoistettu), ESTila (ESLuonnos, ESLahetetty, ESLisatietopyynto, ESHyvaksytty, ESPeruttu, ESPoistettu), VSTila (VSTarveTunnistettu, VSVuosiohjelmissa, VSSuunniteltu, VSKaynnissa, VSTehty, VSPoistettu), LOITila (LOIAktiivinen, LOIPoistettu), ElementtiTypeName)
 
 class ToURIFragment a where
   toURIFragment :: a -> Text
@@ -21,6 +22,11 @@ class ToURIFragment a where
 class FromURIFragment a where
   fromURIFragment :: Text -> Maybe a
 
+instance ToURIFragment a => ToURIFragment [a] where
+  toURIFragment = Text.intercalate "," . fmap toURIFragment
+
+instance ToURIFragment a => ToURIFragment (NonEmpty a) where
+  toURIFragment = Text.intercalate "," . toList . fmap toURIFragment
 
 parsePair :: [Text] -> Maybe (Text,Text)
 parsePair [x,y] = Just (x,y)
@@ -35,12 +41,22 @@ instance ToURIFragment Natural where
 instance ToURIFragment Int where
   toURIFragment = show
 
+instance ToURIFragment OID where
+  toURIFragment (OID x) = x
+
+instance ToURIFragment SRSName where
+  toURIFragment EPSG3067 = "epsg:3067"
+  toURIFragment CRS84    = "crs:84"
+
 -- Time.hs
 
 instance FromURIFragment UTCTime where
   fromURIFragment = parseISO
 
 instance ToURIFragment UTCTime where
+  toURIFragment = showISO
+
+instance ToURIFragment CalendarDiffTime where
   toURIFragment = showISO
 
 -- | fromURIFragment
@@ -148,3 +164,42 @@ printLayers AppState{layers} = if layers == defaultLayers then Nothing else Just
 printTimeSetting = Just . toURIFragment . timeSetting
 
 printLocation = fmap toURIFragment . location
+
+
+instance ToURIFragment Kmetaisyys where
+  toURIFragment (Kmetaisyys ratakm Distance{meters}) = toURIFragment ratakm <> "+" <> toURIFragment meters
+
+instance ToURIFragment Direction where
+  toURIFragment Inc = "+"
+  toURIFragment Dec = "+"
+
+instance ToURIFragment Pmsijainti where
+  toURIFragment (Pmsijainti numero suunta Distance{meters}) = toURIFragment numero <> toURIFragment suunta <> toURIFragment meters
+
+instance ToURIFragment EITila where
+  toURIFragment EILuonnos    = "luonnos"
+  toURIFragment EIHyvaksytty = "hyväksytty"
+  toURIFragment EIPoistettu  = "poistettu"
+
+instance ToURIFragment ESTila where
+  toURIFragment ESLuonnos         = "luonnos"
+  toURIFragment ESLahetetty       = "lähetetty"
+  toURIFragment ESLisatietopyynto = "lisätietopyyntö"
+  toURIFragment ESHyvaksytty      = "hyväksytty"
+  toURIFragment ESPeruttu         = "peruttu"
+  toURIFragment ESPoistettu       = "poistettu"
+
+instance ToURIFragment VSTila where
+  toURIFragment VSTarveTunnistettu = "tarve tunnistettu"
+  toURIFragment VSVuosiohjelmissa  = "vuosiohjelmissa"
+  toURIFragment VSSuunniteltu      = "suunniteltu"
+  toURIFragment VSKaynnissa        = "käynnissä"
+  toURIFragment VSTehty            = "tehty"
+  toURIFragment VSPoistettu        = "poistettu"
+
+instance ToURIFragment LOITila where
+  toURIFragment LOIAktiivinen = "aktiivinen"
+  toURIFragment LOIPoistettu  = "poistettu"
+  
+instance ToURIFragment ElementtiTypeName where
+  toURIFragment = toLower <$> show

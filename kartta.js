@@ -854,9 +854,8 @@ let createPopupContent = (tunniste, container) => {
     content.setAttribute('class', 'info');
     container.appendChild(content);
 
-    let time = undefined;
-    let url = onkoInfra(tunniste) || onkoTREX(tunniste) ? luoInfraAPIUrl(tunniste, time) :
-              onkoJeti(tunniste)                        ? luoEtj2APIUrl(tunniste, time) :
+    let url = onkoInfra(tunniste) || onkoTREX(tunniste) ? luoInfraAPIUrl(tunniste) :
+              onkoJeti(tunniste)                        ? luoEtj2APIUrl(tunniste) :
               onkoJuna(tunniste)                        ? luoAikatauluUrl(tunniste) :
               onkoRuma(tunniste)                        ? luoRumaUrl(tunniste) :
               undefined;

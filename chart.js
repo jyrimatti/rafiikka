@@ -983,9 +983,9 @@ am4core.ready(() => {
         viimeisteleEnnakkotietoSeries(seriesLO, loUrlRatanumero, loUrlAikataulupaikka);
         viimeisteleEnnakkotietoSeries(seriesLR, lrUrl, lrUrl);
         viimeisteleEnnakkotietoSeries(seriesRT, rtUrl, rtUrl);
-        viimeisteleEnnakkotietoSeries(seriesEI, eiUrlRatanumero, eiUrlAikataulupaikka);
-        viimeisteleEnnakkotietoSeries(seriesES, esUrlRatanumero, esUrlAikataulupaikka);
-        viimeisteleEnnakkotietoSeries(seriesVS, vsUrlRatanumero, vsUrlAikataulupaikka);
+        viimeisteleEnnakkotietoSeries(seriesEI, () => eiUrlRatanumero, eiUrlAikataulupaikka);
+        viimeisteleEnnakkotietoSeries(seriesES, () => esUrlRatanumero, esUrlAikataulupaikka);
+        viimeisteleEnnakkotietoSeries(seriesVS, () => vsUrlRatanumero, vsUrlAikataulupaikka);
 
         
 
@@ -1102,7 +1102,7 @@ am4core.ready(() => {
                                                 "{paikka.nimi} -> {commercialTrack}<br/>" +
                                                 "🛑:{trainStopping}, $:{commercialStop}";
             add(bullet.adapter, "tooltipHTML", (html,target) => 
-                html + '<br/>' + luoLinkit('grafiikka', target.dataItem.dataContext.paikka.tunniste, target.dataItem.dataContext.paikka.nimi, target.dataItem.dataContext.dateX));
+                html + '<br/>' + luoLinkit('grafiikka', target.dataItem.dataContext.paikka.tunniste, target.dataItem.dataContext.paikka.nimi, [target.dataItem.dataContext.dateX,target.dataItem.dataContext.dateX]));
             bullet.cloneTooltip               = false;
             bullet.propertyFields.fillOpacity = "paaty";
             bullet.states.create("hover").properties.scale = 1.5;

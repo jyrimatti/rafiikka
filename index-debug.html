@@ -397,9 +397,9 @@ var connect = function() {
                                         expectedBatch = batch[2];
                                         if (batch[2] === originalBatch[2]) {
                                             window.__count++;
-                                            if (window.__count > 5) {
+                                            if (window.__count > 500) {
                                                 window.__count = 0;
-                                                console.warn('Got same batch 5 times -> breaking away');
+                                                console.warn('Got same batch 500 times -> breaking away');
                                                 batch[0] = [];
                                                 break;
                                             }

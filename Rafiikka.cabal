@@ -28,10 +28,10 @@ executable Rafiikka
    , extra
    , megaparsec
    , generic-lens
-   , lens-datetime
    , cabal-doctest
    , modern-uri
    , control-bool
+   , time-lens
   
   if impl(ghcjs)
     build-depends: ghcjs-base

@@ -21,7 +21,7 @@ let luoMuutoksetPopup_ = (luotuja, duration, muutokset, title) => {
 
     dragElement(container);
 
-    muutokset.forEach(x => getJson(luotuja ? x(duration).luotuja : x(duration).poistuneita, luoRyhma(container, luotuja, x(duration).nimi)));
+    muutokset.forEach(x => getJson(luotuja ? x.luotuja : x.poistuneita, luoRyhma(container, luotuja, x.nimi)));
 };
 
 let luoRyhma = (container, luotuja, title) => {
@@ -45,7 +45,7 @@ let luoRyhma = (container, luotuja, title) => {
             
             let links = document.createElement("ul");
             li.appendChild(links);
-            links.innerHTML = luoLinkit('muutokset', x.tunniste, x.tunniste, voimassa[0] + '/' + voimassa[0]);
+            links.innerHTML = luoLinkit('muutokset', x.tunniste, x.tunniste, [new Date(voimassa[0]), new Date(voimassa[0])]);
             
             li.appendChild(document.createTextNode(x.tunniste));
             let i = document.createElement('i');

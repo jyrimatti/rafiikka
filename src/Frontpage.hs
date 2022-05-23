@@ -234,9 +234,9 @@ view _ =
             ]
           , div_
             [
-              jsLink_ "luoMuutoksetPopup(document.getElementById('delta4').value === 'true', document.getElementById('delta1').value + 'P' + document.getElementById('delta2').value + document.getElementById('delta3').value, muutoksetInfra)"
+              jsLink_ "luoMuutoksetPopup(document.getElementById('delta4').value === 'true', document.getElementById('delta1').value + 'P' + document.getElementById('delta2').value + document.getElementById('delta3').value, muutoksetInfra('P' + document.getElementById('delta2').value + document.getElementById('delta3').value))"
                 ["ratainfra"]
-            , jsLink_ "luoMuutoksetPopup(document.getElementById('delta4').value === 'true', document.getElementById('delta1').value + 'P' + document.getElementById('delta2').value + document.getElementById('delta3').value, muutoksetEtj2)"
+            , jsLink_ "luoMuutoksetPopup(document.getElementById('delta4').value === 'true', document.getElementById('delta1').value + 'P' + document.getElementById('delta2').value + document.getElementById('delta3').value, muutoksetEtj2('P' + document.getElementById('delta2').value + document.getElementById('delta3').value))"
                 ["ennakkotiedot"]
             ]
           ]

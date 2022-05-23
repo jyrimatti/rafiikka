@@ -26,10 +26,10 @@ import Text.URI (URI)
 import Data.Aeson
 import Language.Javascript.JSaddle ((#), call, global, ToJSVal (toJSVal), jsg, liftJSM, (!), (<#))
 import Amcharts.DataSource (monitor)
-import URI (infraAPIUrl, etj2APIUrl, aikatauluAPIUrl, graphQLUrl, mqttPort, mqttHost, mqttTopic, infraAPIrevisionsUrl, etj2APIrevisionsUrl, withTime, baseInfraAPIUrl, baseEtj2APIUrl)
+import URI (infraAPIUrl, etj2APIUrl, aikatauluAPIUrl, graphQLUrl, mqttPort, mqttHost, mqttTopic, infraAPIrevisionsUrl, etj2APIrevisionsUrl, withTime, baseInfraAPIUrl, baseEtj2APIUrl, ratanumeroUrl, ratanumerotUrl, ratakmSijaintiUrl, pmSijaintiUrl, ratakmValiUrl, liikennepaikkavalitUrl, reittiUrl, reittihakuUrl, vaihdeTyypitUrl, opastinTyypitUrl, ratapihapalveluTyypitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl, elementitUrl, lorajatUrl, raiteenKorkeudetUrl, eiUrlRatanumero, esUrlRatanumero, vsUrlRatanumero, loUrlRatanumero, eiUrlAikataulupaikka, esUrlAikataulupaikka, vsUrlAikataulupaikka, loUrlAikataulupaikka, kunnossapitoalueetMetaUrl, liikenteenohjausalueetMetaUrl, kayttokeskuksetMetaUrl, liikennesuunnittelualueetMetaUrl, ratapihapalvelutUrlTilasto, toimialueetUrlTilasto, tilirataosatUrlTilasto, liikennesuunnittelualueetUrlTilasto, paikantamismerkitUrlTilasto, kilometrimerkitUrlTilasto, radatUrlTilasto, liikennepaikanOsatUrlTilasto, rautatieliikennepaikatUrlTilasto, liikennepaikkavalitUrlTilasto, raideosuudetUrlTilasto, elementitUrlTilasto, raiteensulutUrlTilasto, raiteetUrlTilasto, liikenteenohjauksenrajatUrlTilasto, tunnelitUrlTilasto, sillatUrlTilasto, laituritUrlTilasto, tasoristeyksetUrlTilasto, kayttokeskuksetUrlTilasto, kytkentaryhmatUrlTilasto, asiatUrl, esTyypitUrl, loUrlTilasto, eiUrlTilasto, esUrlTilasto, vsUrlTilasto, muutoksetInfra, muutoksetEtj2)
 import JSDOM (currentWindow)
 import Types
-import Time (startOfTime, endOfTime, roundToPreviousDay, roundToPreviousMonth)
+import Time (startOfTime, endOfTime, roundToPreviousDay, roundToPreviousMonth, intervalsIntersect, limitInterval, toISOStringNoMillis)
 import URISerialization (fromURIFragment)
 
 main :: IO ()
@@ -59,7 +59,7 @@ app :: JSM ()
 app = do
   enableLogging True
 
-  registerGlobalFunction "onkoSeed" isSeed
+  --registerGlobalFunction "onkoSeed" isSeed
 
   registerGlobalFunctionPure1 "parseInterval" (fromURIFragment @TimeSetting)
   registerGlobalFunctionPure1 "startOfDayUTC" roundToPreviousDay
@@ -67,6 +67,9 @@ app = do
   registerGlobalFunctionPure1 "laajennaAikavali" laajennaAikavali_
   registerGlobalFunctionPure "ikuisuusAlku" startOfTime
   registerGlobalFunctionPure "ikuisuusLoppu" endOfTime
+  registerGlobalFunctionPure2 "intervalsIntersect" intervalsIntersect
+  registerGlobalFunctionPure1 "limitInterval" limitInterval
+  --registerGlobalFunctionPure1 "toISOStringNoMillis" toISOStringNoMillis
 
   registerGlobalFunction "getStates" getStates
   registerGlobalFunction "defaultState" defaultState
@@ -91,6 +94,67 @@ app = do
   registerGlobalFunctionPure "mqttHost" mqttHost
   registerGlobalFunctionPure "mqttPort" mqttPort
   --registerGlobalFunctionPure1 "mqttTopic" mqttTopic
+
+  registerGlobalFunction1 "ratanumeroUrl" ratanumeroUrl
+  registerGlobalFunction "ratanumerotUrl" ratanumerotUrl
+  registerGlobalFunction1 "ratakmSijaintiUrl" ratakmSijaintiUrl
+  registerGlobalFunction1 "pmSijaintiUrl" pmSijaintiUrl
+  registerGlobalFunction1 "ratakmValiUrl" ratakmValiUrl
+  registerGlobalFunction "liikennepaikkavalitUrl" liikennepaikkavalitUrl
+  registerGlobalFunction3 "reittiUrl" reittiUrl
+  registerGlobalFunction3 "reittihakuUrl" reittihakuUrl
+  registerGlobalFunction "ratapihapalveluTyypitUrl" ratapihapalveluTyypitUrl
+  registerGlobalFunction "opastinTyypitUrl" opastinTyypitUrl
+  registerGlobalFunction "vaihdeTyypitUrl" vaihdeTyypitUrl
+  registerGlobalFunction "rautatieliikennepaikatUrl" rautatieliikennepaikatUrl
+  registerGlobalFunction "liikennepaikanOsatUrl" liikennepaikanOsatUrl
+  registerGlobalFunction "raideosuudetUrl" raideosuudetUrl
+  registerGlobalFunction "laituritUrl" laituritUrl
+  registerGlobalFunction "elementitUrl" elementitUrl
+  registerGlobalFunction "lorajatUrl" lorajatUrl
+  registerGlobalFunction1 "raiteenKorkeudetUrl" raiteenKorkeudetUrl
+  registerGlobalFunction1 "eiUrlRatanumero" eiUrlRatanumero
+  registerGlobalFunction1 "esUrlRatanumero" esUrlRatanumero
+  registerGlobalFunction1 "vsUrlRatanumero" vsUrlRatanumero
+  registerGlobalFunction1 "loUrlRatanumero" loUrlRatanumero
+  registerGlobalFunction1 "eiUrlAikataulupaikka" eiUrlAikataulupaikka
+  registerGlobalFunction1 "esUrlAikataulupaikka" esUrlAikataulupaikka
+  registerGlobalFunction1 "vsUrlAikataulupaikka" vsUrlAikataulupaikka
+  registerGlobalFunction1 "loUrlAikataulupaikka" loUrlAikataulupaikka
+  registerGlobalFunction "kunnossapitoalueetMetaUrl" kunnossapitoalueetMetaUrl
+  registerGlobalFunction "liikenteenohjausalueetMetaUrl" liikenteenohjausalueetMetaUrl
+  registerGlobalFunction "kayttokeskuksetMetaUrl" kayttokeskuksetMetaUrl
+  registerGlobalFunction "liikennesuunnittelualueetMetaUrl" liikennesuunnittelualueetMetaUrl
+  registerGlobalFunction "ratapihapalvelutUrlTilasto" ratapihapalvelutUrlTilasto
+  registerGlobalFunction "toimialueetUrlTilasto" toimialueetUrlTilasto
+  registerGlobalFunction "tilirataosatUrlTilasto" tilirataosatUrlTilasto
+  registerGlobalFunction "liikennesuunnittelualueetUrlTilasto" liikennesuunnittelualueetUrlTilasto
+  registerGlobalFunction "paikantamismerkitUrlTilasto" paikantamismerkitUrlTilasto
+  registerGlobalFunction "kilometrimerkitUrlTilasto" kilometrimerkitUrlTilasto
+  registerGlobalFunction "radatUrlTilasto" radatUrlTilasto
+  registerGlobalFunction "liikennepaikanOsatUrlTilasto" liikennepaikanOsatUrlTilasto
+  registerGlobalFunction "rautatieliikennepaikatUrlTilasto" rautatieliikennepaikatUrlTilasto
+  registerGlobalFunction "liikennepaikkavalitUrlTilasto" liikennepaikkavalitUrlTilasto
+  registerGlobalFunction "raideosuudetUrlTilasto" raideosuudetUrlTilasto
+  registerGlobalFunction1 "elementitUrlTilasto" elementitUrlTilasto
+  registerGlobalFunction "raiteensulutUrlTilasto" raiteensulutUrlTilasto
+  registerGlobalFunction "raiteetUrlTilasto" raiteetUrlTilasto
+  registerGlobalFunction "liikenteenohjauksenrajatUrlTilasto" liikenteenohjauksenrajatUrlTilasto
+  registerGlobalFunction "tunnelitUrlTilasto" tunnelitUrlTilasto
+  registerGlobalFunction "sillatUrlTilasto" sillatUrlTilasto
+  registerGlobalFunction "laituritUrlTilasto" laituritUrlTilasto
+  registerGlobalFunction "tasoristeyksetUrlTilasto" tasoristeyksetUrlTilasto
+  registerGlobalFunction "kayttokeskuksetUrlTilasto" kayttokeskuksetUrlTilasto
+  registerGlobalFunction "kytkentaryhmatUrlTilasto" kytkentaryhmatUrlTilasto
+  registerGlobalFunction "asiatUrl" asiatUrl
+  registerGlobalFunction "esTyypitUrl" esTyypitUrl
+  registerGlobalFunction "loUrlTilasto" loUrlTilasto
+  registerGlobalFunction "eiUrlTilasto" eiUrlTilasto
+  registerGlobalFunction "esUrlTilasto" esUrlTilasto
+  registerGlobalFunction "vsUrlTilasto" vsUrlTilasto
+  registerGlobalFunction1 "muutoksetInfra" muutoksetInfra
+  registerGlobalFunction1 "muutoksetEtj2" muutoksetEtj2
+   
 
   addMeta [("charset", "UTF-8")]
   setTitle "Rafiikka"

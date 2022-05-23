@@ -292,7 +292,7 @@ let hakuMuodosta = (str, callback, vainJunat) => {
             m = str.match(/^\(([^)]+)\)\s*([^+]+)\+(\d+)\s*(?:->|-|>|\/)\s*([^+]+)\+(\d+)$/);
             if (m) {
                 let id = generateId();
-                getJson(ratakmValiUrl(m[1], m[2], m[3], m[4], m[5]), data => {
+                getJson(ratakmValiUrl({ratanumero: m[1], alku: {ratakm: m[2], etaisyys: m[3]}, loppu: {ratakm: m[4], etaisyys: m[5]}}), data => {
                     let pm = data.flatMap(x => x.paikantamismerkkivalit.map(muotoilePmv)).join('<br />');
                     document.getElementById(id).innerHTML = (pm ? ' <br />' + pm : '');
                 });

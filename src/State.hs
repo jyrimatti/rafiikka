@@ -10,12 +10,11 @@ import Data.Generics.Labels ()
 import Data.Time ( UTCTime, getCurrentTime, CalendarDiffTime )
 import Time (showISO, parseISO, Interval (Interval), removeDuration, addDuration, roundToPreviousHour, roundToPreviousDay, roundCalendarDiffTimeToPreviousDay)
 import Language.Javascript.JSaddle (new, jsg, ToJSVal (toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, (!), (<#), obj, jsUndefined)
-import Data.Time.Lens ( hours, FlexibleDateTime(flexDT) )
-import Control.Lens ((-~))
 import JSDOM.Types (JSM)
 import Browser (withDebug)
 import Monadic (doFromJSVal, isDefined)
 import Control.Lens.Traversal (both)
+import Data.Time.Lens (modL, hours)
 
 newtype Layer = Layer Text
   deriving (Show, Eq)
@@ -74,7 +73,7 @@ defaultLayers :: [Layer]
 defaultLayers = []
 
 defaultTimeSetting :: IO TimeSetting
-defaultTimeSetting = DurationFrom <$> (roundToPreviousHour . (flexDT.hours -~ 1) <$> getCurrentTime)
+defaultTimeSetting = DurationFrom <$> (roundToPreviousHour . modL hours (subtract 1) <$> getCurrentTime)
                                   <*> pure (fromJust (parseISO "PT4H"))
 
 defaultState :: JSM AppState

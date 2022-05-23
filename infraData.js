@@ -134,32 +134,32 @@ setTimeout(() => {
     on(elementitDS.events, "done", reHandler);
     on(lorajatDS.events,   "done", reHandler);
 
-    var ratapihapalveluTyypit = [];
+    window.ratapihapalveluTyypit = [];
     getJson(ratapihapalveluTyypitUrl(), data => {
         ratapihapalveluTyypit = Object.values(data);
     });
-    var opastintyypit = [];
+    window.opastintyypit = [];
     getJson(opastinTyypitUrl(), data => {
         opastintyypit = Object.values(data);
     });
-    var vaihdetyypit = [];
+    window.vaihdetyypit = [];
     getJson(vaihdeTyypitUrl(), data => {
         vaihdetyypit = Object.values(data);
     });
 
-    var kpalueet = {};
+    window.kpalueet = {};
     getJson(kunnossapitoalueetMetaUrl(), data => {
         kpalueet = data;
     });
-    var ohjausalueet = {};
+    window.ohjausalueet = {};
     getJson(liikenteenohjausalueetMetaUrl(), data => {
         ohjausalueet = data;
     });
-    var kayttokeskukset = {};
+    window.kayttokeskukset = {};
     getJson(kayttokeskuksetMetaUrl(), data => {
         kayttokeskukset = data;
     });
-    var lisualueet = {};
+    window.lisualueet = {};
     getJson(liikennesuunnittelualueetMetaUrl(), data => {
         lisualueet = data;
     });
