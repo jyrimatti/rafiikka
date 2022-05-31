@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Fetch (
+module Browser.Fetch (
   headJson,
   getJson,
   postJson
@@ -9,13 +9,12 @@ module Fetch (
 
 import Universum
 import Text.URI (URI, render)
-import Yleiset (DataType)
 import Language.Javascript.JSaddle (JSM, JSString, JSVal, jsg5)
 import FFI (function1)
 import Data.Aeson.Types (FromJSON, Value, fromJSON, Result (Success, Error), ToJSON (toJSON))
 import Data.Text (pack)
-import Amcharts.DataSource (progressStart, progressEnd)
-import Browser (withDebug)
+import Amcharts.DataSource (progressStart, progressEnd, DataType)
+import Browser.Browser (withDebug)
 
 headJson :: FromJSON a => DataType -> URI -> Maybe JSVal -> (Text -> JSM ()) -> (a -> JSM ()) -> JSM ()
 headJson = fetchJson "HEAD" (Nothing :: Maybe ())

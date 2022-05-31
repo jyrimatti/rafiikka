@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 
-module Browser (
+module Browser.Browser (
     getElementById,
     setTimeout,
     debug,

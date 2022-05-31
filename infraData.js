@@ -1,11 +1,11 @@
 setTimeout(() => {
-    window.ratanumerotDS = luoDatasource("Ratanumerot", ratanumerotUrl, (ret, x) => {
+    window.ratanumerotDS = luoDatasource(["Infra", "Rata"], ratanumerotUrl, (ret, x) => {
         let kilometrit = x.ratakilometrit.flat();
         ret[x.ratanumero] = [Math.min.apply(Math, kilometrit)*1000,
                             Math.max.apply(Math, kilometrit)*1000+1000];
     });
 
-    window.liikennepaikkavalitDS = luoDatasource("Liikennepaikkavalit", liikennepaikkavalitUrl, (ret, x) => {
+    window.liikennepaikkavalitDS = luoDatasource(["Infra", "Liikennepaikkavali"], liikennepaikkavalitUrl, (ret, x) => {
         ret[x.tunniste] = {
             alkuliikennepaikka:  x.alkuliikennepaikka,
             loppuliikennepaikka: x.loppuliikennepaikka,
@@ -14,7 +14,7 @@ setTimeout(() => {
         };
     });
 
-    window.rautatieliikennepaikatDS = luoDatasource("Rautatieliikennepaikat", rautatieliikennepaikatUrl, (ret, x) => {
+    window.rautatieliikennepaikatDS = luoDatasource(["Infra", "Rautatieliikennepaikka"], rautatieliikennepaikatUrl, (ret, x) => {
         ret[x.tunniste] = {
             tunniste:        x.tunniste,
             ratakmSijainnit: x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti != null ? [x.virallinenRatakmsijainti] : []),
@@ -31,7 +31,7 @@ setTimeout(() => {
         };
     });
 
-    window.liikennepaikanOsatDS = luoDatasource("LiikennepaikanOsat", liikennepaikanOsatUrl, (ret, x) => {
+    window.liikennepaikanOsatDS = luoDatasource(["Infra", "LiikennepaikanOsa"], liikennepaikanOsatUrl, (ret, x) => {
         ret[x.tunniste] = {
             tunniste:        x.tunniste,
             ratakmSijainnit: x.muutRatakmsijainnit.concat(x.virallinenRatakmsijainti ? [x.virallinenRatakmsijainti] : []),
@@ -56,7 +56,7 @@ setTimeout(() => {
         };
     });
 
-    window.raideosuudetDS = luoDatasource("Raideosuudet", raideosuudetUrl, (ret, x) => {
+    window.raideosuudetDS = luoDatasource(["Infra","Raideosuus"], raideosuudetUrl, (ret, x) => {
         ret[x.tunniste[0].tunniste] = {
             tunniste:        x.tunniste,
             ratakmSijainnit: [],
@@ -73,7 +73,7 @@ setTimeout(() => {
         };
     });
 
-    window.laituritDS = luoDatasource("Laiturit", laituritUrl, (ret, x) => {
+    window.laituritDS = luoDatasource(["Infra","Laituri"], laituritUrl, (ret, x) => {
         ret[x.tunniste[0].tunniste] = {
             tunniste:        x.tunniste,
             ratakmSijainnit: [],
@@ -90,7 +90,7 @@ setTimeout(() => {
         };
     });
 
-    window.elementitDS = luoDatasource("Elementit", elementitUrl, (ret, x) => {
+    window.elementitDS = luoDatasource(["Infra","Elementti"], elementitUrl, (ret, x) => {
         ret[x.tunniste] = {
             tunniste:        x.tunniste,
             nimi:            x.nimi,
@@ -99,7 +99,7 @@ setTimeout(() => {
         };
     });
 
-    window.lorajatDS = luoDatasource("LiikenteenohjauksenRajat", lorajatUrl, (ret, x) => {
+    window.lorajatDS = luoDatasource(["Infra","LiikenteenohjauksenRaja"], lorajatUrl, (ret, x) => {
         ret[x.tunniste] = {
             tunniste:        x.tunniste,
             nimi:            'Liikenteenohjauksen raja',

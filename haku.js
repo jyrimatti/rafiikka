@@ -1,6 +1,6 @@
 
 setTimeout(() => {
-    window.objektityypitDS = luoDatasource("Objektityypit", infraObjektityypitUrl, (ret, x) => {
+    window.objektityypitDS = luoDatasource(["Infra", "Objektityyppi"], infraObjektityypitUrl, (ret, x) => {
         ret[x.tyyppinumero] = {fi: x.nimi, en: x.name};
     });
     objektityypitDS.load();
@@ -13,9 +13,9 @@ setTimeout(() => {
             ret.hakudata.push(x);
         }
     };
-    window.hakuUrlitInfraDS = hakuUrlitInfra()                   .map( (url,i) => luoDatasource("Haku-Infra:" + i, () => url, hakudataHandler));
-    window.hakuUrlitEtj2DS  = hakuUrlitEtj2()                    .map( (url,i) => luoDatasource("Haku-Etj2:" + i,  () => url, hakudataHandler));
-    window.hakuUrlitRumaDS  = hakuUrlitRT().concat(hakuUrlitLR()).map( (url,i) => luoDatasource("Haku-Ruma:" + i,  () => url, hakudataHandler));
+    window.hakuUrlitInfraDS = hakuUrlitInfra().map( (url,i) => luoDatasource(["Search","Infra",i], () => url, hakudataHandler));
+    window.hakuUrlitEtj2DS  = hakuUrlitEtj2() .map( (url,i) => luoDatasource(["Search","Jeti",i],  () => url, hakudataHandler));
+    window.hakuUrlitRumaDS  = hakuUrlitRuma   .map( (url,i) => luoDatasource(["Search","Ruma",i],  () => url, hakudataHandler));
 }, 100);
 
 let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) => {
@@ -40,7 +40,7 @@ let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) =
                 let tunniste = item.tunniste;
                 let reitti = onkoReitti(item.tunniste);
                 if (reitti) {
-                    reitti = [reitti[1]].concat(reitti[2] ? reitti[2].split('=>').filter(x => x != '') : []).concat(reitti[3]);
+                    reitti = [reitti.start].concat(reitti.legs.filter(x => x != '')).concat([reitti.end]);
                     reitti = reitti.map(x => !x ? x : Object.values(aikataulupaikatDS.data)
                                                             .filter(y => x == y.tunniste || ''+x == y.uicKoodi || y.lyhenne && x.toLowerCase() == y.lyhenne.toLowerCase() || y.nimi && x.toLowerCase() == y.nimi.toLowerCase())
                                                             .map(x => x.tunniste)
@@ -259,7 +259,7 @@ let hakuMuodosta = (str, callback, vainJunat) => {
                 }
 
                 let id = generateId();
-                getJson(koordinaattiUrl(m[1] + ',' + m[2], srs), data => {
+                getJson(koordinaattiUrl([m[1], m[2]], srs), data => {
                     let rkm = data.flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
                     let pm  = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
                     document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '') + (pm ? ' <br />' + pm : '');
@@ -321,7 +321,7 @@ let hakuMuodosta = (str, callback, vainJunat) => {
                     luokka:     'Infra',
                     ryhma:      'Linkit',
                     tunniste:   str,
-                    nimi:       'Kaikki reitit ' + m[1] + (m[2] ? ' ' + m[2].split('=>').join(' => ') : '') + ' => ' + m[3],
+                    nimi:       'Kaikki reitit ' + m.start + (m.legs.length > 0 ? ' ' + m.legs.join(' => ') : '') + ' => ' + m.end,
                     score:      91000
                 });
             }
@@ -402,8 +402,8 @@ let hakuMuodosta = (str, callback, vainJunat) => {
                 ret.push({
                     luokka:   'Geometria',
                     ryhma:    'Geometria',
-                    tunniste: m[0],
-                    nimi:     m[1],
+                    tunniste: str,
+                    nimi:     m,
                     score:    100000
                 });
             }
@@ -540,7 +540,7 @@ let osuuko_ = matchers => value => {
                 return m && m[0] == m.input ? 1000 : 0;
             } else if (oid) {
                 // oid vaaditaan exact match
-                let m = oid[1].match(matcher);
+                let m = subsystemId(oid).match(matcher);
                 return m && m[0] == m.input ? 200 : 0;
             } else {
                 // muussa tapauksessa säädetään osumatarkkuutta sen mukaan miten iso osa mätsäsi

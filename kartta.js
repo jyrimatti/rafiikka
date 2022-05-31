@@ -215,7 +215,7 @@ let junaLayer = (map, tunniste) => {
 
     setInterval(paivitaYksikot(layer, map), 1000);
     let juna = onkoJuna(tunniste);
-    junasijainnitPaalle({departureDate: juna[1], trainNumber: juna[2]});
+    junasijainnitPaalle(juna);
     return layer;
 }
 
@@ -675,7 +675,7 @@ let lisaaKartalle = map => tunniste => {
         onkoES(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, 'laskennallinenKarttapiste,tila,tunniste,voimassa', esStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
         onkoVS(tunniste)                     ? newVectorLayerNoTile(luoEtj2APIUrl(tunniste), tunniste, tunniste, tunniste, undefined, 'laskennallinenKarttapiste,tila,tunniste,voimassa', vsStyle, undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
         onkoInfra(tunniste) || onkoTREX(tunniste) ? newVectorLayerNoTile(luoInfraAPIUrl(tunniste), tunniste, tunniste, tunniste, undefined, undefined, resolveStyle(tunniste), undefined, undefined, map.kaavio, map.ajanhetki, map.aikavali) :
-        wkt ? wktLayer(tunniste, wkt[1]) :
+        wkt ? wktLayer(tunniste, wkt) :
         undefined;
     if (preselectLayer) {
         preselectLayer.setVisible(true);
@@ -784,7 +784,7 @@ let select = map => {
             });
             header.appendChild(detach);
 
-            if (onkoRaide(tunniste)) {
+            if (onkoInfraOID(tunniste) == 44) {
                 let raide = document.createElement("div");
                 raide.setAttribute("class", "raidekorkeudet");
                 raide.innerText = '⦧';

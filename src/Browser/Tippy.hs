@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Tippy (
+module Browser.Tippy (
     setContent, tippy, interactive, placement, offset, content
 ) where
 

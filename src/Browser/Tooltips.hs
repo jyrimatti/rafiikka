@@ -1,18 +1,18 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
 
-module Tooltips (
+module Browser.Tooltips (
     initTooltips
 ) where
 
 import Universum
 import Language.Javascript.JSaddle (JSM, jsg2, Object, (<#), JSVal, (!), obj, FromJSVal (fromJSVal), JSString)
 import FFI (function1)
-import MutationObserver (onTitleChange)
+import Browser.MutationObserver (onTitleChange)
 import JSDOM.Generated.Element (removeAttribute)
 import JSDOM.Types as JSDOM (Element)
-import Tippy (setContent, tippy, interactive, placement, offset, content)
+import Browser.Tippy (setContent, tippy, interactive, placement, offset, content)
 import JSDOM.Generated.ParentNode (querySelectorAll)
-import Browser (withDebug)
+import Browser.Browser (withDebug)
 
 titleUpdater :: JSDOM.Element -> JSVal -> JSM ()
 titleUpdater reference _ = withDebug "titleUpdater" $ do

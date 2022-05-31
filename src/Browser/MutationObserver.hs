@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# LANGUAGE TypeApplications #-}
 
-module MutationObserver (
+module Browser.MutationObserver (
     onTitleChange,
     onStyleChange,
     onAttributeMutation

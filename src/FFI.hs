@@ -27,7 +27,7 @@ module FFI(
 
 import Universum
 #ifndef ghcjs_HOST_OS
-import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, fun, function, Function (Function), call, eval, global, (<#), JSCallAsFunction, valToObject, MakeObject, JSString, isTruthy, ghcjsPure, (#), jsg, JSVal, MakeArgs)
+import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, fun, function, Function (Function), call, eval, global, (<#), JSCallAsFunction, valToObject, MakeObject, JSString, ghcjsPure, (#), jsg, JSVal, MakeArgs)
 import Data.Data (typeOf)
 import GHCJS.Foreign (jsTypeOf)
 #else
@@ -60,24 +60,6 @@ deserializationFailure :: JSVal -> Text -> JSM (Maybe a)
 deserializationFailure val resultType = do
   _ <- deserializationFailure_ val resultType
   pure Nothing
-
-
-
-isArray :: JSVal -> JSM Bool
-isArray = ghcjsPure . isTruthy <=< jsg @JSString "Array" # ("isArray" :: JSString)
-
-tryArray :: FromJSVal a => Text -> JSVal -> JSM (Maybe [a])
-tryArray resultType jsval = do
-    isArr <- isArray jsval
-    if isArr
-      then fromJSValListOf jsval
-      else deserializationFailure jsval resultType
-
-instance FromJSVal a => FromJSVal (NonEmpty a) where
-  fromJSVal = fmap (fmap fromList) . tryArray "NonEmpty"
-
-instance ToJSVal a => ToJSVal (NonEmpty a) where
-  toJSVal = toJSVal . toList
 
 -- Procedures don't return a value, and can thus be executed asynchronously
 -- TODO: asyncFunction does not seem to work for non-GHCJS, so have to separate non-GHCJS to use a synchronous approach for now...

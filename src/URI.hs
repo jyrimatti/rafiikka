@@ -5,24 +5,27 @@
 {-# LANGUAGE DataKinds #-}
 module URI where
 
-import Universum hiding (local)
+import Universum hiding (local, state)
 import Text.URI (mkURI, URI, mkPathPiece, mkQueryKey, mkQueryValue, QueryParam (QueryParam, QueryFlag), unRText, RText, RTextLabel (PathPiece))
 import Text.URI.Lens (uriPath, uriQuery, uriTrailingSlash)
-import Text.URI.QQ
-import Browser
+import Text.URI.QQ ( uri )
+import Browser.Browser ( isLocal, isSafari, isSeed )
 import JSDOM.Types (JSM)
 import JSDOM (currentWindow)
 import Language.Javascript.JSaddle ((!), create, (<#))
 import Language.Javascript.JSaddle.Classes (FromJSVal(fromJSVal))
 import Data.Maybe (fromJust)
-import Types (Train (Train, departureDate, trainNumber), Revisions (infra, etj2), Ratakmetaisyys (Ratakmetaisyys, kmetaisyys, ratanumero), Pmsijainti, Ratakmvali (Ratakmvali), OID, SRSName (CRS84), EITila, ESTila, VSTila, ElementtiTypeName (..))
+import Types (Train (Train, departureDate, trainNumber), Revisions (infra, etj2), Ratakmetaisyys (Ratakmetaisyys, kmetaisyys, ratanumero), Pmsijainti, Ratakmvali (Ratakmvali), OID, SRSName (CRS84), Point)
 import URISerialization (ToURIFragment(toURIFragment))
 import Time (Interval (Interval), roundToPreviousMonth, roundToNextMonth, roundToPreviousDay, infiniteInterval)
 import StateAccessor (getMainState)
 import State (AppState(AppState, timeSetting), roundTimeSettingToPreviousDay, TimeSetting (Span, Instant), toInterval)
 import Control.Lens (filtered, folded)
 import Data.Time (CalendarDiffTime)
-import Language.Javascript.JSaddle.Value
+import Language.Javascript.JSaddle.Value( ToJSVal(toJSVal), JSString )
+import Jeti.Types ( VSTila, ESTila, EITila )
+import Infra.Types ( ElementtiTypeName(..) )
+import Ruma.Types ( RTTila )
 
 aikatauluAPIUrl :: URI
 aikatauluAPIUrl = [uri|https://rata.digitraffic.fi/api/v1/trains/|]
@@ -70,6 +73,9 @@ baseInfraAPIUrl skipRevision = baseUrl "infra" (if skipRevision then Nothing els
 baseEtj2APIUrl :: Bool -> JSM URI
 baseEtj2APIUrl skipRevision = baseUrl "jeti" (if skipRevision then Nothing else Just etj2)
 
+baseRumaAPIUrl :: JSM URI
+baseRumaAPIUrl = mkURI "https://rata.digitraffic.fi/api/v1/"
+
 -- Infra-API URL with time
 infraAPIUrl :: JSM URI
 infraAPIUrl = over uriQuery . (<>) <$> infraInterval <*> baseInfraAPIUrl False
@@ -77,6 +83,10 @@ infraAPIUrl = over uriQuery . (<>) <$> infraInterval <*> baseInfraAPIUrl False
 -- Etj2-API URL with time
 etj2APIUrl :: JSM URI
 etj2APIUrl = over uriQuery . (<>) <$> etj2Interval <*> baseEtj2APIUrl False
+
+-- Ruma-API URL with time
+rumaAPIUrl :: JSM URI
+rumaAPIUrl = over uriQuery . (<>) <$> rumaInterval <*> baseRumaAPIUrl
 
 infraAPIrevisionsUrl :: JSM URI
 infraAPIrevisionsUrl = over uriQuery (<> mkParam "count" (1 :: Int)) .
@@ -115,10 +125,13 @@ path = over uriPath . flip (<>) . mkPathPiece
 -- >>> render . asJson <$> mkURI "http://foo.bar/baz.html"
 -- "http://foo.bar/baz.html.json"
 asJson :: URI -> URI
-asJson = set uriTrailingSlash False . over uriPath modLast
+asJson = withExtension "json"
+
+withExtension :: Text -> URI -> URI
+withExtension ext = set uriTrailingSlash False . over uriPath modLast
   where modLast :: [RText 'PathPiece] -> [RText 'PathPiece]
         modLast [] = []
-        modLast [x] = (mkPathPiece . (<> ".json") . unRText) x
+        modLast [x] = (mkPathPiece . (<> "." <> ext) . unRText) x
         modLast (x:xs) = x : modLast xs
 
 infraAPIJson :: (URI -> URI) -> JSM URI
@@ -127,11 +140,17 @@ infraAPIJson f =  (`fmap` infraAPIUrl) $ asJson . f
 etj2APIJson :: (URI -> URI) -> JSM URI
 etj2APIJson f =  (`fmap` etj2APIUrl) $ asJson . f
 
+rumaAPIJson :: (URI -> URI) -> JSM URI
+rumaAPIJson f =  (`fmap` rumaAPIUrl) $ asJson . f
+
 cqlFilter :: Text -> URI -> URI
 cqlFilter = over uriQuery . (<>) . mkParam "cql_filter"
 
 propertyName :: Text -> URI -> URI
 propertyName = over uriQuery . (<>) . mkParam "propertyName"
+
+state :: Text -> URI -> URI
+state = over uriQuery . (<>) . mkParam "state"
 
 typeNames :: Text -> URI -> URI
 typeNames = over uriQuery . (<>) . mkParam "typeNames"
@@ -640,3 +659,133 @@ etj2MuutoksetUrl name p dur = do
     luotuja <- luotujaEtj2Url p dur
     poistuneita <- poistuneitaEtj2Url p dur
     pure $ Muutokset name luotuja poistuneita
+
+
+
+
+
+junasijainnitUrl :: URI
+junasijainnitUrl = [uri|https://rata.digitraffic.fi/api/v1/train-locations/latest/|]
+
+junasijainnitGeojsonUrl :: URI
+junasijainnitGeojsonUrl = [uri|https://rata.digitraffic.fi/api/v1/train-locations/latest.geojson/|]
+
+
+
+
+koordinaattiUrl :: Point -> Maybe SRSName -> JSM URI
+koordinaattiUrl c srs = infraAPIJson $
+    path "koordinaatit" .
+    path (toURIFragment c) .
+    maybe id srsName srs
+
+ratakmMuunnosUrl :: Point -> JSM URI
+ratakmMuunnosUrl c = infraAPIJson $
+    path "koordinaatit" .
+    path (toURIFragment c) .
+    propertyName "ratakmsijainnit,haetunDatanVoimassaoloaika" .
+    srsName CRS84
+
+koordinaattiMuunnosUrl :: Ratakmetaisyys -> JSM URI
+koordinaattiMuunnosUrl (Ratakmetaisyys ratanumero kme) = (`fmap` infraAPIUrl) $ withExtension "geojson" .
+    path "radat" .
+    path (toURIFragment ratanumero) .
+    path (toURIFragment kme) .
+    propertyName "geometria,haetunDatanVoimassaoloaika" .
+    srsName CRS84
+
+
+
+rtUrl :: Maybe RTTila -> JSM URI
+rtUrl tila = rumaAPIJson $
+    path "trackwork-notifications" .
+    maybe id (state . toURIFragment) tila
+
+rtGeojsonUrl :: Maybe RTTila -> JSM URI
+rtGeojsonUrl = fmap (withExtension "geojson") . rtUrl
+
+rtSingleUrl :: OID -> JSM URI
+rtSingleUrl tunniste = rumaAPIJson $
+    path "trackwork-notifications" .
+    path (toURIFragment tunniste) .
+    path "latest"
+
+lrUrl :: Maybe RTTila -> JSM URI
+lrUrl tila = rumaAPIJson $
+    path "trafficrestriction-notifications" .
+    maybe id (state . toURIFragment) tila
+
+lrGeojsonUrl :: Maybe RTTila -> JSM URI
+lrGeojsonUrl = fmap (withExtension "geojson") . rtUrl
+
+lrSingleUrl :: OID -> JSM URI
+lrSingleUrl tunniste = rumaAPIJson $
+    path "trafficrestriction-notifications" .
+    path (toURIFragment tunniste) .
+    path "latest"
+
+infraObjektityypitUrl :: JSM URI
+infraObjektityypitUrl = (`fmap` baseInfraAPIUrl True) $ asJson .
+    path "objektityypit"
+
+hakuUrlitInfra :: JSM [URI]
+hakuUrlitInfra = traverse infraAPIJson [
+    path "ratapihapalvelut" . propertyName "kuvaus,nimi,ratakmsijainnit,sahkokeskus.sahkokeskustyyppi,tunniste,tyyppi"
+  , path "toimialueet" . propertyName "nimi,rttunnusvali,tunniste,valit.ratakmvali"
+  , path "tilirataosat" . propertyName "nimi,numero,ratakmvalit,tunniste"
+  , path "liikennesuunnittelualueet" . propertyName "nimi,tunniste"
+  , path "paikantamismerkit" . propertyName "liikennepaikkavalit,numero,ratakmsijainnit,rautatieliikennepaikka,tunniste"
+  , path "kilometrimerkit" . propertyName "ratakm,ratanumero,tunniste"
+  , path "radat" . propertyName "ratanumero,tunniste"
+  , path "liikennepaikanosat" . propertyName "kuljettajaAikatauluNimi,liikennepaikka,lyhenne,maakoodi,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti"
+  , path "rautatieliikennepaikat" . propertyName "kuljettajaAikatauluNimi,lyhenne,muutRatakmsijainnit,nimi,paaristeysasema,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti"
+  , path "liikennepaikkavalit" . propertyName "alkuliikennepaikka,loppuliikennepaikka,tunniste"
+  , path "raideosuudet" . propertyName "kaukoOhjausTunnisteet,liikennepaikkavalit,rautatieliikennepaikat,tunniste,turvalaiteNimi,turvalaiteRaide,tyyppi,uicKoodi"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "akselinlaskija"
+  , path "elementit" . propertyName "baliisi,kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "baliisi"
+  , path "elementit" . propertyName "kuumakayntiIlmaisin,kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "kuumakayntiilmaisin"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "liikennepaikanraja"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,opastin,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "opastin"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "puskin"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,pyoravoimailmaisin,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "pyoravoimailmaisin"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "raideeristys"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,pysaytyslaite,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "pysaytyslaite"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,rfidLukija,tunniste,tyyppi" . typeNames "rfidlukija"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,ryhmityseristin,tunniste,tyyppi" . typeNames "ryhmityseristin"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,sahkoistysPaattyy,tunniste,tyyppi" . typeNames "sahkoistyspaattyy"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "seislevy"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi,vaihde" . typeNames "vaihde"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi,virroitinvalvontakamera" . typeNames "virroitinvalvontakamera"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "erotusjakso"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "erotuskentta"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "maadoitin"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "tyonaikaineneristin"
+  , path "elementit" . propertyName "kaantopoyta,kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "kaantopoyta"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,pyoraprofiiliMittalaite,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "pyoraprofiilimittalaite"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,telivalvonta,tunniste,tyyppi" . typeNames "telivalvonta"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "erotin"
+  , path "elementit" . propertyName "kuvaus,liikennepaikkavali,nimi,ratakmsijainnit,rautatieliikennepaikat,tunniste,tyyppi" . typeNames "tasoristeysvalojenpyoratunnistin"
+  , path "raiteensulut" . propertyName "kasinAsetettava,nimi,tunniste,varmuuslukittu"
+  , path "raiteet" . propertyName "kaupallinenNumero,kayttotarkoitukset,kuvaus,liikennepaikkavalit,linjaraidetunnukset,nopeusrajoitukset,rautatieliikennepaikat,tunniste,tunnus"
+  , path "liikenteenohjauksenrajat" . propertyName "ensimmaisenLuokanAlueidenRaja,leikkaukset.ratakmsijainnit,tunniste"
+  , path "tunnelit" . propertyName "nimi,tunniste"
+  , path "sillat" . propertyName "kayttotarkoitus,nimi,ratakmvalit,siltakoodi,tunniste"
+  , path "laiturit" . propertyName "kaupallinenNumero,kuvaus,liikennepaikanOsa,ratakmvalit,rautatieliikennepaikka,tunniste,tunnus,uicKoodi"
+  , path "tasoristeykset" . propertyName "liikennepaikkavalit,nimi,rautatieliikennepaikat,tielaji,tunniste,tunnus,varoituslaitos,virallinenSijainti"
+  , path "kytkentaryhmat" . propertyName "numero,rautatieliikennepaikat,tunniste"
+  ]
+
+hakuUrlitEtj2 :: JSM [URI]
+hakuUrlitEtj2 = traverse etj2APIJson [
+      path "vuosisuunnitelmat" . propertyName "alustavakapasiteettivaraus,liikennehaitta,liikennejarjestelyt,liikennerajoitteenLisatiedot,liikennerajoitteet,myohastymisvaikutus,sisainenTunniste,tila,tunniste,tyo,tyonlaji,tyonLisatiedot,urakoitsija.urakoitsija,voimassa"
+    , path "ennakkosuunnitelmat" . propertyName "kuvaus,organisaatio,projektinumerot,sisainenTunniste,tila,tilanLisatiedot,tunniste,tyyppi,tyonosat.alustavaKapasiteettirajoite,tyonosat.nopeusrajoitus,tyonosat.selite,tyonosat.tyyppi,urakoitsija.urakoitsija,voimassa"
+    , path "ennakkoilmoitukset" . propertyName "asia,eivekSelite,muutostyyppi,nopeusrajoitus,sisainenTunniste,suunta,symbolit,tila,tunniste,tyyppi,vekSelite,voimassa"
+    , path "loilmoitukset" . propertyName "sisainenTunniste,tila,toimitustapa,tunniste,tyyppi"
+    ]
+
+hakuUrlitRuma :: [URI]
+hakuUrlitRuma = [
+      [uri|https://rata.digitraffic.fi/api/v1/trackwork-notifications.json|]
+    , [uri|https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json|]
+    ]
+

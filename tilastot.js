@@ -163,7 +163,7 @@ let luoTilastoPopup_ = (nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari
 
     chart.dataSource = new am4core.DataSource();
     initDS(chart.dataSource);
-    monitor(chart.dataSource, "tilasto-" + nimi);
+    monitor(chart.dataSource, ["Statistics", nimi]);
 
     on(chart.dataSource.events, "parseended", ev => {
         logDiff("Parsitaan tilastoja", nimi, () => {

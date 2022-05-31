@@ -72,7 +72,7 @@ let luoRaidePopup_ = tunniste => {
         let dataSource = new am4core.DataSource();
         dataSource.data = [];
         initDS(dataSource);
-        monitor(dataSource, tunniste);
+        monitor(dataSource, [tunniste]);
 
         let korkeudet = new am4charts.LineSeries();
         korkeudet.dataSource           = dataSource;

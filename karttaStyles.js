@@ -258,17 +258,17 @@ let pmStyle = feature => {
 let resolveStyleForFeature = feature => resolveStyle(lueTunniste(feature.getProperties()));
 
 let resolveStyle = tunniste => {
-    let tyyppi = onkoTREX(tunniste);
+    let tyyppi = onkoTREXOID(tunniste);
     if (tyyppi) {
-        if (tyyppi[1] == 15) {
+        if (tyyppi == 15) {
             return siltaStyle;
-        } else if (tyyppi[1] == 17) {
+        } else if (tyyppi == 17) {
             return tunneliStyle;
         }
     }
     tyyppi = onkoInfraOID(tunniste);
     if (tyyppi) {
-        let t = tyyppi[1];
+        let t = tyyppi;
         return t == 44 ? raideStyle :
             t == 39 ? lpStyle : // mites tästä erotetaan alityyppi?
             t == 40 ? lpValiStyle :

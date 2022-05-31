@@ -502,23 +502,23 @@ muutoksetEtj2 = [
     etj2MuutoksetUrl('Vuosisuunnitelmat'  , 'vuosisuunnitelmat')
 ];*/
 
-let junasijainnitUrl        = () => 'https://rata.digitraffic.fi/api/v1/train-locations/latest/';
-let junasijainnitGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/train-locations.geojson/latest/';
+//let junasijainnitUrl        = () => 'https://rata.digitraffic.fi/api/v1/train-locations/latest/';
+//let junasijainnitGeojsonUrl = () => 'https://rata.digitraffic.fi/api/v1/train-locations.geojson/latest/';
 
-let koordinaattiUrl        = (coord, srsName, time) => baseInfraAPIUrl(false) + 'koordinaatit/' + coord + '.json?' + (srsName ? 'srsName=' + srsName + '&' : '') + (time ? 'time=' + time : infraAikavali());
-let ratakmMuunnosUrl       = coord => baseInfraAPIUrl(false) + 'koordinaatit/' + coord + '.json?propertyName=ratakmsijainnit,haetunDatanVoimassaoloaika&srsName=crs:84&' + infraAikavali();
-let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => baseInfraAPIUrl(false) + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.geojson?propertyName=geometria,haetunDatanVoimassaoloaika&srsName=crs:84&' + infraAikavali();
+//let koordinaattiUrl        = (coord, srsName, time) => baseInfraAPIUrl(false) + 'koordinaatit/' + coord[0] + "," + coord[1] + '.json?' + (srsName ? 'srsName=' + srsName + '&' : '') + (time ? 'time=' + time : infraAikavali());
+//let ratakmMuunnosUrl       = coord => baseInfraAPIUrl(false) + 'koordinaatit/' + coord + '.json?propertyName=ratakmsijainnit,haetunDatanVoimassaoloaika&srsName=crs:84&' + infraAikavali();
+//let koordinaattiMuunnosUrl = (ratanumero, ratakm, etaisyys) => baseInfraAPIUrl(false) + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.geojson?propertyName=geometria,haetunDatanVoimassaoloaika&srsName=crs:84&' + infraAikavali();
 
-let rtUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?'    + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
-let rtSingleUrl        = (tunniste) => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications/'         + tunniste + '/latest.json';
-let rtGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
+//let rtUrl              = tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.json?'    + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
+//let rtSingleUrl        = (tunniste) => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications/'         + tunniste + '/latest.json';
+//let rtGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trackwork-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 
-let lrUrl              = () => tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?'    + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
-let lrSingleUrl        = (tunniste) => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications/'         + tunniste + '/latest.json';
-let lrGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
+//let lrUrl              = tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json?'    + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
+//let lrSingleUrl        = (tunniste) => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications/'         + tunniste + '/latest.json';
+//let lrGeojsonUrl       =       tila => 'https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.geojson?' + (tila ? 'state=' + tila + '&' : '') + rumaAikavali();
 
-let infraObjektityypitUrl = () => baseInfraAPIUrl(true) + "objektityypit.json";
-let hakuUrlitInfra = () => [ baseInfraAPIUrl(false) + "ratapihapalvelut.json?propertyName=kuvaus,nimi,ratakmsijainnit,sahkokeskus.sahkokeskustyyppi,tunniste,tyyppi"
+//let infraObjektityypitUrl = () => baseInfraAPIUrl(true) + "objektityypit.json";
+/*let hakuUrlitInfra = () => [ baseInfraAPIUrl(false) + "ratapihapalvelut.json?propertyName=kuvaus,nimi,ratakmsijainnit,sahkokeskus.sahkokeskustyyppi,tunniste,tyyppi"
                            , baseInfraAPIUrl(false) + "toimialueet.json?propertyName=nimi,rttunnusvali,tunniste,valit.ratakmvali"
                            , baseInfraAPIUrl(false) + "tilirataosat.json?propertyName=nimi,numero,ratakmvalit,tunniste"
                            , baseInfraAPIUrl(false) + "liikennesuunnittelualueet.json?propertyName=nimi,tunniste"
@@ -562,14 +562,14 @@ let hakuUrlitInfra = () => [ baseInfraAPIUrl(false) + "ratapihapalvelut.json?pro
                            , baseInfraAPIUrl(false) + "tasoristeykset.json?propertyName=liikennepaikkavalit,nimi,rautatieliikennepaikat,tielaji,tunniste,tunnus,varoituslaitos,virallinenSijainti"
                            , baseInfraAPIUrl(false) + "kayttokeskukset.json?propertyName=nimi,tunniste"
                            , baseInfraAPIUrl(false) + "kytkentaryhmat.json?propertyName=numero,rautatieliikennepaikat,tunniste"
-                           ].map(x => x + '&' + infraAikavali());
-let hakuUrlitEtj2  = () => [ baseEtj2APIUrl(false) + "vuosisuunnitelmat.json?propertyName=alustavakapasiteettivaraus,liikennehaitta,liikennejarjestelyt,liikennerajoitteenLisatiedot,liikennerajoitteet,myohastymisvaikutus,sisainenTunniste,tila,tunniste,tyo,tyonlaji,tyonLisatiedot,urakoitsija.urakoitsija,voimassa"
+                           ].map(x => x + '&' + infraAikavali());*/
+/*let hakuUrlitEtj2  = () => [ baseEtj2APIUrl(false) + "vuosisuunnitelmat.json?propertyName=alustavakapasiteettivaraus,liikennehaitta,liikennejarjestelyt,liikennerajoitteenLisatiedot,liikennerajoitteet,myohastymisvaikutus,sisainenTunniste,tila,tunniste,tyo,tyonlaji,tyonLisatiedot,urakoitsija.urakoitsija,voimassa"
                            , baseEtj2APIUrl(false) + "ennakkosuunnitelmat.json?propertyName=kuvaus,organisaatio,projektinumerot,sisainenTunniste,tila,tilanLisatiedot,tunniste,tyyppi,tyonosat.alustavaKapasiteettirajoite,tyonosat.nopeusrajoitus,tyonosat.selite,tyonosat.tyyppi,urakoitsija.urakoitsija,voimassa"
                            , baseEtj2APIUrl(false) + "ennakkoilmoitukset.json?propertyName=asia,eivekSelite,muutostyyppi,nopeusrajoitus,sisainenTunniste,suunta,symbolit,tila,tunniste,tyyppi,vekSelite,voimassa"
                            , baseEtj2APIUrl(false) + "loilmoitukset.json?propertyName=sisainenTunniste,tila,toimitustapa,tunniste,tyyppi"
-                           ].map(x => x + '&' + etj2Aikavali());
-let hakuUrlitRT    = () => ['https://rata.digitraffic.fi/api/v1/trackwork-notifications.json'];
-let hakuUrlitLR    = () => ['https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json'];
+                           ].map(x => x + '&' + etj2Aikavali());*/
+//let hakuUrlitRT    = () => ['https://rata.digitraffic.fi/api/v1/trackwork-notifications.json'];
+//let hakuUrlitLR    = () => ['https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json'];
 
 let initDS = ds => {
     ds.requestOptions.requestHeaders = [{
@@ -577,11 +577,6 @@ let initDS = ds => {
         "value": "Rafiikka"
     }];
 }
-
-let eiTilat = ['hyväksytty', 'luonnos', 'poistettu'];
-let esTilat = ['hyväksytty', 'lähetetty', 'lisätietopyyntö', 'luonnos', 'peruttu', 'poistettu'];
-let vsTilat = ['alustava', 'toteutuu', 'tehty', 'poistettu', 'vuosiohjelmissa (tila poistunut käytöstä)', 'käynnissä (tila poistunut käytöstä)'];
-let loTilat = ['aktiivinen', 'poistettu'];
 
 if (onkoSeed()) {
     let seed = urls => {
@@ -601,11 +596,10 @@ if (onkoSeed()) {
      .concat(eiTilat.flatMap(tila => [eiUrlRatanumero(tila), eiUrlAikataulupaikka()(tila)]))
      .concat(esTilat.flatMap(tila => [esUrlRatanumero(tila), esUrlAikataulupaikka()(tila)]))
      .concat(vsTilat.flatMap(tila => [vsUrlRatanumero(tila), vsUrlAikataulupaikka()(tila)]))
-     .concat(loTilat.flatMap(tila => [loUrlRatanumero(tila), loUrlAikataulupaikka()(tila)]))
+     .concat(loiTilat.flatMap(tila => [loUrlRatanumero(tila), loUrlAikataulupaikka()(tila)]))
      .concat(hakuUrlitInfra())
      .concat(hakuUrlitEtj2())
-     .concat(hakuUrlitRT())
-     .concat(hakuUrlitLR())
+     .concat(hakuUrlitRuma())
      .concat(muutoksetInfra(document.getElementById('delta1').value + 'P' + document.getElementById('delta2').value + document.getElementById('delta3').value).flatMap(x => [x.luotuja, x.poistuneita]))
      .concat(muutoksetEtj2(document.getElementById('delta1').value + 'P' + document.getElementById('delta2').value + document.getElementById('delta3').value).flatMap(x => [x.luotuja, x.poistuneita]))
      .concat([asiatUrl(), eiUrlTilasto(), esUrlTilasto(), vsUrlTilasto()])
@@ -652,43 +646,42 @@ let luoDatasource = (type, urlF, f) => {
     return ds;
 };
 
-let onkoOID      = str => str && str.match && str.match(/^(?:\d+\.)+(\d+)$/);
-let onkoInfraOID = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.1\.)(\d+)\.([0-9.]+)$/);
-let onkoJetiOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.)(\d+)\.([0-9.]+)$/);
-let onkoRumaOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.7\.)(\d+)\.([0-9.]+)$/);
-let onkoTREXOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.578\.1\.)(\d+)\.([0-9.]+)$/);
+//let onkoOID      = str => str && str.match && str.match(/^(?:\d+\.)+(\d+)$/);
+//let onkoInfraOID = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.1\.)(\d+)\.([0-9.]+)$/);
+//let onkoJetiOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.)(\d+)\.([0-9.]+)$/);
+//let onkoRumaOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.7\.)(\d+)\.([0-9.]+)$/);
+//let onkoTREXOID  = str => str && str.match && str.match(/^(?:1\.2\.246\.578\.1\.)(\d+)\.([0-9.]+)$/);
 
-let onkoKoordinaatti   = str => str && str.match && str.match(/^(\d+)(?:\.\d+)?,[ ]?(\d+)(?:\.\d+)?$/);
-let onkoRatakmSijainti = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)$/);
-let onkoPmSijainti     = str => str && str.match && str.match(/^(\d+)([+-])(\d+)$/);
-let onkoRatakmVali     = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)\s*-\s*(\d+)[+](\d+)$/);
-let onkoRatanumero     = str => str && str.match && !onkoJeti(str) && !onkoRuma(str) && !onkoWKT(str) && str.match(/^\(([a-zA-Z0-9 ]+|[^a-zA-Z0-9 ]{1,6}(?: [^a-zA-Z0-9 ]{1,3})?)\)$/);
-let onkoReitti         = str => str && str.match && str.match(/^(.*?)\s*((?:=>.*?)*\s*)(?:=>)\s*(.*?)$/);
-let onkoRaide          = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.1\.44\.)([0-9.]+)$/);
+//let onkoKoordinaatti   = str => str && str.match && str.match(/^(\d+)(?:\.\d+)?,[ ]?(\d+)(?:\.\d+)?$/);
+//let onkoRatakmSijainti = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)$/);
+//let onkoPmSijainti     = str => str && str.match && str.match(/^(\d+)([+-])(\d+)$/);
+//let onkoRatakmVali     = str => str && str.match && str.match(/^\(([^)]+)\)\s*(\d+)[+](\d+)\s*-\s*(\d+)[+](\d+)$/);
+//let onkoRatanumero     = str => str && str.match && !onkoJeti(str) && !onkoRuma(str) && !onkoWKT(str) && str.match(/^\(([a-zA-Z0-9 ]+|[^a-zA-Z0-9 ]{1,6}(?: [^a-zA-Z0-9 ]{1,3})?)\)$/);
+//let onkoReitti         = str => str && str.match && str.match(/^(.*?)\s*((?:=>.*?)*\s*)(?:=>)\s*(.*?)$/);
+//let onkoRaide          = str => onkoInfraOID(str) == 44
 
-let onkoInfra = str => onkoInfraOID(str) ||
+/*let onkoInfra = str => onkoInfraOID(str) ||
                        onkoReitti(str) ||
                        onkoRatanumero(str) ||
                        onkoRatakmSijainti(str) ||
                        onkoRatakmVali(str) ||
                        onkoKoordinaatti(str) ||
-                       onkoPmSijainti(str);
+                       onkoPmSijainti(str);*/
 
-let onkoJeti  = str => onkoJetiOID(str) || str && str.match && str.match(/^(EI|ES|VS|LOI)(\d+)$/);
-let onkoRuma  = str => onkoRumaOID(str) || str && str.match && str.match(/^(RT|LR)(\d+)$/);
-let onkoTREX  = onkoTREXOID
+//let onkoJeti  = str => onkoJetiOID(str) || str && str.match && str.match(/^(EI|ES|VS|LOI)(\d+)$/);
+//let onkoRuma  = str => onkoRumaOID(str) || str && str.match && str.match(/^(RT|LR)(\d+)$/);
 
-let onkoJuna  = str => str && str.match && str.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})\s*\(?(\d+)\)?$/);
+//let onkoJuna  = str => str && str.match && str.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})\s*\(?(\d+)\)?$/);
 
-let onkoLOI   = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.80\.|LOI)(\d+)$/);
+/*let onkoLOI   = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.80\.|LOI)(\d+)$/);
 let onkoEI    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.81\.|EI)(\d+)$/);
 let onkoES    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.82\.|ES)(\d+)$/);
 let onkoVS    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.2\.83\.|VS)(\d+)$/);
 
 let onkoRT    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.7\.1\.|RT)(\d+)$/);
 let onkoLR    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.7\.2\.|LR)(\d+)$/);
-
-let onkoWKT = str => str && str.match && str.match(/^(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)(.*)$/);
+*/
+//let onkoWKT = str => str && str.match && str.match(/^(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)(.*)$/);
 
 let luoInfraAPIUrl = (str, time) => {
     return time ? withTime(time, luoInfraAPIUrl_(str)) : luoInfraAPIUrl_(str);
@@ -696,15 +689,15 @@ let luoInfraAPIUrl = (str, time) => {
 let luoInfraAPIUrl_ = str => {
     let m = onkoInfraOID(str);
     if (m) {
-        return baseInfraAPIUrl(false)+ m[0] + '.json';
+        return baseInfraAPIUrl(false) + str + '.json';
     }
     m = onkoRatakmSijainti(str);
     if (m) {
-        return ratakmSijaintiUrl(m[1], m[2], m[3]);
+        return ratakmSijaintiUrl(m.ratanumero, m.kmetaisyys.ratakm, m.kmetaisyys.etaisyys);
     }
     m = onkoRatakmVali(str);
     if (m) {
-        return ratakmValiUrl({ratanumero: m[1], alku: {ratakm: m[2], etaisyys: m[3]}, loppu: {ratakm: m[4], etaisyys: m[5]}});
+        return ratakmValiUrl(m);
     }
     m = onkoRatanumero(str);
     if (m) {
@@ -712,59 +705,59 @@ let luoInfraAPIUrl_ = str => {
     }
     m = onkoPmSijainti(str);
     if (m) {
-        return pmSijaintiUrl(m[1],m[2],m[3]);
+        return pmSijaintiUrl(m.numero,m.suunta,m.etaisyys);
     }
     m = onkoReitti(str);
     if (m) {
-        return reittiUrl(m[1], (m[2] ? m[2].split('=>').filter(x => x != '') : []), m[3]);
+        return reittiUrl(m.start, (m.legs.length > 0 ? m.legs.filter(x => x != '') : []), m.end);
     }
     m = onkoKoordinaatti(str);
     if (m) {
         var srs = undefined;
-        if (m[1] > 999 && m[2] > 999) {
+        if (m[0] > 999 && m[1] > 999) {
             // epsg:3067
             srs = undefined;
-        } else if (m[1] < 50 && m[2] > 50) {
+        } else if (m[0] < 50 && m[1] > 50) {
             // epsg:4326
             srs = 'srsName=epsg:4326';
-        } else if (m[1] > 50 && m[2] < 50) {
+        } else if (m[0] > 50 && m[1] < 50) {
             // crs:84
             srs = 'srsName=crs:84';
         }
-        return koordinaattiUrl(m[1] + ',' + m[2],  srs);
+        return koordinaattiUrl([m[0], m[1]],  srs);
     }
     m = onkoTREXOID(str);
     if (m) {
-        return baseInfraAPIUrl(false) + m[0] + '.json';
+        return baseInfraAPIUrl(false) + str + '.json';
     }
 }
 
 let luoEtj2APIUrl = (str, time) => {
     let m = onkoJetiOID(str)
     if (m) {
-        return baseEtj2APIUrl(false) + m[0] + '.json?' + (time ? 'time=' + time : '');
+        return baseEtj2APIUrl(false) + str + '.json?' + (time ? 'time=' + time : '');
     }
     m = onkoJeti(str);
     if (m) {
-        return baseEtj2APIUrl(true) + m[0] + '.json?' + (time ? 'time=' + time : '');
+        return baseEtj2APIUrl(true) + str + '.json?' + (time ? 'time=' + time : '');
     }
 }
 
 let luoRumaUrl = str => {
     let m = onkoRT(str);
     if (m) {
-        return rtSingleUrl(m[0]);
+        return rtSingleUrl(str);
     }
     m = onkoLR(str);
     if (m) {
-        return lrSingleUrl(m[0]);
+        return lrSingleUrl(str);
     }
 }
 
 let luoAikatauluUrl = str => {
     let m = onkoJuna(str);
     if (m) {
-        return aikatauluAPIUrl + m[1] + '/' + m[2];
+        return aikatauluAPIUrl + m.departureDate + '/' + m.trainNumber;
     }
 }
 
@@ -913,13 +906,13 @@ let luoAikatauluLinkki = (tunniste) => onkoJuna(tunniste) ? `
         <a href=""
            title='Avaa aikataulu'
            class='infoikoni'
-           onclick='luoJunaPopup("${onkoJuna(tunniste)[1]}", "${onkoJuna(tunniste)[2]}"); return false;' />
+           onclick='luoJunaPopup("${onkoJuna(tunniste).departureDate}", "${onkoJuna(tunniste).trainNumber}"); return false;' />
            📅
         </a>
     </li>
 ` : '';
 
-let luoRaideLinkki = (tunniste) => onkoRaide(tunniste) ? `
+let luoRaideLinkki = (tunniste) => onkoInfraOID(tunniste) == 44 ? `
     <li>
         <a href=""
            title='Avaa raiteen korkeuskäyrä'
@@ -937,15 +930,15 @@ let luoGrafiikkaLinkki = tunniste => {
     }
     m = onkoReitti(tunniste);
     if (m) {
-        return luoGrafiikkaLinkkiReitille([m[1]].concat(m[2] ? m[2].split('=>').filter(x => x != '') : []).concat(m[3]));
+        return luoGrafiikkaLinkkiReitille([m.start].concat(m.legs.filter(x => x != '')).concat([m.end]));
     }
     m = onkoJuna(tunniste);
     if (m) {
-        return luoGrafiikkaLinkkiJunalle(m[1], m[2]);
+        return luoGrafiikkaLinkkiJunalle(m.trainNumber, m.departureDate);
     }
     m = onkoJeti(tunniste);
     if (m) {
-        return luoGrafiikkaLinkkiJetille(m[0]);
+        return luoGrafiikkaLinkkiJetille(tunniste);
     }
     return '';
 }
@@ -966,8 +959,8 @@ let luoGrafiikkaLinkkiReitille = reitti => {
     if (reitti instanceof Array) {
         r = reitti;
     } else {
-        let rr = onkoReitti(reitti).slice(1);
-        r = [rr[1]].concat(rr[2] ? rr[2].split('=>').filter(x => x != '') : []).concat(rr[3]);
+        let rr = onkoReitti(reitti);
+        r = [rr.start].concat(rr.legs.filter(x => x != '')).concat([rr.end]);
     }
     return `
         <li>

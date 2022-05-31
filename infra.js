@@ -137,7 +137,7 @@ window.koordinaatitMap = {};
 let lataaKoordinaatit = ratakmsijainti => {
     let koordinaatitDS = new am4core.DataSource();
     initDS(koordinaatitDS);
-    koordinaatitDS.url = koordinaattiMuunnosUrl(ratakmsijainti.ratanumero, ratakmsijainti.ratakm, ratakmsijainti.etaisyys);
+    koordinaatitDS.url = koordinaattiMuunnosUrl({ratanumero: ratakmsijainti.ratanumero, kmetaisyys: {ratakm: ratakmsijainti.ratakm, etaisyys: ratakmsijainti.etaisyys}});
     on(koordinaatitDS.events, "done", ev => {
         if (ev.target.data.features.length > 0) {
             let jstsCoord = geojsonReader.read(ev.target.data.features[0].geometry);
@@ -157,7 +157,7 @@ window.sijainnitMap = {};
 let lataaSijainti = coord => {
     let sijaintiDS = new am4core.DataSource();
     initDS(sijaintiDS);
-    sijaintiDS.url = ratakmMuunnosUrl(coord.join(","));
+    sijaintiDS.url = ratakmMuunnosUrl(coord);
     on(sijaintiDS.events, "done", ev => {
         if (ev.target.data[0] && ev.target.data[0].ratakmsijainnit) {
             log("Saatiin koordinaatille", coord, "ratakmsijainnit", ev.target.data[0].ratakmsijainnit);

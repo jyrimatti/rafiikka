@@ -14,7 +14,10 @@ import Time (Interval (Interval), parseISO, showISO)
 import State (Mode, AppState (..), Layer (Layer), Degrees (Degrees), Location (Location), TimeSetting (..), defaultRotation, defaultLayers, defaultMode)
 import qualified Data.Text as Text
 import Data.Bitraversable (Bitraversable(bitraverse))
-import Types (Distance (Distance, meters), Pmsijainti (Pmsijainti), Direction (Inc, Dec), Kmetaisyys (Kmetaisyys), OID (OID), SRSName (EPSG3067, CRS84), EITila (EILuonnos, EIHyvaksytty, EIPoistettu), ESTila (ESLuonnos, ESLahetetty, ESLisatietopyynto, ESHyvaksytty, ESPeruttu, ESPoistettu), VSTila (VSTarveTunnistettu, VSVuosiohjelmissa, VSSuunniteltu, VSKaynnissa, VSTehty, VSPoistettu), LOITila (LOIAktiivinen, LOIPoistettu), ElementtiTypeName)
+import Types (Distance (Distance, meters), Pmsijainti (Pmsijainti), Direction (Inc, Dec), Kmetaisyys (Kmetaisyys), OID (OID), SRSName (EPSG3067, CRS84), Point (Point))
+import Jeti.Types
+import Ruma.Types
+import Infra.Types
 
 class ToURIFragment a where
   toURIFragment :: a -> Text
@@ -47,6 +50,9 @@ instance ToURIFragment OID where
 instance ToURIFragment SRSName where
   toURIFragment EPSG3067 = "epsg:3067"
   toURIFragment CRS84    = "crs:84"
+
+instance ToURIFragment Point where
+  toURIFragment (Point x y) = toURIFragment x <> "," <> toURIFragment y
 
 -- Time.hs
 
@@ -190,16 +196,22 @@ instance ToURIFragment ESTila where
   toURIFragment ESPoistettu       = "poistettu"
 
 instance ToURIFragment VSTila where
-  toURIFragment VSTarveTunnistettu = "tarve tunnistettu"
-  toURIFragment VSVuosiohjelmissa  = "vuosiohjelmissa"
-  toURIFragment VSSuunniteltu      = "suunniteltu"
-  toURIFragment VSKaynnissa        = "käynnissä"
+  toURIFragment VSAlustava         = "alustava"
+  toURIFragment VSVuosiohjelmissa  = "vuosiohjelmissa (tila poistunut käytöstä)"
+  toURIFragment VSToteutuu         = "toteutuu"
+  toURIFragment VSKaynnissa        = "käynnissä (tila poistunut käytöstä)"
   toURIFragment VSTehty            = "tehty"
   toURIFragment VSPoistettu        = "poistettu"
 
 instance ToURIFragment LOITila where
   toURIFragment LOIAktiivinen = "aktiivinen"
   toURIFragment LOIPoistettu  = "poistettu"
-  
+
+instance ToURIFragment RTTila where
+  toURIFragment RTActive   = "ACTIVE"
+  toURIFragment RTPassive  = "PASSIVE"
+  toURIFragment RTSent     = "SENT"
+  toURIFragment RTFinished = "FINISHED"
+
 instance ToURIFragment ElementtiTypeName where
   toURIFragment = toLower <$> show

@@ -32,6 +32,8 @@ executable Rafiikka
    , modern-uri
    , control-bool
    , time-lens
+   , regex
+   , data-foldapp
   
   if impl(ghcjs)
     build-depends: ghcjs-base
@@ -42,22 +44,27 @@ executable Rafiikka
   default-extensions: NoImplicitPrelude, OverloadedStrings, TypeFamilies
 
   other-modules: FFI
-               , Tooltips
-               , MutationObserver
-               , Tippy
-               , Browser
+               , Browser.Tooltips
+               , Browser.MutationObserver
+               , Browser.Tippy
+               , Browser.Browser
+               , Browser.Fetch
                , Frontpage
                , Yleiset
                , Time
                , State
                , StateAccessor
                , URISerialization
-               , Fetch
                , Monadic
                , URI
                , Types
+               , Match
                , Amcharts.DataSource
                , Amcharts.Events
+               , Infra.Types
+               , Jeti.Types
+               , Ruma.Types
+               , Trex.Types
 
   ghc-options:
     -Wall

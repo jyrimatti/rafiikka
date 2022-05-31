@@ -83,7 +83,7 @@ let parsiAikataulu = (paiva, data) => {
 let lataaAikatauluRest = (paiva, callback) => {
     let aikataulutDS = new am4core.DataSource();
     aikataulutDS.url = aikatauluAPIUrl + paiva;
-    monitor(aikataulutDS, paiva);
+    monitor(aikataulutDS, ["Timetable",paiva]);
     initDS(aikataulutDS);
     on(aikataulutDS.events, "done", ev => {
         callback(parsiAikataulu(paiva, ev.target.data));
@@ -180,7 +180,7 @@ let luoJunaPopup_ = (lahtopaiva, junanumero) => {
         let dataSource = new am4core.DataSource();
         dataSource.data = [];
         initDS(dataSource);
-        monitor(dataSource, tunniste);
+        monitor(dataSource, [tunniste]);
 
         let aikatauluPopup = new am4charts.LineSeries();
         aikatauluPopup.dataSource = dataSource;

@@ -2,6 +2,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Types where
 import Universum
 import Language.Javascript.JSaddle (FromJSVal(fromJSVal), (!), ToJSVal, create, (<#), JSString)
@@ -10,18 +15,77 @@ import Data.Time.Calendar (Day)
 import Language.Javascript.JSaddle.Classes (ToJSVal(toJSVal))
 import Yleiset ()
 import Data.Aeson (FromJSON)
-import Data.Text (unpack)
 
-newtype OID = OID Text
-  deriving (Show, Generic)
+newtype OID = OID {
+    oid :: Text
+} deriving (Show, Generic)
+
+data FintrafficSystem = Infra | Jeti | Ruma
+  deriving (Show, Enum, Bounded, Eq, Read)
+
+instance ToJSVal FintrafficSystem where
+    toJSVal = toJSVal . show @Text
+
+instance FromJSVal FintrafficSystem where
+    fromJSVal = doFromJSVal "FintrafficSystem" $ \x -> do
+        txt <- MaybeT $ fromJSVal x
+        hoistMaybe $ find ((== txt) . show @Text) [minBound ..]
+
+data VaylaSystem = Trex
+  deriving (Show, Enum, Bounded, Eq)
+
+mkFintrafficSystem :: Natural -> Maybe FintrafficSystem
+mkFintrafficSystem 1 = Just Infra
+mkFintrafficSystem 2 = Just Jeti
+mkFintrafficSystem 7 = Just Ruma
+mkFintrafficSystem _ = Nothing
+
+mkVaylaSystem :: Natural -> Maybe VaylaSystem
+mkVaylaSystem 1 = Just Trex
+mkVaylaSystem _ = Nothing
+
+
+
 
 instance FromJSVal OID where
     fromJSVal = doFromJSVal "OID" $ \x -> do
         oid <- MaybeT $ fromJSVal x
         pure $ OID oid
 
+instance ToJSVal OID where
+    toJSVal = toJSVal . oid
+
 data SRSName = EPSG3067 | CRS84
     deriving (Show, Generic)
+
+instance FromJSVal SRSName where
+    fromJSVal = doFromJSVal "SRSName" $ \x -> do
+        srs :: Text <- MaybeT $ fromJSVal x
+        case srs of
+            "epsg:3067" -> pure EPSG3067
+            "crs:84"    -> pure CRS84
+            _ -> mzero
+
+data GeometryType = POINT | LINESTRING | POLYGON | MULTIPOINT | MULTILINESTRING | MULTIPOLYGON | GEOMETRYCOLLECTION
+  deriving (Show, Read)
+
+instance ToJSVal GeometryType where
+    toJSVal = toJSVal . show @Text
+
+data Point = Point {
+    longitude :: Int,
+    latitude  :: Int
+} deriving (Show, Generic)
+
+instance ToJSVal Point where
+    toJSVal Point{..} = toJSVal [longitude, latitude]
+
+instance FromJSVal Point where
+    fromJSVal = doFromJSVal "Point" $ \x -> do
+        xs <- MaybeT $ fromJSVal x
+        case xs of
+            [lon,lat] -> pure $ Point lon lat
+            _ -> mzero
 
 data Direction = Inc | Dec
   deriving (Show, Generic)
@@ -34,6 +98,10 @@ instance FromJSVal Direction where
             '-' -> pure Dec
             _ -> mzero
 
+instance ToJSVal Direction where
+    toJSVal Inc = toJSVal @Text "+"
+    toJSVal Dec = toJSVal @Text "-"
+
 -- Distance in meters
 newtype Distance = Distance {
     meters :: Natural
@@ -43,6 +111,9 @@ instance FromJSVal Distance where
     fromJSVal = doFromJSVal "Distance" $ \x -> do
         y <- MaybeT $ fromJSVal x
         pure $ Distance y
+
+instance ToJSVal Distance where
+    toJSVal = toJSVal . meters
 
 data Kmetaisyys = Kmetaisyys {
     ratakm :: Natural,
@@ -55,6 +126,13 @@ instance FromJSVal Kmetaisyys where
         k  <- MaybeT $ fromJSVal =<< x ! ("etaisyys" :: Text)
         pure $ Kmetaisyys r k
 
+instance ToJSVal Kmetaisyys where
+    toJSVal Kmetaisyys{..} = do
+        o <- create
+        o <# ("ratakm" :: JSString) $ toJSVal ratakm
+        o <# ("etaisyys" :: JSString) $ toJSVal etaisyys
+        toJSVal o
+
 data Ratakmetaisyys = Ratakmetaisyys {
     ratanumero :: Text,
     kmetaisyys :: Kmetaisyys
@@ -65,6 +143,13 @@ instance FromJSVal Ratakmetaisyys where
         r <- MaybeT $ fromJSVal =<< x ! ("ratanumero" :: Text)
         k  <- MaybeT $ fromJSVal =<< x ! ("kmetaisyys" :: Text)
         pure $ Ratakmetaisyys r k
+
+instance ToJSVal Ratakmetaisyys where
+    toJSVal Ratakmetaisyys{..} = do
+        o <- create
+        o <# ("ratanumero" :: JSString) $ toJSVal ratanumero
+        o <# ("kmetaisyys" :: JSString) $ toJSVal kmetaisyys
+        toJSVal o
 
 data Ratakmvali = Ratakmvali {
     ratanumero :: Text,
@@ -79,6 +164,14 @@ instance FromJSVal Ratakmvali where
         l <- MaybeT $ fromJSVal =<< x ! ("loppu" :: Text)
         pure $ Ratakmvali r a l
 
+instance ToJSVal Ratakmvali where
+    toJSVal Ratakmvali{..} = do
+        o <- create
+        o <# ("ratanumero" :: JSString) $ toJSVal ratanumero
+        o <# ("alku" :: JSString) $ toJSVal alku
+        o <# ("loppu" :: JSString) $ toJSVal loppu
+        toJSVal o
+
 data Pmsijainti = Pmsijainti {
     numero :: Natural,
     suunta :: Direction,
@@ -91,6 +184,14 @@ instance FromJSVal Pmsijainti where
         s  <- MaybeT $ fromJSVal =<< x ! ("suunta" :: Text)
         e  <- MaybeT $ fromJSVal =<< x ! ("etaisyys" :: Text)
         pure $ Pmsijainti n s e
+
+instance ToJSVal Pmsijainti where
+    toJSVal Pmsijainti{..} = do
+        o <- create
+        o <# ("numero" :: JSString) $ toJSVal numero
+        o <# ("suunta" :: JSString) $ toJSVal suunta
+        o <# ("etaisyys" :: JSString) $ toJSVal etaisyys
+        toJSVal o
 
 newtype Revision = Revision {
     revisio :: Natural
@@ -126,87 +227,16 @@ instance FromJSVal Train where
         Train <$> MaybeT (fromJSVal =<< x ! ("departureDate" :: JSString))
               <*> MaybeT (fromJSVal =<< x ! ("trainNumber" :: JSString))
 
+data Route = Route {
+    start :: Text
+  , legs :: [Text]
+  , end :: Text
+}
 
-data EITila = EILuonnos | EIHyvaksytty | EIPoistettu
-    deriving Show
-
-instance FromJSVal EITila where
-    fromJSVal = doFromJSVal "EITila" $ \x -> do
-        xx :: Text <- MaybeT $ fromJSVal x
-        case xx of
-            "luonnos"    -> pure EILuonnos
-            "hyväksytty" -> pure EIHyvaksytty
-            "poistettu"  -> pure EIPoistettu
-            _            -> mzero
-
-data ESTila = ESLuonnos | ESLahetetty | ESLisatietopyynto | ESHyvaksytty | ESPeruttu | ESPoistettu
-    deriving Show
-
-instance FromJSVal ESTila where
-    fromJSVal = doFromJSVal "ESTila" $ \x -> do
-        xx :: Text <- MaybeT $ fromJSVal x
-        case xx of
-            "luonnos"         -> pure ESLuonnos
-            "lähetetty"       -> pure ESLahetetty
-            "lisätietopyyntö" -> pure ESLisatietopyynto
-            "hyväksytty"      -> pure ESHyvaksytty
-            "peruttu"         -> pure ESPeruttu
-            "poistettu"       -> pure ESPoistettu
-            _                 -> mzero
-
-data VSTila = VSTarveTunnistettu | VSVuosiohjelmissa | VSSuunniteltu | VSKaynnissa | VSTehty | VSPoistettu
-    deriving Show
-
-instance FromJSVal VSTila where
-    fromJSVal = doFromJSVal "VSTila" $ \x -> do
-        xx :: Text <- MaybeT $ fromJSVal x
-        case xx of
-            "tarve tunnistettu" -> pure VSTarveTunnistettu
-            "vuosiohjelmissa"   -> pure VSVuosiohjelmissa
-            "suunniteltu"       -> pure VSSuunniteltu
-            "käynnissä"         -> pure VSKaynnissa
-            "tehty"             -> pure VSTehty
-            "poistettu"         -> pure VSPoistettu
-            _                   -> mzero
-
-data LOITila = LOIAktiivinen | LOIPoistettu
-    deriving Show
-
-instance FromJSVal LOITila where
-    fromJSVal = doFromJSVal "LOITila" $ \x -> do
-        xx :: Text <- MaybeT $ fromJSVal x
-        case xx of
-            "aktiivinen" -> pure LOIAktiivinen
-            "poistettu"  -> pure LOIPoistettu
-            _            -> mzero
-
-data ElementtiTypeName = Akselinlaskija
-                       | Baliisi
-                       | Kuumakayntiilmaisin
-                       | Liikennepaikanraja
-                       | Opastin
-                       | Puskin
-                       | Pyoravoimailmaisin
-                       | Raideeristys
-                       | Pysaytyslaite
-                       | Rfidlukija
-                       | Ryhmityseristin
-                       | Sahkoistyspaattyy
-                       | Seislevy
-                       | Vaihde
-                       | Virroitinvalvontakamera
-                       | Erotusjakso
-                       | Erotuskentta
-                       | Maadoitin
-                       | Tyonaikaineneristin
-                       | Kaantopoyta
-                       | Pyoraprofiilimittalaite
-                       | Telivalvonta
-                       | Erotin
-                       | Tasoristeysvalojenpyoratunnistin
-    deriving (Show,Read)
-
-instance FromJSVal ElementtiTypeName where
-    fromJSVal = doFromJSVal "ElementtiTypeName" $ \x -> do
-        xx :: Text <- MaybeT $ fromJSVal x
-        hoistMaybe $ readMaybe (unpack xx)
+instance ToJSVal Route where
+    toJSVal Route{..} = do
+        o <- create
+        o <# ("start" :: JSString) $ toJSVal start
+        o <# ("legs" :: JSString) $ toJSVal legs
+        o <# ("end" :: JSString) $ toJSVal end
+        toJSVal o

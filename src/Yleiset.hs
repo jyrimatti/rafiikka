@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Yleiset where
 
@@ -16,13 +17,7 @@ import GHCJS.Marshal (FromJSVal(fromJSVal))
 import Monadic (doFromJSVal)
 import Language.Javascript.JSaddle.Classes (ToJSVal(toJSVal))
 import Data.Time.Lens (modL, month)
-
-data DataType = Other | Infra
-  deriving Show
-
-instance FromJSVal DataType where
-  fromJSVal _ = pure $ Just Other
-  -- FIXME
+import Data.FoldApp (FoldrApp, foldrApp)
 
 instance FromJSVal Natural where
   fromJSVal = doFromJSVal "Natural" $ \x -> do
@@ -57,3 +52,7 @@ errorHandler err = do
   stack <- new (jsg @JSString "Error") () ! ("stack" :: JSString)
   _ <- jsg3 @JSString "log" err errorStack stack
   pure ()
+
+-- Data.FoldApp has this, but does not export it...
+anyOf :: FoldrApp Bool Bool f => f
+anyOf = foldrApp (||) False

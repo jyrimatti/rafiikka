@@ -1,9 +1,6 @@
 window.valittuDS = new am4core.DataSource();
 
-let valittunaRatanumero = () => {
-    let x = onkoRatanumero(valittuDS.data);
-    return !x ? x : x[1];
-};
+let valittunaRatanumero = () => onkoRatanumero(valittuDS.data);
 let valittunaAikataulupaikka = () => valittuDS.data instanceof Array && valittuDS.data.length > 0;
 
 window.aktiivisetJunatDS = new am4core.DataSource();
@@ -54,7 +51,7 @@ window.aikataulupaikkaChanged = (val1, val2, etapit) => {
     let reittiDS = new am4core.DataSource();
     reittiDS.url = reittihakuUrl(uusiVali[0], uusiVali.slice(1, -1), uusiVali[uusiVali.length-1]);
     initDS(reittiDS);
-    monitor(reittiDS, uusiVali.map(x => aikataulupaikatDS.data[x].lyhenne).join("=>"));
+    monitor(reittiDS, [uusiVali.map(x => aikataulupaikatDS.data[x].lyhenne).join("=>")]);
     on(reittiDS.events, "done", ev => {
         let data = ev.target.data;
         let lpJaOsat = data.liikennepaikat.flatMap(x => aikataulupaikatDS.data[x.tunniste]
@@ -723,7 +720,7 @@ am4core.ready(() => {
                     d.isActive = true;
                 }
                 initDS(d);
-                monitor(d, nimi + "(" + t + ")");
+                monitor(d, [nimi + "(" + t + ")"]);
 
                 on(d.events, "done", () => {
                     series.dataSource.data = ds.filter(x => x[1].isActive).flatMap(x => x[1].data || []);
@@ -913,7 +910,7 @@ am4core.ready(() => {
             });
 
             let paivitaUrl = () => {
-                let uusiUrl = valittunaRatanumero() ? urlRatanumero() : valittunaAikataulupaikka() ? urlAikataulupaikka() : undefined;
+                let uusiUrl = valittunaRatanumero() ? urlRatanumero : valittunaAikataulupaikka() ? urlAikataulupaikka : undefined;
                 if (series.isReady() && !series.isHidden && !series.isHiding && uusiUrl && series.dataSource.url != uusiUrl) {
                     log('Asetetaan ja ladataan url', uusiUrl);
                     series.dataSource.url(uusiUrl);
@@ -936,7 +933,7 @@ am4core.ready(() => {
             log("Parsittu EI:", ev.target.data.length);
         });
 
-        window.seriesLO = luoEnnakkotietoSeries("LOilmoitukset", 'loi', am4core.color("purple"), loTilat);
+        window.seriesLO = luoEnnakkotietoSeries("LOilmoitukset", 'loi', am4core.color("purple"), loiTilat);
         on(seriesLO.dataSource.events, "parseended", ev => {
             log("Parsitaan LO done");
             ev.target.data = ev.target.data.flatMap(parsiLO).sort(ennakkotietoIntervalComparator);
@@ -983,9 +980,9 @@ am4core.ready(() => {
         viimeisteleEnnakkotietoSeries(seriesLO, loUrlRatanumero, loUrlAikataulupaikka);
         viimeisteleEnnakkotietoSeries(seriesLR, lrUrl, lrUrl);
         viimeisteleEnnakkotietoSeries(seriesRT, rtUrl, rtUrl);
-        viimeisteleEnnakkotietoSeries(seriesEI, () => eiUrlRatanumero, eiUrlAikataulupaikka);
-        viimeisteleEnnakkotietoSeries(seriesES, () => esUrlRatanumero, esUrlAikataulupaikka);
-        viimeisteleEnnakkotietoSeries(seriesVS, () => vsUrlRatanumero, vsUrlAikataulupaikka);
+        viimeisteleEnnakkotietoSeries(seriesEI, eiUrlRatanumero, eiUrlAikataulupaikka);
+        viimeisteleEnnakkotietoSeries(seriesES, esUrlRatanumero, esUrlAikataulupaikka);
+        viimeisteleEnnakkotietoSeries(seriesVS, vsUrlRatanumero, vsUrlAikataulupaikka);
 
         
 

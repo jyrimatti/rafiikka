@@ -8,7 +8,7 @@ import Data.Maybe (fromJust)
 import Data.Generics.Labels ()
 import Control.Lens ((?~), Ixed (ix), folded, ifiltered, toListOf)
 import JSDOM.Types (JSM)
-import Browser (withDebug, locationHash, setLocationHash)
+import Browser.Browser (withDebug, locationHash, setLocationHash)
 import State (AppState, hashPlaceholder, Mode (Map, Diagram), Location (Location), defaultState)
 import URISerialization (fromURIFragment, ToURIFragment (toURIFragment))
 
