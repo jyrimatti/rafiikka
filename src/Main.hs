@@ -1,5 +1,8 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables, TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# LANGUAGE DataKinds, OverloadedLabels #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE KindSignatures #-}
 
 module Main where
 
@@ -14,18 +17,18 @@ import qualified Data.ByteString.Lazy as B
 import Language.Javascript.JSaddle.Run (enableLogging)
 import Data.Maybe (fromJust)
 import Data.Time.Clock (secondsToNominalDiffTime)
-import Browser.Browser (setTimeout, getElementById, withDebug, isSeed)
+import Browser.Browser (setTimeout, getElementById, withDebug, isSeed, Location(..), setLocationHash)
 import Frontpage (view)
 import Shpadoinkle.Console (debug, warn, info)
 import StateAccessor (getStates, getState, getMainState, setState, setMainState, removeSubState)
-import State (defaultState, TimeSetting)
+import State (defaultState, TimeSetting, AppState (location))
 import Browser.Fetch (getJson, headJson)
-import JSDOM.Types (Callback(Callback), JSVal, Function, FromJSVal (fromJSVal))
+import JSDOM.Types (Callback(Callback), JSVal, Function, FromJSVal (fromJSVal), Window)
 import Text.URI (URI, render)
 import Data.Aeson ( Value, Result(Error, Success), fromJSON )
-import Language.Javascript.JSaddle ((#), call, global, ToJSVal (toJSVal), jsg, liftJSM, (!), (<#))
+import Language.Javascript.JSaddle ((#), call, global, ToJSVal (toJSVal), jsg, liftJSM, (!), (<#), JSString)
 import Amcharts.DataSource (monitor, DataType (Other, Revisions))
-import URI (infraAPIUrl, etj2APIUrl, aikatauluAPIUrl, graphQLUrl, mqttPort, mqttHost, mqttTopic, infraAPIrevisionsUrl, etj2APIrevisionsUrl, withTime, baseInfraAPIUrl, baseEtj2APIUrl, ratanumeroUrl, ratanumerotUrl, ratakmSijaintiUrl, pmSijaintiUrl, ratakmValiUrl, liikennepaikkavalitUrl, reittiUrl, reittihakuUrl, vaihdeTyypitUrl, opastinTyypitUrl, ratapihapalveluTyypitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl, elementitUrl, lorajatUrl, raiteenKorkeudetUrl, eiUrlRatanumero, esUrlRatanumero, vsUrlRatanumero, loUrlRatanumero, eiUrlAikataulupaikka, esUrlAikataulupaikka, vsUrlAikataulupaikka, loUrlAikataulupaikka, kunnossapitoalueetMetaUrl, liikenteenohjausalueetMetaUrl, kayttokeskuksetMetaUrl, liikennesuunnittelualueetMetaUrl, ratapihapalvelutUrlTilasto, toimialueetUrlTilasto, tilirataosatUrlTilasto, liikennesuunnittelualueetUrlTilasto, paikantamismerkitUrlTilasto, kilometrimerkitUrlTilasto, radatUrlTilasto, liikennepaikanOsatUrlTilasto, rautatieliikennepaikatUrlTilasto, liikennepaikkavalitUrlTilasto, raideosuudetUrlTilasto, elementitUrlTilasto, raiteensulutUrlTilasto, raiteetUrlTilasto, liikenteenohjauksenrajatUrlTilasto, tunnelitUrlTilasto, sillatUrlTilasto, laituritUrlTilasto, tasoristeyksetUrlTilasto, kayttokeskuksetUrlTilasto, kytkentaryhmatUrlTilasto, asiatUrl, esTyypitUrl, loUrlTilasto, eiUrlTilasto, esUrlTilasto, vsUrlTilasto, muutoksetInfra, muutoksetEtj2, koordinaattiUrl, ratakmMuunnosUrl, koordinaattiMuunnosUrl, rtUrl, rtSingleUrl, rtGeojsonUrl, lrUrl, lrSingleUrl, lrGeojsonUrl, infraObjektityypitUrl, hakuUrlitInfra, hakuUrlitEtj2, hakuUrlitRuma)
+import URI (infraAPIUrl, etj2APIUrl, aikatauluAPIUrl, graphQLUrl, mqttPort, mqttHost, mqttTopic, infraAPIrevisionsUrl, etj2APIrevisionsUrl, withTime, baseInfraAPIUrl, baseEtj2APIUrl, ratanumeroUrl, ratanumerotUrl, ratakmSijaintiUrl, pmSijaintiUrl, ratakmValiUrl, liikennepaikkavalitUrl, reittiUrl, reittihakuUrl, vaihdeTyypitUrl, opastinTyypitUrl, ratapihapalveluTyypitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl, elementitUrl, lorajatUrl, raiteenKorkeudetUrl, eiUrlRatanumero, esUrlRatanumero, vsUrlRatanumero, loUrlRatanumero, eiUrlAikataulupaikka, esUrlAikataulupaikka, vsUrlAikataulupaikka, loUrlAikataulupaikka, kunnossapitoalueetMetaUrl, liikenteenohjausalueetMetaUrl, kayttokeskuksetMetaUrl, liikennesuunnittelualueetMetaUrl, ratapihapalvelutUrlTilasto, toimialueetUrlTilasto, tilirataosatUrlTilasto, liikennesuunnittelualueetUrlTilasto, paikantamismerkitUrlTilasto, kilometrimerkitUrlTilasto, radatUrlTilasto, liikennepaikanOsatUrlTilasto, rautatieliikennepaikatUrlTilasto, liikennepaikkavalitUrlTilasto, raideosuudetUrlTilasto, elementitUrlTilasto, raiteensulutUrlTilasto, raiteetUrlTilasto, liikenteenohjauksenrajatUrlTilasto, tunnelitUrlTilasto, sillatUrlTilasto, laituritUrlTilasto, tasoristeyksetUrlTilasto, kayttokeskuksetUrlTilasto, kytkentaryhmatUrlTilasto, asiatUrl, esTyypitUrl, loUrlTilasto, eiUrlTilasto, esUrlTilasto, vsUrlTilasto, muutoksetInfra, muutoksetEtj2, koordinaattiUrl, ratakmMuunnosUrl, koordinaattiMuunnosUrl, rtUrl, rtSingleUrl, rtGeojsonUrl, lrUrl, lrSingleUrl, lrGeojsonUrl, infraObjektityypitUrl, hakuUrlitInfra, hakuUrlitEtj2, hakuUrlitRuma, luoInfraAPIUrl, luoEtj2APIUrl, luoRumaUrl, luoAikatauluUrl, junasijainnitGeojsonUrl, junasijainnitUrl)
 import JSDOM (currentWindow)
 import Jeti.Types ( eiTilat, esTilat, vsTilat, loiTilat )
 import Time (startOfTime, endOfTime, roundToPreviousDay, roundToPreviousMonth, intervalsIntersect, limitInterval, toISOStringNoMillis)
@@ -33,6 +36,10 @@ import URISerialization (fromURIFragment, ToURIFragment (toURIFragment))
 import Match (onkoOID, subsystemId, onkoInfraOID, onkoTREXOID, onkoJetiOID, onkoRumaOID, onkoKoordinaatti, onkoRatakmSijainti, onkoPmSijainti, onkoRatakmVali, onkoRatanumero, onkoReitti, onkoInfra, onkoJeti, onkoRuma, onkoJuna, onkoLOI, onkoEI, onkoES, onkoVS, onkoRT, onkoLR, onkoWKT)
 import Types (Revision(Revision))
 import Yleiset (laajennaAikavali_, errorHandler)
+import Control.Lens.Action ( (^!), act )
+import GetSet
+import Control.Lens.Action.Type (IndexPreservingAction)
+import GHC.Records (getField)
 
 main :: IO ()
 main = do
@@ -42,7 +49,8 @@ main = do
 
 dev :: IO ()
 dev = do
-  bs <- B.readFile "./index-debug.html"
+  --bs <- B.readFile "./index-debug.html"
+  bs <- B.readFile "./index-dev.html"
   liveWithStaticAndIndex bs 8080 app "./"
 
 getJson_ :: URI -> JSVal -> Maybe JSVal -> JSM ()
@@ -103,7 +111,7 @@ app = do
   registerGlobalFunction1 "pmSijaintiUrl" pmSijaintiUrl
   registerGlobalFunction1 "ratakmValiUrl" ratakmValiUrl
   registerGlobalFunction "liikennepaikkavalitUrl" liikennepaikkavalitUrl
-  registerGlobalFunction3 "reittiUrl" reittiUrl
+  registerGlobalFunction1 "reittiUrl" reittiUrl
   registerGlobalFunction3 "reittihakuUrl" reittihakuUrl
   registerGlobalFunction "ratapihapalveluTyypitUrl" ratapihapalveluTyypitUrl
   registerGlobalFunction "opastinTyypitUrl" opastinTyypitUrl
@@ -156,6 +164,8 @@ app = do
   registerGlobalFunction "vsUrlTilasto" vsUrlTilasto
   registerGlobalFunction1 "muutoksetInfra" muutoksetInfra
   registerGlobalFunction1 "muutoksetEtj2" muutoksetEtj2
+  registerGlobalFunctionPure "junasijainnitGeojsonUrl" junasijainnitGeojsonUrl
+  registerGlobalFunctionPure "junasijainnitUrl" junasijainnitUrl
   registerGlobalFunction2 "koordinaattiUrl" koordinaattiUrl
   registerGlobalFunction1 "ratakmMuunnosUrl" ratakmMuunnosUrl
   registerGlobalFunction1 "koordinaattiMuunnosUrl" koordinaattiMuunnosUrl
@@ -169,6 +179,11 @@ app = do
   registerGlobalFunction "hakuUrlitInfra" hakuUrlitInfra
   registerGlobalFunction "hakuUrlitEtj2" hakuUrlitEtj2
   registerGlobalFunctionPure "hakuUrlitRuma" hakuUrlitRuma
+  registerGlobalFunctionPure1 "luoInfraAPIUrl" luoInfraAPIUrl
+  registerGlobalFunctionPure1 "luoEtj2APIUrl" luoEtj2APIUrl
+  registerGlobalFunctionPure1 "luoRumaUrl" luoRumaUrl
+  registerGlobalFunctionPure1 "luoAikatauluUrl" luoAikatauluUrl
+
   registerGlobalFunctionPure "eiTilat" (toURIFragment <$> eiTilat)
   registerGlobalFunctionPure "esTilat" (toURIFragment <$> esTilat)
   registerGlobalFunctionPure "vsTilat" (toURIFragment <$> vsTilat)

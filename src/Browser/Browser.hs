@@ -1,4 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Browser.Browser (
     getElementById,
@@ -9,12 +12,14 @@ module Browser.Browser (
     setLocationHash,
     isSeed,
     isSafari,
-    isLocal
+    isLocal,
+    Location(..),
+    Progress(..)
 ) where
 
-import Universum hiding (drop)
+import Universum hiding (drop,get,Element)
 import FFI (procedure)
-import Language.Javascript.JSaddle (JSM, jsg2, JSString, (!), FromJSVal (fromJSVal), (<#), JSVal, ghcjsPure)
+import Language.Javascript.JSaddle (JSM, jsg2, JSString, (!), FromJSVal (fromJSVal), (<#), JSVal, ghcjsPure, jsUndefined, MakeObject)
 import JSDOM (currentDocument, currentWindow)
 import qualified JSDOM.Types as JSDOM (Element)
 import JSDOM.Generated.ParentNode (querySelector)
@@ -23,6 +28,27 @@ import qualified Shpadoinkle.Console as SC (debug)
 import Data.Text (drop, isInfixOf, isSuffixOf)
 import Data.Maybe (fromJust)
 import Monadic (isDefined)
+import GHC.Records (HasField (getField))
+import GetSet (getObj,getVal)
+import JSDOM.Types (Window,Element)
+
+newtype Location = Location JSVal deriving MakeObject
+instance HasField "location" Window (JSM Location) where
+  getField = getObj Location "location"
+
+instance HasField "hash" Location (JSM Text) where
+  getField = getVal "hash"
+  
+newtype Progress = Progress Element deriving MakeObject
+instance HasField "progress" Window (JSM Progress) where
+  getField = getObj Progress "progress"
+  
+instance HasField "max" Progress (JSM Int) where
+  getField = getVal "max"
+instance HasField "value" Progress (JSM (Maybe Int)) where
+  getField = getVal "value"
+instance HasField "title" Progress (JSM (Maybe Text)) where
+  getField = getVal "title"
 
 __loggingEnabled :: Bool
 __loggingEnabled = False
@@ -43,8 +69,10 @@ withDebug x f = do
 getElementById :: Text -> JSM (Maybe JSDOM.Element)
 getElementById id_ = do
   debug "getElementById"
-  Just doc <- currentDocument
-  doc `querySelector` ("#" <> id_)
+  doc <- currentDocument
+  if isNothing doc
+    then pure Nothing
+    else fromJust doc `querySelector` ("#" <> id_)
 
 setTimeout :: NominalDiffTime -> JSM () -> JSM ()
 setTimeout timeout callback = do
@@ -53,17 +81,23 @@ setTimeout timeout callback = do
   pure ()
 
 location :: JSM JSVal
-location = (! ("location" :: JSString)) . fromJust =<< currentWindow
+location = do
+  win <- currentWindow
+  maybe (pure jsUndefined) (! ("location" :: JSString)) win
 
 navigator :: JSM JSVal
-navigator = (! ("navigator" :: JSString)) . fromJust =<< currentWindow
+navigator = do
+  win <- currentWindow
+  maybe (pure jsUndefined) (! ("navigator" :: JSString)) win
 
 locationHash :: JSM Text
 locationHash = withDebug "locationHash" $ do
   loc <- location
   hash <- loc ! ("hash" :: JSString)
-  Just h <- fromJSVal hash
-  pure $ drop 1 h
+  h <- fromJSVal hash
+  if isNothing h
+    then pure ""
+    else pure $ drop 1 (fromJust h)
 
 setLocationHash :: Text -> JSM ()
 setLocationHash x = withDebug "setLocationHash" $ do
@@ -83,20 +117,22 @@ isSeed = withDebug "isSeed" $ do
 isSafari :: JSM Bool
 isSafari = do
   nav <- navigator
-  
+
   vendor    <- nav ! ("vendor" :: JSString)
   userAgent <- nav ! ("userAgent" :: JSString)
-  
+
   vendorDef    <- ghcjsPure $ isDefined vendor
   userAgentDef <- ghcjsPure $ isDefined userAgent
-  
+
   if vendorDef && userAgentDef
     then do
-      Just v <- fromJSVal vendor
-      Just u <- fromJSVal userAgent
-      pure $ "Apple" `isInfixOf` v &&
-             not ("CriOS" `isInfixOf` u) &&
-             not ("FxiOS" `isInfixOf` u)
+      v <- fromJSVal vendor
+      u <- fromJSVal userAgent
+      if isNothing v || isNothing u
+        then pure False
+        else pure $ "Apple" `isInfixOf` fromJust v &&
+             not ("CriOS" `isInfixOf` fromJust u) &&
+             not ("FxiOS" `isInfixOf` fromJust u)
     else pure False
 
 isLocal :: JSM Bool
@@ -106,6 +142,6 @@ isLocal = do
   protocolDef <- ghcjsPure $ isDefined protocol
   if protocolDef
     then do
-      Just p <- fromJSVal protocol
-      pure $ p == ("file:" :: Text)
+      p <- fromJSVal protocol
+      pure $ p == Just ("file:" :: Text)
     else pure False

@@ -1023,7 +1023,7 @@ am4core.ready(() => {
 
         initDS(junatSeries.dataSource);
         on(junatSeries.events, "shown", () => {
-            junatSeries.dataSource.url = junasijainnitUrl();
+            junatSeries.dataSource.url = junasijainnitUrl;
             junatSeries.dataSource.load();
         });
 

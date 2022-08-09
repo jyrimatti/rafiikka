@@ -16,7 +16,9 @@ let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY
     let open = document.createElement("div");
     open.setAttribute("class", "open");
 
-    open.innerHTML = luoLinkit('kartta', tunniste);
+    if (tunniste) {
+        open.innerHTML = luoLinkit('kartta', tunniste);
+    }
     elemHeader.appendChild(open);
 
     let haku = document.createElement('input');

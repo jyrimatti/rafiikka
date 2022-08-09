@@ -4,7 +4,6 @@
 module Monadic where
 
 import Universum hiding (unlessM, whenM, unless, when)
-import Data.Generics.Labels ()
 import Data.Time.Calendar.MonthDay ()
 import Data.Time.Calendar.OrdinalDate ()
 import Language.Javascript.JSaddle (JSM, JSVal, GHCJSPure, ghcjsPure, isUndefined, ghcjsPureMap, liftJSM, js0, (!), MonadJSM, MakeObject, FromJSVal (fromJSValListOf), ToJSVal, JSString, (#), jsg)

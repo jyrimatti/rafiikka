@@ -31,7 +31,7 @@ import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, fun, functi
 import Data.Data (typeOf)
 import GHCJS.Foreign (jsTypeOf)
 #else
-import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, JSString, ToJSString(..), JSVal, MonadJSM, liftJSM, Object (Object), MakeArgs, jsg, (#), ghcjsPure, isTruthy)
+import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, JSString, ToJSString(..), JSVal, MonadJSM, liftJSM, Object (Object), MakeArgs, jsg, (#), ghcjsPure)
 import GHCJS.Foreign.Callback (Callback, syncCallback', syncCallback1', syncCallback2', syncCallback3', asyncCallback, asyncCallback1, asyncCallback2, asyncCallback3)
 import Data.Data (typeOf)
 import GHCJS.Foreign (jsTypeOf)

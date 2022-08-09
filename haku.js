@@ -259,7 +259,7 @@ let hakuMuodosta = (str, callback, vainJunat) => {
                 }
 
                 let id = generateId();
-                getJson(koordinaattiUrl([m[1], m[2]], srs), data => {
+                getJson(koordinaattiUrl(srs, [m[1], m[2]]), data => {
                     let rkm = data.flatMap(x => x.ratakmsijainnit.map(muotoileRkm)).join('<br />');
                     let pm  = data.flatMap(x => x.paikantamismerkkisijainnit.map(muotoilePm)).join('<br />');
                     document.getElementById(id).innerHTML = (rkm ? ' <br />' + rkm : '') + (pm ? ' <br />' + pm : '');

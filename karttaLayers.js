@@ -284,7 +284,7 @@ let layers = (kaavio, ajanhetki, aikavali) => [
     new ol.layer.Group({
         title: mkLayerTitle('Junat','Trains'),
         layers: [
-            newVectorLayerNoTile(junasijainnitGeojsonUrl(), 'tr', 'Junat', 'Trains', opacity, undefined, trainStyle, undefined, junaPrepareFeatures, kaavio, ajanhetki, aikavali),
+            newVectorLayerNoTile(junasijainnitGeojsonUrl, 'tr', 'Junat', 'Trains', opacity, undefined, trainStyle, undefined, junaPrepareFeatures, kaavio, ajanhetki, aikavali),
         ]
     })
 ];

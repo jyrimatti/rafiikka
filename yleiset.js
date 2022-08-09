@@ -591,7 +591,7 @@ if (onkoSeed()) {
     seed([]
      .concat([ratanumerotUrl(), liikennepaikkavalitUrl(), rautatieliikennepaikatUrl(), liikennepaikanOsatUrl(), raideosuudetUrl(), laituritUrl(),
               elementitUrl(), lorajatUrl(), infraObjektityypitUrl(),
-              junasijainnitUrl(), junasijainnitGeojsonUrl(), kunnossapitoalueetMetaUrl(), liikenteenohjausalueetMetaUrl(), kayttokeskuksetMetaUrl(), liikennesuunnittelualueetMetaUrl(),
+              junasijainnitUrl, junasijainnitGeojsonUrl, kunnossapitoalueetMetaUrl(), liikenteenohjausalueetMetaUrl(), kayttokeskuksetMetaUrl(), liikennesuunnittelualueetMetaUrl(),
               ratapihapalveluTyypitUrl(), opastinTyypitUrl(), vaihdeTyypitUrl()])
      .concat(eiTilat.flatMap(tila => [eiUrlRatanumero(tila), eiUrlAikataulupaikka()(tila)]))
      .concat(esTilat.flatMap(tila => [esUrlRatanumero(tila), esUrlAikataulupaikka()(tila)]))
@@ -683,7 +683,7 @@ let onkoLR    = str => str && str.match && str.match(/^(?:1\.2\.246\.586\.7\.2\.
 */
 //let onkoWKT = str => str && str.match && str.match(/^(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)(.*)$/);
 
-let luoInfraAPIUrl = (str, time) => {
+/*let luoInfraAPIUrl = (str, time) => {
     return time ? withTime(time, luoInfraAPIUrl_(str)) : luoInfraAPIUrl_(str);
 }
 let luoInfraAPIUrl_ = str => {
@@ -693,7 +693,7 @@ let luoInfraAPIUrl_ = str => {
     }
     m = onkoRatakmSijainti(str);
     if (m) {
-        return ratakmSijaintiUrl(m.ratanumero, m.kmetaisyys.ratakm, m.kmetaisyys.etaisyys);
+        return ratakmSijaintiUrl(m);
     }
     m = onkoRatakmVali(str);
     if (m) {
@@ -705,11 +705,11 @@ let luoInfraAPIUrl_ = str => {
     }
     m = onkoPmSijainti(str);
     if (m) {
-        return pmSijaintiUrl(m.numero,m.suunta,m.etaisyys);
+        return pmSijaintiUrl(m);
     }
     m = onkoReitti(str);
     if (m) {
-        return reittiUrl(m.start, (m.legs.length > 0 ? m.legs.filter(x => x != '') : []), m.end);
+        return reittiUrl({start: m.start, legs: (m.legs.length > 0 ? m.legs.filter(x => x != '') : []), end: m.end});
     }
     m = onkoKoordinaatti(str);
     if (m) {
@@ -724,7 +724,7 @@ let luoInfraAPIUrl_ = str => {
             // crs:84
             srs = 'srsName=crs:84';
         }
-        return koordinaattiUrl([m[0], m[1]],  srs);
+        return koordinaattiUrl(srs, [m[0], m[1]]);
     }
     m = onkoTREXOID(str);
     if (m) {
@@ -733,6 +733,9 @@ let luoInfraAPIUrl_ = str => {
 }
 
 let luoEtj2APIUrl = (str, time) => {
+    return time ? withTime(time, luoEtj2APIUrl_(str)) : luoEtj2APIUrl_(str);
+}
+let luoEtj2APIUrl_ = str => {
     let m = onkoJetiOID(str)
     if (m) {
         return baseEtj2APIUrl(false) + str + '.json?' + (time ? 'time=' + time : '');
@@ -759,7 +762,7 @@ let luoAikatauluUrl = str => {
     if (m) {
         return aikatauluAPIUrl + m.departureDate + '/' + m.trainNumber;
     }
-}
+}*/
 
 // charts ei piirrä näkyviin laatikoita, jotka ovat 0-mittaisia suuntaan tai toiseen.
 let fixPoints = x => {
@@ -780,7 +783,7 @@ let onAttributeMutation = (attr) => (elem, callback) => {
 };
 
 let onStyleChange = onAttributeMutation('style');
-let onTitleChange = onAttributeMutation('title');
+//let onTitleChange = onAttributeMutation('title');
 
 let withoutProp = (obj, unwantedProp) => {
     var ret = {};

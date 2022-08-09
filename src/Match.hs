@@ -66,6 +66,12 @@ fintrafficJarjestelma = mkFintrafficSystem <=< readMaybe . unpack <=< (captureTe
 vaylaJarjestelma :: OID -> Maybe VaylaSystem
 vaylaJarjestelma = mkVaylaSystem <=< readMaybe . unpack <=< (captureTextMaybe [cp|systemId|] . (?=~ regex_knownOid) . oid)
 
+
+-- | subsystemId
+-- >>> subsystemId (OID "1.2.246.586.1.1")
+-- "1"
+-- >>> subsystemId (OID "1.2.246.586.1.2.3.4.5")
+-- "2.3.4.5"
 subsystemId :: OID -> Text
 subsystemId = fromJust . (captureTextMaybe [cp|subsystemId|] . (?=~ regex_knownOid) . oid)
 
@@ -80,28 +86,31 @@ subsystemId = fromJust . (captureTextMaybe [cp|subsystemId|] . (?=~ regex_knownO
 onkoOID :: Text -> Maybe OID
 onkoOID = fmap OID . (=~~ regex_oid)
 
+-- | onkoInfraOID
+-- >>> onkoInfraOID $ OID "1.2.246.586.1.40.3"
+-- Just Liikennepaikkavali
 onkoInfraOID :: OID -> Maybe InfraType
 onkoInfraOID x = do
-    ret <- readMaybe . unpack . takeWhile (/= '.') . subsystemId $ x
     guard $ fintrafficJarjestelma x == Just Infra
+    ret <- readMaybe . unpack . takeWhile (/= '.') . subsystemId $ x
     findInfraType ret
 
 onkoJetiOID :: OID -> Maybe JetiType
 onkoJetiOID x = do
-    ret <- readMaybe . unpack . takeWhile (/= '.') . subsystemId $ x
     guard $ fintrafficJarjestelma x == Just Jeti
+    ret <- readMaybe . unpack . takeWhile (/= '.') . subsystemId $ x
     findJetiType ret
 
 onkoRumaOID :: OID -> Maybe RumaType
 onkoRumaOID x = do
-    ret <- readMaybe . unpack . takeWhile (/= '.') . subsystemId $ x
     guard $ fintrafficJarjestelma x == Just Ruma
+    ret <- readMaybe . unpack . takeWhile (/= '.') . subsystemId $ x
     findRumaType ret
 
 onkoTREXOID :: OID -> Maybe TrexType
 onkoTREXOID x = do
-    ret <- readMaybe . unpack . takeWhile (/= '.') . subsystemId $ x
     guard $ vaylaJarjestelma x == Just Trex
+    ret <- readMaybe . unpack . takeWhile (/= '.') . subsystemId $ x
     findTrexType ret
 
 

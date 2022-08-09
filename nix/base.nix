@@ -97,6 +97,7 @@ let
         [ cabal-install
           haskell-language-server
           ghcid
+          cabal-doctest
         ] ++ (if isJS then [] else [ /*stylish-haskell*/ ]);
 
 

@@ -6,7 +6,6 @@ module State where
 
 import Universum
 import Data.Maybe (fromJust)
-import Data.Generics.Labels ()
 import Data.Time ( UTCTime, getCurrentTime, CalendarDiffTime )
 import Time (showISO, parseISO, Interval (Interval), removeDuration, addDuration, roundToPreviousHour, roundToPreviousDay, roundCalendarDiffTimeToPreviousDay)
 import Language.Javascript.JSaddle (new, jsg, ToJSVal (toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, (!), (<#), obj, jsUndefined)

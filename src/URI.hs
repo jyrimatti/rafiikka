@@ -3,9 +3,11 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module URI where
 
-import Universum hiding (local, state)
+import Universum hiding (whenM, local, state)
 import Text.URI (mkURI, URI, mkPathPiece, mkQueryKey, mkQueryValue, QueryParam (QueryParam, QueryFlag), unRText, RText, RTextLabel (PathPiece))
 import Text.URI.Lens (uriPath, uriQuery, uriTrailingSlash)
 import Text.URI.QQ ( uri )
@@ -15,17 +17,18 @@ import JSDOM (currentWindow)
 import Language.Javascript.JSaddle ((!), create, (<#))
 import Language.Javascript.JSaddle.Classes (FromJSVal(fromJSVal))
 import Data.Maybe (fromJust)
-import Types (Train (Train, departureDate, trainNumber), Revisions (infra, etj2), Ratakmetaisyys (Ratakmetaisyys, kmetaisyys, ratanumero), Pmsijainti, Ratakmvali (Ratakmvali), OID, SRSName (CRS84), Point)
+import Types (Train (Train, departureDate, trainNumber), Revisions (infra, etj2), Ratakmetaisyys (Ratakmetaisyys, kmetaisyys, ratanumero), Pmsijainti, Ratakmvali (Ratakmvali), OID, SRSName (CRS84), Point, Route (Route))
 import URISerialization (ToURIFragment(toURIFragment))
 import Time (Interval (Interval), roundToPreviousMonth, roundToNextMonth, roundToPreviousDay, infiniteInterval)
 import StateAccessor (getMainState)
 import State (AppState(AppState, timeSetting), roundTimeSettingToPreviousDay, TimeSetting (Span, Instant), toInterval)
 import Control.Lens (filtered, folded)
-import Data.Time (CalendarDiffTime)
+import Data.Time (CalendarDiffTime, Day)
 import Language.Javascript.JSaddle.Value( ToJSVal(toJSVal), JSString )
 import Jeti.Types ( VSTila, ESTila, EITila )
 import Infra.Types ( ElementtiTypeName(..) )
 import Ruma.Types ( RTTila )
+import Match (onkoRatakmSijainti, onkoOID, onkoRatakmVali, onkoRatanumero, onkoInfraOID, onkoPmSijainti, onkoReitti, onkoKoordinaatti, onkoTREXOID, onkoJeti, onkoRT, onkoLR, onkoJuna)
 
 aikatauluAPIUrl :: URI
 aikatauluAPIUrl = [uri|https://rata.digitraffic.fi/api/v1/trains/|]
@@ -104,15 +107,21 @@ baseUrl api revision = do
     local <- isLocal
     seed <- isSeed
 
-    Just win <- currentWindow
-    Just revs <- fromJSVal =<< win ! ("revisions" :: Text)
+    win <- currentWindow
+    revs <- if isNothing win
+        then pure Nothing 
+        else fromJSVal =<< fromJust win ! ("revisions" :: Text)
+
+    let suffix = if isNothing revs || isNothing revision
+        then "/"
+        else maybe "" (("/" <>) . ($ fromJust revs)) revision
 
     pure $ 
         set uriTrailingSlash True $
         fromJust $ mkURI $
         "https://" <>
         (if safari || local || seed then "rafiikka.lahteenmaki.net" else "rata.digitraffic.fi") <>
-        "/" <> api <> "-api/0.7" <> maybe "" (("/" <>) . ($ revs)) revision
+        "/" <> api <> "-api/0.7" <> suffix
 
 -- PREPENDs a path segment
 path :: Text -> URI -> URI
@@ -171,6 +180,10 @@ withTime (Just ts) =
     over uriQuery (<> mkParam "time" (toURIFragment $ asInterval ts)) .
     over uriQuery (\params -> params^..folded.filtered (not . isTimeParam))
 
+withoutTime :: URI -> URI
+withoutTime =
+    over uriQuery (\params -> params^..folded.filtered (not . isTimeParam))
+
 withInfinity :: URI -> URI
 withInfinity = withTime (Just $ Span infiniteInterval)
 
@@ -178,6 +191,19 @@ isTimeParam :: QueryParam -> Bool
 isTimeParam (QueryFlag key) = unRText key == "time"
 isTimeParam (QueryParam key _) = unRText key == "time"
 
+
+
+
+junaUrl :: Train -> URI
+junaUrl  Train{..} =
+    path (toURIFragment departureDate) $
+    path (toURIFragment trainNumber)
+    aikatauluAPIUrl
+
+lahtopaivaUrl :: Day -> URI
+lahtopaivaUrl departureDate =
+    path (toURIFragment departureDate) $
+    aikatauluAPIUrl
 
 
 
@@ -213,8 +239,8 @@ liikennepaikkavalitUrl = infraAPIJson $
     path "liikennepaikkavalit" .
     propertyName "alkuliikennepaikka,loppuliikennepaikka,ratakmvalit,objektinVoimassaoloaika,tunniste"
 
-reittiUrl :: NonEmpty OID -> [OID] -> NonEmpty OID -> JSM URI
-reittiUrl alku etapit loppu = infraAPIJson $
+reittiUrl :: Route -> JSM URI
+reittiUrl (Route alku etapit loppu) = infraAPIJson $
     path "reitit" .
     path "kaikki" .
     path (toURIFragment alku) .
@@ -673,8 +699,8 @@ junasijainnitGeojsonUrl = [uri|https://rata.digitraffic.fi/api/v1/train-location
 
 
 
-koordinaattiUrl :: Point -> Maybe SRSName -> JSM URI
-koordinaattiUrl c srs = infraAPIJson $
+koordinaattiUrl :: Maybe SRSName -> Point -> JSM URI
+koordinaattiUrl srs c = infraAPIJson $
     path "koordinaatit" .
     path (toURIFragment c) .
     maybe id srsName srs
@@ -789,3 +815,35 @@ hakuUrlitRuma = [
     , [uri|https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json|]
     ]
 
+
+
+match :: Text -> (Text -> Maybe a) -> (a -> JSM URI) -> Maybe (JSM URI)
+match x p f = case p x of
+    Just a -> Just $ f a
+    Nothing -> Nothing
+                   
+-- | luoInfraAPIUrl
+-- >>> runTest $ render . withoutTime . fromJust <$> luoInfraAPIUrl "1.2.246.586.1.40.3"
+-- "https://rata.digitraffic.fi/infra-api/0.7/1.2.246.586.1.40.3.json"
+luoInfraAPIUrl :: Text -> JSM (Maybe URI)
+luoInfraAPIUrl x = sequence $
+    match x (onkoOID >=> onkoInfraOID) (const $ infraAPIJson $ path x) <|>
+    match x  onkoRatakmSijainti         ratakmSijaintiUrl              <|>
+    match x  onkoRatakmVali             ratakmValiUrl                  <|>
+    match x  onkoRatanumero             ratanumeroUrl                  <|>
+    match x  onkoPmSijainti             pmSijaintiUrl                  <|>
+    match x  onkoReitti                 reittiUrl                      <|>
+    match x  onkoKoordinaatti           (koordinaattiUrl Nothing)      <|>
+    match x (onkoOID >=> onkoTREXOID)   (const $ infraAPIJson $ path x)
+
+luoEtj2APIUrl :: Text -> JSM (Maybe URI)
+luoEtj2APIUrl x = sequence $
+    match x onkoJeti (const $ etj2APIJson $ path x)
+
+luoRumaUrl :: Text -> JSM (Maybe URI)
+luoRumaUrl x = sequence $
+    match x (onkoOID >=> (\oid -> if onkoRT x then Just oid else Nothing)) rtSingleUrl <|>
+    match x (onkoOID >=> (\oid -> if onkoLR x then Just oid else Nothing)) lrSingleUrl
+
+luoAikatauluUrl :: Text -> Maybe URI
+luoAikatauluUrl = fmap junaUrl . onkoJuna

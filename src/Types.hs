@@ -240,3 +240,9 @@ instance ToJSVal Route where
         o <# ("legs" :: JSString) $ toJSVal legs
         o <# ("end" :: JSString) $ toJSVal end
         toJSVal o
+
+instance FromJSVal Route where
+    fromJSVal = doFromJSVal "Route" $ \x ->
+        Route <$> MaybeT (fromJSVal =<< x ! ("start" :: JSString))
+              <*> MaybeT (fromJSVal =<< x ! ("legs" :: JSString))
+              <*> MaybeT (fromJSVal =<< x ! ("end" :: JSString))
