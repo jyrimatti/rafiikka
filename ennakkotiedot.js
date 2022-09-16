@@ -113,8 +113,8 @@ let luoEnnakkotieto = (ennakkotieto, aikavali) => rkmv => {
         if (rkmv.ratanumero != ratanumero) {
             return [];
         }
-        yAxisMin = ratanumerotDS.data[ratanumero][0];
-        yAxisMax = ratanumerotDS.data[ratanumero][1];
+        yAxisMin = ratanumerotDS.data[ratanumero].alku.ratakm*1000 + atanumerotDS.data[ratanumero].alku.etaisyys;
+        yAxisMax = ratanumerotDS.data[ratanumero].loppu.ratakm*1000 + atanumerotDS.data[ratanumero].loppu.etaisyys;
         let ratakmvalille = {
             alkuY:    Math.max(alkuRkm, yAxisMin),
             loppuY:   Math.min(loppuRkm, yAxisMax),

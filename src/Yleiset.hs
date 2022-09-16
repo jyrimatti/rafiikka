@@ -20,16 +20,15 @@ import Data.Time.Lens (modL, month)
 import Data.FoldApp (FoldrApp, foldrApp)
 
 instance FromJSVal Natural where
-  fromJSVal = doFromJSVal "Natural" $ \x -> do
-    MaybeT $ fromJSVal x
+  fromJSVal = doFromJSVal "Natural" $
+    MaybeT . fromJSVal
 
 instance ToJSVal Natural where
   toJSVal = toJSVal @Int . fromIntegral
 
 instance FromJSVal URI where
-  fromJSVal = doFromJSVal "URI" $ \x -> do
-    str <- MaybeT $ fromJSVal x
-    hoistMaybe $ mkURI str
+  fromJSVal = doFromJSVal "URI" $
+    mkURI <=< MaybeT . fromJSVal
 
 instance ToJSVal URI where
   toJSVal = toJSVal . render

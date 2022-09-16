@@ -21,7 +21,7 @@ window.addEventListener('hashchange', () => {
 });
 
 window.ratanumeroChanged = val => {
-    if (!ratanumerotDS.data || ratanumerotDS.data.length == 0) {
+    if (!ratanumerotDS.data || Object.keys(ratanumerotDS.data).length == 0) {
         log("odotellaan ratanumeroiden latautumista...");
         return false;
     }
@@ -320,14 +320,14 @@ am4core.ready(() => {
         on(valittuDS.events, "done", ev => {
             let ratanumero = valittunaRatanumero();
             if (ratanumero) {
-                if (!ratanumerotDS.data || ratanumerotDS.data.length == 0) {
+                if (!ratanumerotDS.data || Object.keys(ratanumerotDS.data).length == 0) {
                     log('odotellaan ratanumeroiden latautumista...');
                     return;
                 }
                 yAxis.title.text = "(" + ratanumero + ")";
                 on(yAxis.title.events, 'doublehit', () => kartta(yAxis.title.text));
-                yAxis.min = ratanumerotDS.data[ratanumero][0];
-                yAxis.max = ratanumerotDS.data[ratanumero][1];
+                yAxis.min = ratanumerotDS.data[ratanumero].alku.ratakm*1000 + ratanumerotDS.data[ratanumero].alku.etaisyys;
+                yAxis.max = ratanumerotDS.data[ratanumero].loppu.ratakm*1000 + ratanumerotDS.data[ratanumero].loppu.etaisyys;
             } else if (valittunaAikataulupaikka()) {
                 if (!aikataulupaikatDS.data || aikataulupaikatDS.data.length == 0) {
                     log('odotellaan aikataulupaikkojen latautumista...');
@@ -380,7 +380,7 @@ am4core.ready(() => {
                 return false;
             }
             aikataulupaikkaSelect.html = "<label for='aikataulupaikkaRadio'><select id='aikataulupaikka1' onchange='window.aikataulupaikkaChanged(this.value, document.getElementById(\"aikataulupaikka2\").value)'><option></option>{1}</select> - " +
-                                                                            "<select id='aikataulupaikka2' onchange='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value, this.value)'><option></option>{2}</select></label>";
+                                                                           "<select id='aikataulupaikka2' onchange='window.aikataulupaikkaChanged(document.getElementById(\"aikataulupaikka1\").value, this.value)'><option></option>{2}</select></label>";
             let aikataulupaikat1 = Object.keys(ev.target.data).filter(x => x.indexOf(".") > -1).map(x => ev.target.data[x]).sort( (a,b) => a.lyhenne < b.lyhenne ? -1 : a.lyhenne > b.lyhenne ? 1 : 0);
             let aikataulupaikat2 = [...aikataulupaikat1];
             let sijaintiParams = (getMainState().sijainti || '').split("-");
@@ -668,10 +668,7 @@ am4core.ready(() => {
             });
         };
         
-        on(rautatieliikennepaikatDS.events, "done", luoRangetJaBreakit);
-        on(liikennepaikanOsatDS.events,     "done", luoRangetJaBreakit);
-        on(raideosuudetDS.events,           "done", luoRangetJaBreakit);
-        on(laituritDS.events,               "done", luoRangetJaBreakit);
+        on(aikataulupaikatDS.events, "done", luoRangetJaBreakit);
 
         on(valittuDS.events, "done", () => {
             yAxis.axisBreaks.clear();

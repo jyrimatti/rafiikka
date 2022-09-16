@@ -11,9 +11,10 @@ import Time (showISO, parseISO, Interval (Interval), removeDuration, addDuration
 import Language.Javascript.JSaddle (new, jsg, ToJSVal (toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, (!), (<#), obj, jsUndefined)
 import JSDOM.Types (JSM)
 import Browser.Browser (withDebug)
-import Monadic (doFromJSVal, isDefined)
+import Monadic (doFromJSVal, isDefined, propFromJSVal, tryPropFromJSVal)
 import Control.Lens.Traversal (both)
 import Data.Time.Lens (modL, hours)
+import Control.Applicative.HT (lift5)
 
 newtype Layer = Layer Text
   deriving (Show, Eq)
@@ -27,7 +28,7 @@ data Mode = Map | Diagram
 instance FromJSVal Mode where
   fromJSVal = doFromJSVal "Mode" $ \x -> do
     MaybeT (fromJSVal @Text x) >>= \case
-     "map" -> pure Map
+     "map"     -> pure Map
      "diagram" -> pure Diagram
      _ -> mzero
 
@@ -156,10 +157,9 @@ instance ToJSVal AppState where
     toJSVal o
 
 instance FromJSVal AppState where
-  fromJSVal = doFromJSVal "AppState" $ \x -> do
-    moodi    <- MaybeT $ fromJSVal =<< x ! ("moodi" :: JSString)
-    rotaatio <- MaybeT $ fromJSVal =<< x ! ("rotaatio" :: JSString)
-    tasot    <- MaybeT $ fromJSVal =<< x ! ("tasot" :: JSString)
-    aika     <- MaybeT $ fromJSVal =<< x ! ("aika" :: JSString)
-    sijainti <- MaybeT $ fromJSVal =<< x ! ("sijainti" :: JSString)
-    pure $ AppState moodi (Degrees rotaatio) (Layer <$> tasot) aika (Location <$> sijainti)
+  fromJSVal = doFromJSVal "AppState" $
+    lift5 AppState <$> propFromJSVal "moodi"
+                   <*> fmap Degrees . propFromJSVal "rotaatio"
+                   <*> (fmap . fmap) Layer . propFromJSVal "tasot"
+                   <*> propFromJSVal "aika"
+                   <*> lift . (fmap . fmap) Location . tryPropFromJSVal "sijainti"

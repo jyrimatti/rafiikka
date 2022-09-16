@@ -8,6 +8,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DataKinds #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module GetSet (
   get,
@@ -21,18 +22,20 @@ module GetSet (
   Constant(..)
 ) where
 
-import Language.Javascript.JSaddle  (MakeObject, ToJSVal, JSVal, JSM, JSString, (!), (<#), toJSVal_aeson, FromJSVal (fromJSVal), FromJSString (fromJSString), MakeArgs)
+import Language.Javascript.JSaddle  (MakeObject, ToJSVal, JSVal, JSM, JSString, (!), (<#), toJSVal_aeson, FromJSVal (fromJSVal), FromJSString (fromJSString), MakeArgs, ghcjsPure, jsUndefined, isUndefined, syncPoint)
 import qualified Language.Javascript.JSaddle as JSaddle
 import GHC.OverloadedLabels (IsLabel (fromLabel))
-import Universum ((>>=), Applicative (pure), ($), (<$>), error, Text, show)
+import Universum ((>>=), Applicative (pure), ($), (<$>), error, Text, show, Semigroup ((<>)), whenM, Bool (True), undefined)
 import GHC.Records (HasField (getField))
 import Data.Aeson (ToJSON)
 import Data.Typeable (Typeable, Proxy (Proxy), typeRep)
-import FFI (deserializationFailure_)
+import FFI (deserializationFailure_, deserializationFailureUnsafe)
 import Data.Maybe ( Maybe(Just, Nothing) )
 import Control.Lens.Action (act)
 import Control.Lens.Action.Type (IndexPreservingAction)
 import Data.Text (tail, init)
+import Shpadoinkle.Console (warn)
+import Monadic (tryReadProperty)
 
 
 instance {-# INCOHERENT #-} HasField x r a => IsLabel x (r -> a) where
@@ -66,20 +69,22 @@ get_ = getField @fieldname
 get :: forall fieldname this res. HasField fieldname this (JSM res) => IndexPreservingAction JSM this res
 get = act (get_ @fieldname)
 
-getObj :: (MakeObject this, FromJSVal jsval) => (jsval -> res) -> JSString -> this -> JSM res
+getObj :: (MakeObject this, ToJSVal this, FromJSVal jsval) => (jsval -> res) -> Text -> this -> JSM res
 getObj c fieldname this = do
-  jval <- this ! fieldname
+  jval <- tryReadProperty fieldname this
   res <- fromJSVal jval
   case res of
-      Nothing -> error "" <$> deserializationFailure_ jval (fromJSString fieldname)
-      Just r  -> pure $ c r
+    Nothing -> do
+      deserializationFailureUnsafe jval fieldname
+    Just r  -> do
+      pure $ c r
 
-getVal :: (MakeObject this, FromJSVal res) => JSString -> this -> JSM res
+getVal :: (MakeObject this, FromJSVal res) => Text -> this -> JSM res
 getVal fieldname this = do
     jval <- this ! fieldname
     res <- fromJSVal jval
     case res of
-      Nothing -> error "" <$> deserializationFailure_ jval (fromJSString fieldname)
+      Nothing -> deserializationFailureUnsafe jval fieldname
       Just r  -> pure r
 
 setVal_ :: forall fieldname this val. (TypeBaseName fieldname, MakeObject this, HasField fieldname this (JSM val), ToJSVal val) => val -> this -> JSM ()

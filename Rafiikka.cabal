@@ -37,6 +37,7 @@ executable Rafiikka
    , regex
    , data-foldapp
    , containers
+   , utility-ht
   
   if impl(ghcjs)
     build-depends: ghcjs-base
@@ -67,6 +68,7 @@ executable Rafiikka
                , Amcharts.Amcharts
                , Amcharts.Adapter
                , Infra.Types
+               , Infra.DataSource
                , Jeti.Types
                , Ruma.Types
                , Trex.Types
@@ -80,6 +82,10 @@ executable Rafiikka
     -fwarn-tabs
     -fwarn-incomplete-record-updates
     -fwarn-identities
+    
+    -Wno-unused-imports
+    -Wno-redundant-constraints
+    -Wno-unused-matches
 
   ghcjs-options:
     -Wall

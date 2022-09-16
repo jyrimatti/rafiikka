@@ -33,9 +33,12 @@ import Language.Javascript.JSaddle (JSString, jsg, new)
 import Monadic (doFromJSVal, guardP, isDefined, invoke)
 import GHCJS.Marshal.Internal ( FromJSVal(fromJSVal), ToJSVal(toJSVal) )
 import Data.Fixed (mod', Fixed (MkFixed))
+import Data.Aeson (ToJSON (toJSON))
 
 data Interval = Interval UTCTime UTCTime
   deriving Show
+instance ToJSON Interval where
+  toJSON (Interval start end)= toJSON $ showISO start <> "/" <> showISO end
 
 startOfTime :: UTCTime
 startOfTime = UTCTime (fromGregorian 2010 01 01) 0
@@ -140,7 +143,6 @@ toISOStringNoMillis = showISO . modL seconds (MkFixed . truncate)
 instance FromJSVal UTCTime where
   fromJSVal = doFromJSVal "UTCTime" $ \x -> do
     a <- invoke x "toISOString"
-    guardP $ isDefined a
     c <- MaybeT $ fromJSVal a
     hoistMaybe $ parseISO c
 
@@ -178,5 +180,5 @@ instance FromJSVal Interval where
 
 instance FromJSVal CalendarDiffTime where
   fromJSVal = doFromJSVal "CalendarDiffTime" $ \x -> do
-    txt :: Text <- MaybeT $ fromJSVal x
+    txt <- MaybeT $ fromJSVal x
     hoistMaybe $ parseISO txt

@@ -4,81 +4,97 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DerivingVia #-}
 module Amcharts.Events where
 
-import Universum ( ($), Generic, Int, Text, (.), (<$>), void )
-import Language.Javascript.JSaddle (JSVal, JSM, JSString, jsg3, FromJSVal, ToJSVal, (!), MakeObject)
-import FFI (function1, function2, functionPure1)
+import Universum ( ($), Generic, Int, Text, (.), (<$>), void, (^.), Semigroup ((<>)), Applicative (pure, (<*>)), MaybeT (MaybeT), MonadTrans (lift), (=<<), Maybe (Just), (<=<), Functor (fmap), liftA3 )
+import Language.Javascript.JSaddle (JSVal, JSM, JSString, jsg3, FromJSVal, ToJSVal, (!), MakeObject, js1, (#))
+import FFI (function1, function2, functionPure1, warn, functionPure2)
 import Amcharts.Amcharts ( AmchartsObject, HasEvent )
 import GHC.Records (HasField (getField))
-import GetSet (getVal, typeBaseName, TypeBaseName)
+import GetSet (getVal, typeBaseName, TypeBaseName, Constant)
+import Monadic (tryReadProperty, doFromJSVal, propFromJSVal)
+import Browser.Browser (withDebug)
+import Language.Javascript.JSaddle.Classes (FromJSVal(fromJSVal))
 
 
 
-data Done
-data Started
-data Ended
+newtype Done = Done {
+  target :: Target
+} deriving Generic
+  deriving TypeBaseName via Constant "done"
+instance FromJSVal Done where
+  fromJSVal = doFromJSVal "Target" $
+    fmap Done <$> propFromJSVal "target"
 
-newtype Target a = Target JSVal deriving (Generic,MakeObject)
-instance FromJSVal a => FromJSVal (Target a)
+data Started = Started
+  deriving Generic
+instance FromJSVal Started
 
-instance (FromJSVal a) => HasField "data" (Target a) (JSM a) where
+data Ended = Ended
+  deriving Generic
+instance FromJSVal Ended
+
+newtype Target = Target JSVal
+  deriving (Generic,MakeObject)
+instance FromJSVal Target where
+  fromJSVal = pure . pure . Target
+
+instance HasField "data" Target (JSM JSVal) where
   getField = getVal "data"
 
 newtype ParseEnded a = ParseEnded {
-  target :: Target a
+  target :: Target
 } deriving Generic
-instance FromJSVal a => FromJSVal (ParseEnded a)
+  deriving TypeBaseName via Constant "parseended"
+instance FromJSVal a => FromJSVal (ParseEnded a) where
+  fromJSVal = doFromJSVal "ParseEnded" $
+    fmap ParseEnded <$> propFromJSVal "target"
 
 data Error = Error {
   code :: Int,
   message :: Text,
   target :: JSVal
 } deriving (Generic)
-instance FromJSVal Error
+instance FromJSVal Error where
+  fromJSVal = doFromJSVal "Error" $
+    liftA3 Error <$> propFromJSVal @Int "code"
+                 <*> propFromJSVal @Text "message"
+                 <*> lift . tryReadProperty "target"
 
 newtype EventDispatcher = EventDispatcher { unEventDispatcher :: JSVal }
-  deriving (Generic, ToJSVal)
-instance FromJSVal EventDispatcher
+  deriving (Generic, ToJSVal, MakeObject)
+instance FromJSVal EventDispatcher where
+  fromJSVal = pure . pure . EventDispatcher
 
 
 
 events :: AmchartsObject obj => obj -> JSM EventDispatcher
-events obj = EventDispatcher <$> obj ! ("events" :: JSString)
+events obj = EventDispatcher <$> tryReadProperty "events" obj
 
-cb :: (ToJSVal obj, ToJSVal b) => JSString -> obj -> Text -> JSM b -> JSM ()
-cb name obj event ret = void $ jsg3 @JSString name obj event (function1 $ \(_::JSVal) -> ret)
+cbPure1 :: (MakeObject obj, FromJSVal a, ToJSVal ret) => JSString -> obj -> Text -> (a -> ret) -> JSM ()
+cbPure1 name obj event f = void $ obj # name $ (event, functionPure1 f)
 
-cb1 :: (ToJSVal obj, FromJSVal a, ToJSVal b) => JSString -> obj -> Text -> (a -> JSM b) -> JSM ()
-cb1 name obj event = void . jsg3 @JSString name obj event . function1
+cbPure2 :: (MakeObject obj, FromJSVal a1, FromJSVal a2, ToJSVal ret) => JSString -> obj -> Text -> (a1 -> a2 -> ret) -> JSM ()
+cbPure2 name obj event f = void $ obj # name $ (event, functionPure2 f)
 
-cb2 :: (ToJSVal obj, FromJSVal a1, FromJSVal a2, ToJSVal b) => JSString -> obj -> Text -> (a1 -> a2 -> JSM b) -> JSM ()
-cb2 name obj event = void . jsg3 @JSString name obj event . function2
+cb1 :: (MakeObject obj, FromJSVal a, ToJSVal ret) => JSString -> obj -> Text -> (a -> JSM ret) -> JSM ()
+cb1 name obj event f = void $ obj # name $ (event, function1 f)
 
-cbPure :: (ToJSVal obj, FromJSVal a, ToJSVal b) => JSString -> obj -> Text -> (a -> b) -> JSM ()
-cbPure name obj event = void . jsg3 @JSString name obj event . functionPure1
+cb2 :: (MakeObject obj, FromJSVal a1, FromJSVal a2, ToJSVal ret) => JSString -> obj -> Text -> (a1 -> a2 -> JSM ret) -> JSM ()
+cb2 name obj event f = void $ obj # name $ (event, function2 f)
 
-on :: forall ev obj. (TypeBaseName ev, AmchartsObject obj, HasEvent obj ev ~ ()) => obj -> JSM () -> JSM ()
-on obj x = do
-    e <- events obj
-    cb "on" e (typeBaseName @ev) x
-
-on1 :: forall ev obj. (FromJSVal ev, TypeBaseName ev, AmchartsObject obj, HasEvent obj ev ~ ()) => obj -> (ev -> JSM ()) -> JSM ()
+on1 :: forall ev obj ret. (FromJSVal ev, ToJSVal ret, TypeBaseName ev, AmchartsObject obj, HasEvent obj ev ~ ()) => obj -> (ev -> JSM ret) -> JSM ()
 on1 obj x = do
     e <- events obj
-    cb1 "on" e (typeBaseName @ev) x
-on2 :: (FromJSVal a1, FromJSVal a2) => EventDispatcher -> Text -> (a1 -> a2 -> JSM ()) -> JSM ()
-on2 = cb2 "on"
+    cb1 "on" e (typeBaseName @ev) $ \ev -> withDebug ("On: " <> typeBaseName @ev) $
+      x ev
 
-once :: EventDispatcher -> Text -> JSM () -> JSM ()
-once = cb "once"
-
-once1 :: (FromJSVal a) => EventDispatcher -> Text -> (a -> JSM ()) -> JSM ()
-once1 = cb1 "once"
-
-once2 :: (FromJSVal a1, FromJSVal a2) => EventDispatcher -> Text -> (a1 -> a2 -> JSM ()) -> JSM ()
-once2 = cb2 "once"
+once1 :: forall ev obj ret. (FromJSVal ev, ToJSVal ret, TypeBaseName ev, AmchartsObject obj, HasEvent obj ev ~ ()) => obj -> (ev -> JSM ret) -> JSM ()
+once1 obj x = do
+    e <- events obj
+    cb1 "once" e (typeBaseName @ev) $ \ev -> withDebug ("Once: " <> typeBaseName @ev) $
+      x ev

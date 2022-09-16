@@ -336,13 +336,13 @@ getJson(baseEtj2APIUrl(false) + 'revisions.json?count=1', data => {
 
 //let ikuisuusAlku = '2010-01-01T00:00:00Z';
 //let ikuisuusLoppu = '2030-01-01T00:00:00Z';
-let ikuisuusAikavali = 'time=' + toISOStringNoMillis(ikuisuusAlku) + '/' + toISOStringNoMillis(ikuisuusLoppu);
+//let ikuisuusAikavali = 'time=' + toISOStringNoMillis(ikuisuusAlku) + '/' + toISOStringNoMillis(ikuisuusLoppu);
 // haetaan infra oletuksena päätilan alkuajanhetkellä
-let infraAikavali = () => 'time=' + toISOStringNoMillis(startOfDayUTC(getMainState().aika[0])) + "/" + toISOStringNoMillis(startOfDayUTC(getMainState().aika[0]));
+//let infraAikavali = () => 'time=' + toISOStringNoMillis(startOfDayUTC(getMainState().aika[0])) + "/" + toISOStringNoMillis(startOfDayUTC(getMainState().aika[0]));
 // haetaan ennakkotiedot oletuksena päätilan aikakonteksti laajennettuna (+- kuukausi tms)
-let etj2Aikavali  = () => 'time=' + laajennaAikavali(getMainState().aika.slice(0,2)).map(toISOStringNoMillis).join("/");
+//let etj2Aikavali  = () => 'time=' + laajennaAikavali(getMainState().aika.slice(0,2)).map(toISOStringNoMillis).join("/");
 // haetaan ratatyöt oletuksena tarkasti päätilan aikakontekstilla (ei cachetusta)
-let rumaAikavali  = () => 'start=' + getMainState().aika.slice(0,2).map(startOfDayUTC).map(toISOStringNoMillis).join("&end=");
+//let rumaAikavali  = () => 'start=' + getMainState().aika.slice(0,2).map(startOfDayUTC).map(toISOStringNoMillis).join("&end=");
 
 //let ratanumeroUrl             = (ratanumero, time) => baseInfraAPIUrl(false) + "radat.json?cql_filter=ratanumero='" + ratanumero + "'&" + (time ? 'time=' + time : infraAikavali());
 //let ratanumerotUrl            = () => baseInfraAPIUrl(false) + "radat.json?propertyName=ratakilometrit,ratanumero,objektinVoimassaoloaika&" + infraAikavali();
@@ -571,12 +571,12 @@ muutoksetEtj2 = [
 //let hakuUrlitRT    = () => ['https://rata.digitraffic.fi/api/v1/trackwork-notifications.json'];
 //let hakuUrlitLR    = () => ['https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json'];
 
-let initDS = ds => {
+/*let initDS = ds => {
     ds.requestOptions.requestHeaders = [{
         "key": "Digitraffic-User",
         "value": "Rafiikka"
     }];
-}
+}*/
 
 if (onkoSeed()) {
     let seed = urls => {

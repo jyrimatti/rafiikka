@@ -15,6 +15,7 @@ import Data.Aeson.Types (FromJSON, Value, fromJSON, Result (Success, Error), ToJ
 import Data.Text (pack)
 import Amcharts.DataSource (progressStart, progressEnd, DataType)
 import Browser.Browser (withDebug)
+import Amcharts.Events (Ended(Ended), Started (Started))
 
 headJson :: FromJSON a => DataType -> URI -> Maybe JSVal -> (Text -> JSM ()) -> (a -> JSM ()) -> JSM ()
 headJson = fetchJson "HEAD" (Nothing :: Maybe ())
@@ -31,16 +32,16 @@ fetchJson method payload datatype uri signal errCb cb = withDebug "fetchJson" $ 
       cb2 value = do
         case fromJSON value of
           Success a -> do
-            progressEnd datatype
+            progressEnd datatype Ended
             cb a
           Error str -> do
-            progressEnd datatype
+            progressEnd datatype Ended
             errCb (pack str)
       errCb2 :: Text -> JSM ()
       errCb2 msg = do
-        progressEnd datatype
+        progressEnd datatype Ended
         errCb msg
 
-  progressStart datatype
+  progressStart datatype Started
   void $ jsg5 method (render uri) signal (function1 errCb2) (function1 cb2) (toJSON payload)
 

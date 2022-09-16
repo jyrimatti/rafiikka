@@ -176,7 +176,7 @@ view _ =
            , ("data-canonical-src","https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png")
            ]
     ]
-  , progress' [ id' "progress", H.max "1" ]
+  , progress' [ id' "progress", H.max "0" ]
   , h1_
     [
       a [ href "" ]

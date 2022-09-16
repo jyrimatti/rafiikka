@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP, ScopedTypeVariables, TypeApplications #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module FFI(
   registerGlobalFunctionPure,
@@ -22,14 +23,19 @@ module FFI(
   procedure2,
   procedure3,
   deserializationFailure_,
-  deserializationFailure
+  deserializationFailure,
+  deserializationFailureUnsafe,
+  warn,
+  debug
 ) where
 
 import Universum
 #ifndef ghcjs_HOST_OS
-import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, fun, function, Function (Function), call, eval, global, (<#), JSCallAsFunction, valToObject, MakeObject, JSString, ghcjsPure, (#), jsg, JSVal, MakeArgs)
+import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, fun, function, Function (Function), call, eval, global, (<#), JSCallAsFunction, valToObject, MakeObject, JSString, ghcjsPure, (#), jsg, JSVal, MakeArgs, syncPoint)
 import Data.Data (typeOf)
 import GHCJS.Foreign (jsTypeOf)
+import JSDOM (currentWindow)
+import Data.Maybe (fromJust)
 #else
 import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, JSString, ToJSString(..), JSVal, MonadJSM, liftJSM, Object (Object), MakeArgs, jsg, (#), ghcjsPure)
 import GHCJS.Foreign.Callback (Callback, syncCallback', syncCallback1', syncCallback2', syncCallback3', asyncCallback, asyncCallback1, asyncCallback2, asyncCallback3)
@@ -48,13 +54,27 @@ registerGlobalFunction2     :: (FromJSVal a, FromJSVal b,              ToJSVal r
 registerGlobalFunction3     :: (FromJSVal a, FromJSVal b, FromJSVal c, ToJSVal r) => Text -> (a -> b -> c -> JSM r) -> JSM ()
 
 warn :: MakeArgs a => a -> JSM JSVal
-warn = jsg @JSString "console" # ("warn" :: JSString)
+warn args = do
+  ret <- jsg @JSString "console" # ("warn" :: JSString) $ args
+  syncPoint
+  pure ret
+
+debug :: MakeArgs a => a -> JSM JSVal
+debug args = do
+  ret <- jsg @JSString "console" # ("debug" :: JSString) $ args
+  syncPoint
+  pure ret
 
 deserializationFailure_ :: JSVal -> Text -> JSM ()
 deserializationFailure_ val resultType = do
   jsType <- ghcjsPure $ jsTypeOf val
-  _ <- warn ("Error deserializing " <> resultType <> " from a " <> show jsType <> ": ",val)
+  _ <- warn ("Error deserializing type " <> resultType <> " from " <> show jsType <> " value: ",val)
   pure ()
+
+deserializationFailureUnsafe :: JSVal -> Text -> JSM a
+deserializationFailureUnsafe val resultType = do
+  _ <- deserializationFailure_ val resultType
+  pure undefined
 
 deserializationFailure :: JSVal -> Text -> JSM (Maybe a)
 deserializationFailure val resultType = do
@@ -228,7 +248,9 @@ cb3 f = fun $ \ _ _ [a1, a2, a3, returnValueF] -> do
 #endif
 
 #ifndef ghcjs_HOST_OS
-registerGlobalFunctionPure name = global <# name
+registerGlobalFunctionPure name val = do
+  win <- currentWindow
+  fromJust win <# name $ val
 
 registerGlobalFunctionPure1 name f = do
   _ <- call (eval $ "(function(cb) { window['" <> name <> "'] = function(a1) { var ret = []; cb(a1, function(r) { ret[0] = r; }); return ret[0]; }; })") global [cbPure1 f]

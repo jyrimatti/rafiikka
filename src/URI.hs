@@ -5,6 +5,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# LANGUAGE DeriveGeneric #-}
 module URI where
 
 import Universum hiding (whenM, local, state)
@@ -29,6 +30,10 @@ import Jeti.Types ( VSTila, ESTila, EITila )
 import Infra.Types ( ElementtiTypeName(..) )
 import Ruma.Types ( RTTila )
 import Match (onkoRatakmSijainti, onkoOID, onkoRatakmVali, onkoRatanumero, onkoInfraOID, onkoPmSijainti, onkoReitti, onkoKoordinaatti, onkoTREXOID, onkoJeti, onkoRT, onkoLR, onkoJuna)
+
+newtype APIResponse t = APIResponse { unwrap :: URI }
+  deriving Generic
+instance ToJSVal (APIResponse t)
 
 aikatauluAPIUrl :: URI
 aikatauluAPIUrl = [uri|https://rata.digitraffic.fi/api/v1/trains/|]
@@ -91,13 +96,15 @@ etj2APIUrl = over uriQuery . (<>) <$> etj2Interval <*> baseEtj2APIUrl False
 rumaAPIUrl :: JSM URI
 rumaAPIUrl = over uriQuery . (<>) <$> rumaInterval <*> baseRumaAPIUrl
 
-infraAPIrevisionsUrl :: JSM URI
-infraAPIrevisionsUrl = over uriQuery (<> mkParam "count" (1 :: Int)) .
+infraAPIrevisionsUrl :: JSM (APIResponse (NonEmpty a))
+infraAPIrevisionsUrl = fmap APIResponse $
+                       over uriQuery (<> mkParam "count" (1 :: Int)) .
                        over uriPath (<> mkPathPiece "revisions.json")
                        <$> baseInfraAPIUrl False
 
-etj2APIrevisionsUrl :: JSM URI
-etj2APIrevisionsUrl = over uriQuery (<> mkParam "count" (1 :: Int)) .
+etj2APIrevisionsUrl :: JSM (APIResponse (NonEmpty a))
+etj2APIrevisionsUrl = fmap APIResponse $
+                      over uriQuery (<> mkParam "count" (1 :: Int)) .
                       over uriPath (<> mkPathPiece "revisions.json")
                       <$> baseEtj2APIUrl False
 
@@ -194,53 +201,53 @@ isTimeParam (QueryParam key _) = unRText key == "time"
 
 
 
-junaUrl :: Train -> URI
-junaUrl  Train{..} =
+junaUrl :: Train -> APIResponse [a]
+junaUrl  Train{..} = APIResponse $
     path (toURIFragment departureDate) $
     path (toURIFragment trainNumber)
     aikatauluAPIUrl
 
-lahtopaivaUrl :: Day -> URI
-lahtopaivaUrl departureDate =
-    path (toURIFragment departureDate) $
+lahtopaivaUrl :: Day -> APIResponse [a]
+lahtopaivaUrl departureDate = APIResponse $ 
+    path (toURIFragment departureDate)
     aikatauluAPIUrl
 
 
 
-ratanumeroUrl :: Text -> JSM URI
-ratanumeroUrl ratanumero = infraAPIJson $
+ratanumeroUrl :: Text -> JSM (APIResponse (Map OID [a]))
+ratanumeroUrl ratanumero = fmap APIResponse $ infraAPIJson $
     path "radat" .
     cqlFilter ("ratanumero=" <> ratanumero)
 
-ratanumerotUrl :: JSM URI
-ratanumerotUrl = infraAPIJson $
+ratanumerotUrl :: JSM (APIResponse (Map OID [a]))
+ratanumerotUrl = fmap APIResponse $ infraAPIJson $
     path "radat" .
     propertyName "ratakilometrit,ratanumero,objektinVoimassaoloaika"
 
-ratakmSijaintiUrl :: Ratakmetaisyys -> JSM URI
-ratakmSijaintiUrl Ratakmetaisyys{..} = infraAPIJson $
+ratakmSijaintiUrl :: Ratakmetaisyys -> JSM (APIResponse [a])
+ratakmSijaintiUrl Ratakmetaisyys{..} = fmap APIResponse $ infraAPIJson $
     path "radat" .
     path ratanumero .
     path (toURIFragment kmetaisyys)
 
-pmSijaintiUrl :: Pmsijainti -> JSM URI
-pmSijaintiUrl pmsijainti = infraAPIJson $
+pmSijaintiUrl :: Pmsijainti -> JSM (APIResponse [a])
+pmSijaintiUrl pmsijainti = fmap APIResponse $ infraAPIJson $
     path "paikantamismerkit" .
     path (toURIFragment pmsijainti)
 
-ratakmValiUrl :: Ratakmvali -> JSM URI
-ratakmValiUrl (Ratakmvali ratanumero alku loppu) = infraAPIJson $
+ratakmValiUrl :: Ratakmvali -> JSM (APIResponse [a])
+ratakmValiUrl (Ratakmvali ratanumero alku loppu) = fmap APIResponse $ infraAPIJson $
     path "radat" .
     path ratanumero .
     path (toURIFragment alku <> "-" <> toURIFragment loppu)
 
-liikennepaikkavalitUrl :: JSM URI
-liikennepaikkavalitUrl = infraAPIJson $
+liikennepaikkavalitUrl :: JSM (APIResponse (Map OID [a]))
+liikennepaikkavalitUrl = fmap APIResponse $ infraAPIJson $
     path "liikennepaikkavalit" .
     propertyName "alkuliikennepaikka,loppuliikennepaikka,ratakmvalit,objektinVoimassaoloaika,tunniste"
 
-reittiUrl :: Route -> JSM URI
-reittiUrl (Route alku etapit loppu) = infraAPIJson $
+reittiUrl :: Route -> JSM (APIResponse a)
+reittiUrl (Route alku etapit loppu) = fmap APIResponse $ infraAPIJson $
     path "reitit" .
     path "kaikki" .
     path (toURIFragment alku) .
@@ -248,8 +255,8 @@ reittiUrl (Route alku etapit loppu) = infraAPIJson $
     path (toURIFragment loppu) .
     propertyName "geometria,liikennepaikat,liikennepaikanOsat,seisakkeet,linjavaihteet"
 
-reittihakuUrl :: NonEmpty OID -> [OID] -> NonEmpty OID -> JSM URI
-reittihakuUrl alku etapit loppu = infraAPIJson $
+reittihakuUrl :: NonEmpty OID -> [OID] -> NonEmpty OID -> JSM (APIResponse a)
+reittihakuUrl alku etapit loppu = fmap APIResponse $ infraAPIJson $
     path "reitit" .
     path "kaikki" .
     path (toURIFragment alku) .
@@ -261,43 +268,43 @@ reittihakuUrl alku etapit loppu = infraAPIJson $
 
 
 
-ratapihapalveluTyypitUrl :: JSM URI
-ratapihapalveluTyypitUrl = infraAPIJson $
+ratapihapalveluTyypitUrl :: JSM (APIResponse [a])
+ratapihapalveluTyypitUrl = fmap APIResponse $ infraAPIJson $
     path "ratapihapalvelutyypit"
 
-opastinTyypitUrl :: JSM URI
-opastinTyypitUrl = infraAPIJson $
+opastinTyypitUrl :: JSM (APIResponse [a])
+opastinTyypitUrl = fmap APIResponse $ infraAPIJson $
     path "opastintyypit"
 
-vaihdeTyypitUrl :: JSM URI
-vaihdeTyypitUrl = infraAPIJson $
+vaihdeTyypitUrl :: JSM (APIResponse [a])
+vaihdeTyypitUrl = fmap APIResponse $ infraAPIJson $
     path "vaihdetyypit"
 
 
 
 
 
-rautatieliikennepaikatUrl :: JSM URI
-rautatieliikennepaikatUrl = infraAPIJson $
+rautatieliikennepaikatUrl :: JSM (APIResponse (Map OID [a]))
+rautatieliikennepaikatUrl = fmap APIResponse $ infraAPIJson $
     path "rautatieliikennepaikat" .
     propertyName "lyhenne,muutRatakmsijainnit,nimi,ratakmvalit,tunniste,tyyppi,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,objektinVoimassaoloaika" .
     srsName CRS84
 
-liikennepaikanOsatUrl :: JSM URI
-liikennepaikanOsatUrl = infraAPIJson $
+liikennepaikanOsatUrl :: JSM (APIResponse (Map OID [a]))
+liikennepaikanOsatUrl = fmap APIResponse $ infraAPIJson $
     path "liikennepaikanosat" .
     propertyName "liikennepaikka,lyhenne,muutRatakmsijainnit,nimi,tunniste,uicKoodi,virallinenRatakmsijainti,virallinenSijainti,objektinVoimassaoloaika" .
     srsName CRS84
 
-raideosuudetUrl :: JSM URI
-raideosuudetUrl = infraAPIJson $
+raideosuudetUrl :: JSM (APIResponse (Map OID [a]))
+raideosuudetUrl = fmap APIResponse $ infraAPIJson $
     path "aikataulupaikat" .
     cqlFilter "tyyppi='raideosuus'" .
     propertyName "geometria,tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tyyppi,uicKoodi,objektinVoimassaoloaika" .
     srsName CRS84
 
-laituritUrl :: JSM URI
-laituritUrl = infraAPIJson $
+laituritUrl :: JSM (APIResponse (Map OID [a]))
+laituritUrl = fmap APIResponse $ infraAPIJson $
     path "aikataulupaikat" .
     cqlFilter "tyyppi='laituri'" .
     propertyName "geometria,tunniste.tunniste,tunniste.kuvaus,tunniste.ratakmvalit,tunniste.tunnus,tyyppi,uicKoodi,objektinVoimassaoloaika" .
@@ -305,19 +312,18 @@ laituritUrl = infraAPIJson $
 
 
 
-
-elementitUrl :: JSM URI
-elementitUrl = infraAPIJson $
+elementitUrl :: JSM (APIResponse (Map OID [a]))
+elementitUrl = fmap APIResponse $ infraAPIJson $
     path "elementit" .
     propertyName "tunniste,nimi,ratakmsijainnit,objektinVoimassaoloaika"
 
-lorajatUrl :: JSM URI
-lorajatUrl = infraAPIJson $
+lorajatUrl :: JSM (APIResponse (Map OID [a]))
+lorajatUrl = fmap APIResponse $ infraAPIJson $
     path "liikenteenohjauksenrajat" .
     propertyName "tunniste,leikkaukset.ratakmsijainnit,objektinVoimassaoloaika"
 
-raiteenKorkeudetUrl :: OID -> JSM URI
-raiteenKorkeudetUrl raide = infraAPIJson $
+raiteenKorkeudetUrl :: OID -> JSM (APIResponse (Map OID [a]))
+raiteenKorkeudetUrl raide = fmap APIResponse $ infraAPIJson $
     path "raiteet" .
     path (toURIFragment raide) .
     propertyName "korkeuspisteet,ratakmvalit,tunnus"
@@ -325,26 +331,26 @@ raiteenKorkeudetUrl raide = infraAPIJson $
 
 
 
-eiUrlRatanumero :: EITila -> JSM URI
-eiUrlRatanumero tila = etj2APIJson $
+eiUrlRatanumero :: EITila -> JSM (APIResponse [a])
+eiUrlRatanumero tila = fmap APIResponse $ etj2APIJson $
     path "ennakkoilmoitukset" .
     cqlFilter ("tila='" <> toURIFragment tila <> "'") .
     propertyName "tunniste,leikkaukset.ratakmsijainnit,objektinVoimassaoloaika"
 
-esUrlRatanumero :: ESTila -> JSM URI
-esUrlRatanumero tila = etj2APIJson $
+esUrlRatanumero :: ESTila -> JSM (APIResponse [a])
+esUrlRatanumero tila = fmap APIResponse $ etj2APIJson $
     path "ennakkosuunnitelmat" .
     cqlFilter ("tila='" <> toURIFragment tila <> "'") .
     propertyName "sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa"
 
-vsUrlRatanumero :: VSTila -> JSM URI
-vsUrlRatanumero tila = etj2APIJson $
+vsUrlRatanumero :: VSTila -> JSM (APIResponse [a])
+vsUrlRatanumero tila = fmap APIResponse $ etj2APIJson $
     path "vuosisuunnitelmat" .
     cqlFilter ("tila='" <> toURIFragment tila <> "'") .
     propertyName "ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa"
 
-loUrlRatanumero :: VSTila -> JSM URI
-loUrlRatanumero tila = etj2APIJson $
+loUrlRatanumero :: VSTila -> JSM (APIResponse [a])
+loUrlRatanumero tila = fmap APIResponse $ etj2APIJson $
     path "loilmoitukset" .
     cqlFilter ("tila='" <> toURIFragment tila <> "'") .
     propertyName "ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika"
@@ -352,52 +358,52 @@ loUrlRatanumero tila = etj2APIJson $
 
 
 
-eiUrlAikataulupaikka :: EITila -> JSM URI
-eiUrlAikataulupaikka tila = etj2APIJson $
+eiUrlAikataulupaikka :: EITila -> JSM (APIResponse [a])
+eiUrlAikataulupaikka tila = fmap APIResponse $ etj2APIJson $
     path "ennakkoilmoitukset" .
     cqlFilter ("tila='" <> toURIFragment tila <> "'") .
     propertyName "ajankohdat,liikennevaikutusalue.laskennallisetRatakmvalit,sisainenTunniste,tunniste,voimassa"
 
-esUrlAikataulupaikka :: ESTila -> JSM URI
-esUrlAikataulupaikka tila = etj2APIJson $
+esUrlAikataulupaikka :: ESTila -> JSM (APIResponse [a])
+esUrlAikataulupaikka tila = fmap APIResponse $ etj2APIJson $
     path "ennakkosuunnitelmat" .
     cqlFilter ("tila='" <> toURIFragment tila <> "'") .
     propertyName "sisainenTunniste,tyonosat.ajankohdat,tyonosat.tekopaikka.laskennallisetRatakmvalit,tunniste,voimassa"
 
-vsUrlAikataulupaikka :: VSTila -> JSM URI
-vsUrlAikataulupaikka tila = etj2APIJson $
+vsUrlAikataulupaikka :: VSTila -> JSM (APIResponse [a])
+vsUrlAikataulupaikka tila = fmap APIResponse $ etj2APIJson $
     path "vuosisuunnitelmat" .
     cqlFilter ("tila='" <> toURIFragment tila <> "'") .
     propertyName "ajankohdat,sisainenTunniste,tunniste,kohde.laskennallisetRatakmvalit,voimassa"
 
-loUrlAikataulupaikka :: VSTila -> JSM URI
-loUrlAikataulupaikka tila = etj2APIJson $
+loUrlAikataulupaikka :: VSTila -> JSM (APIResponse [a])
+loUrlAikataulupaikka tila = fmap APIResponse $ etj2APIJson $
     path "loilmoitukset" .
     cqlFilter ("tila='" <> toURIFragment tila <> "'") .
     propertyName "ensimmainenAktiivisuusaika,ratakmvalit,sisainenTunniste,tunniste,viimeinenAktiivisuusaika"
 
 
 
-kunnossapitoalueetMetaUrl :: JSM URI
-kunnossapitoalueetMetaUrl = infraAPIJson $
+kunnossapitoalueetMetaUrl :: JSM (APIResponse (Map OID [a]))
+kunnossapitoalueetMetaUrl = fmap APIResponse $ infraAPIJson $
     path "kunnossapitoalueet" .
     propertyName "nimi,objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-liikenteenohjausalueetMetaUrl :: JSM URI
-liikenteenohjausalueetMetaUrl = infraAPIJson $
+liikenteenohjausalueetMetaUrl :: JSM (APIResponse (Map OID [a]))
+liikenteenohjausalueetMetaUrl = fmap APIResponse $ infraAPIJson $
     path "liikenteenohjausalueet" .
     propertyName "nimi,objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-kayttokeskuksetMetaUrl :: JSM URI
-kayttokeskuksetMetaUrl = infraAPIJson $
+kayttokeskuksetMetaUrl :: JSM (APIResponse (Map OID [a]))
+kayttokeskuksetMetaUrl = fmap APIResponse $ infraAPIJson $
     path "kayttokeskukset" .
     propertyName "nimi,objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-liikennesuunnittelualueetMetaUrl :: JSM URI
-liikennesuunnittelualueetMetaUrl = infraAPIJson $
+liikennesuunnittelualueetMetaUrl :: JSM (APIResponse (Map OID [a]))
+liikennesuunnittelualueetMetaUrl = fmap APIResponse $ infraAPIJson $
     path "liikennesuunnittelualueet" .
     propertyName "nimi,objektinVoimassaoloaika,tunniste" .
     withInfinity
@@ -406,74 +412,74 @@ liikennesuunnittelualueetMetaUrl = infraAPIJson $
 
 
 
-ratapihapalvelutUrlTilasto :: JSM URI
-ratapihapalvelutUrlTilasto = infraAPIJson $
+ratapihapalvelutUrlTilasto :: JSM (APIResponse (Map OID [a]))
+ratapihapalvelutUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "ratapihapalvelut" .
     propertyName "objektinVoimassaoloaika,tunniste,tyyppi" .
     withInfinity
 
-toimialueetUrlTilasto :: JSM URI
-toimialueetUrlTilasto = infraAPIJson $
+toimialueetUrlTilasto :: JSM (APIResponse (Map OID [a]))
+toimialueetUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "toimialueet" .
     propertyName "liikenteenohjausalue,objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-tilirataosatUrlTilasto :: JSM URI
-tilirataosatUrlTilasto = infraAPIJson $
+tilirataosatUrlTilasto :: JSM (APIResponse (Map OID [a]))
+tilirataosatUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "tilirataosat" .
     propertyName "kunnossapitoalue,objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-liikennesuunnittelualueetUrlTilasto :: JSM URI
-liikennesuunnittelualueetUrlTilasto = infraAPIJson $
+liikennesuunnittelualueetUrlTilasto :: JSM (APIResponse (Map OID [a]))
+liikennesuunnittelualueetUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "liikennesuunnittelualueet" .
     propertyName "objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-paikantamismerkitUrlTilasto :: JSM URI
-paikantamismerkitUrlTilasto = infraAPIJson $
+paikantamismerkitUrlTilasto :: JSM (APIResponse (Map OID [a]))
+paikantamismerkitUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "paikantamismerkit" .
     propertyName "objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-kilometrimerkitUrlTilasto :: JSM URI
-kilometrimerkitUrlTilasto = infraAPIJson $
+kilometrimerkitUrlTilasto :: JSM (APIResponse (Map OID [a]))
+kilometrimerkitUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "kilometrimerkit" .
     propertyName "objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-radatUrlTilasto :: JSM URI
-radatUrlTilasto = infraAPIJson $
+radatUrlTilasto :: JSM (APIResponse (Map OID [a]))
+radatUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "radat" .
     propertyName "objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-liikennepaikanOsatUrlTilasto :: JSM URI
-liikennepaikanOsatUrlTilasto = infraAPIJson $
+liikennepaikanOsatUrlTilasto :: JSM (APIResponse (Map OID [a]))
+liikennepaikanOsatUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "liikennepaikanosat" .
     propertyName "liikennesuunnittelualueet,objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-rautatieliikennepaikatUrlTilasto :: JSM URI
-rautatieliikennepaikatUrlTilasto = infraAPIJson $
+rautatieliikennepaikatUrlTilasto :: JSM (APIResponse (Map OID [a]))
+rautatieliikennepaikatUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "rautatieliikennepaikat" .
     propertyName "liikennesuunnittelualueet,objektinVoimassaoloaika,tunniste,tyyppi" .
     withInfinity
 
-liikennepaikkavalitUrlTilasto :: JSM URI
-liikennepaikkavalitUrlTilasto = infraAPIJson $
+liikennepaikkavalitUrlTilasto :: JSM (APIResponse (Map OID [a]))
+liikennepaikkavalitUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "liikennepaikkavalit" .
     propertyName "objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-raideosuudetUrlTilasto :: JSM URI
-raideosuudetUrlTilasto = infraAPIJson $
+raideosuudetUrlTilasto :: JSM (APIResponse (Map OID [a]))
+raideosuudetUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "raideosuudet" .
     propertyName "objektinVoimassaoloaika,tunniste,tyyppi" .
     withInfinity
 
-elementitUrlTilasto :: ElementtiTypeName -> JSM URI
-elementitUrlTilasto typeN = infraAPIJson $
+elementitUrlTilasto :: ElementtiTypeName -> JSM (APIResponse (Map OID [a]))
+elementitUrlTilasto typeN = fmap APIResponse $ infraAPIJson $
     path "elementit" .
     typeNames (toURIFragment typeN) .
     propertyName (elementtiTilastoPropertyNames typeN) .
@@ -486,56 +492,56 @@ elementitUrlTilasto typeN = infraAPIJson $
     elementtiTilastoPropertyNames Ryhmityseristin = "kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,ryhmityseristin.nopeastiAjettava,tunniste"
     elementtiTilastoPropertyNames _               = "kayttokeskukset,liikennesuunnittelualue,objektinVoimassaoloaika,tunniste"
 
-raiteensulutUrlTilasto :: JSM URI
-raiteensulutUrlTilasto = infraAPIJson $
+raiteensulutUrlTilasto :: JSM (APIResponse (Map OID [a]))
+raiteensulutUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "raiteensulut" .
     propertyName "kasinAsetettava,objektinVoimassaoloaika,tunniste,varmuuslukittu" .
     withInfinity
 
-raiteetUrlTilasto :: JSM URI
-raiteetUrlTilasto = infraAPIJson $
+raiteetUrlTilasto :: JSM (APIResponse (Map OID [a]))
+raiteetUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "raiteet" .
     propertyName "objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-liikenteenohjauksenrajatUrlTilasto :: JSM URI
-liikenteenohjauksenrajatUrlTilasto = infraAPIJson $
+liikenteenohjauksenrajatUrlTilasto :: JSM (APIResponse (Map OID [a]))
+liikenteenohjauksenrajatUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "liikenteenohjauksenrajat" .
     propertyName "ensimmaisenLuokanAlueidenRaja,objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-tunnelitUrlTilasto :: JSM URI
-tunnelitUrlTilasto = infraAPIJson $
+tunnelitUrlTilasto :: JSM (APIResponse (Map OID [a]))
+tunnelitUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "tunnelit" .
     propertyName "objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-sillatUrlTilasto :: JSM URI
-sillatUrlTilasto = infraAPIJson $
+sillatUrlTilasto :: JSM (APIResponse (Map OID [a]))
+sillatUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "sillat" .
     propertyName "kayttotarkoitus,objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-laituritUrlTilasto :: JSM URI
-laituritUrlTilasto = infraAPIJson $
+laituritUrlTilasto :: JSM (APIResponse (Map OID [a]))
+laituritUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "laiturit" .
     propertyName "korkeus,objektinVoimassaoloaika,tunniste,tyyppi" .
     withInfinity
 
-tasoristeyksetUrlTilasto :: JSM URI
-tasoristeyksetUrlTilasto = infraAPIJson $
+tasoristeyksetUrlTilasto :: JSM (APIResponse (Map OID [a]))
+tasoristeyksetUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "tasoristeykset" .
     propertyName "kayttokeskukset,objektinVoimassaoloaika,tielaji,tunniste,varoituslaitos" .
     withInfinity
 
-kayttokeskuksetUrlTilasto :: JSM URI
-kayttokeskuksetUrlTilasto = infraAPIJson $
+kayttokeskuksetUrlTilasto :: JSM (APIResponse (Map OID [a]))
+kayttokeskuksetUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "kayttokeskukset" .
     propertyName "objektinVoimassaoloaika,tunniste" .
     withInfinity
 
-kytkentaryhmatUrlTilasto :: JSM URI
-kytkentaryhmatUrlTilasto = infraAPIJson $
+kytkentaryhmatUrlTilasto :: JSM (APIResponse (Map OID [a]))
+kytkentaryhmatUrlTilasto = fmap APIResponse $ infraAPIJson $
     path "kytkentaryhmat" .
     propertyName "objektinVoimassaoloaika,tunniste" .
     withInfinity
@@ -544,61 +550,61 @@ kytkentaryhmatUrlTilasto = infraAPIJson $
 
 
 
-asiatUrl :: JSM URI
-asiatUrl = etj2APIJson $
+asiatUrl :: JSM (APIResponse [a])
+asiatUrl = fmap APIResponse $ etj2APIJson $
     path "asiat"
 
-esTyypitUrl :: JSM URI
-esTyypitUrl = etj2APIJson $
+esTyypitUrl :: JSM (APIResponse [a])
+esTyypitUrl = fmap APIResponse $ etj2APIJson $
     path "ennakkosuunnitelmatyypit"
 
-loUrlTilasto :: JSM URI
-loUrlTilasto = etj2APIJson $
+loUrlTilasto :: JSM (APIResponse [a])
+loUrlTilasto = fmap APIResponse $ etj2APIJson $
     path "loilmoitukset" .
     propertyName "ensimmainenAktiivisuusaika,luontiaika,tila,tunniste,tyyppi,viimeinenAktiivisuusaika" .
     withInfinity
 
-eiUrlTilasto :: JSM URI
-eiUrlTilasto = etj2APIJson $
+eiUrlTilasto :: JSM (APIResponse [a])
+eiUrlTilasto = fmap APIResponse $ etj2APIJson $
     path "ennakkoilmoitukset" .
     propertyName "asia,luontiaika,tila,tunniste,tyyppi,voimassa" .
     withInfinity
 
-esUrlTilasto :: JSM URI
-esUrlTilasto = etj2APIJson $
+esUrlTilasto :: JSM (APIResponse [a])
+esUrlTilasto = fmap APIResponse $ etj2APIJson $
     path "ennakkosuunnitelmat" .
     propertyName "luontiaika,tila,tunniste,tyyppi,voimassa" .
     withInfinity
 
-vsUrlTilasto :: JSM URI
-vsUrlTilasto = etj2APIJson $
+vsUrlTilasto :: JSM (APIResponse [a])
+vsUrlTilasto = fmap APIResponse $ etj2APIJson $
     path "vuosisuunnitelmat" .
     propertyName "alustavakapasiteettivaraus,luontiaika,tila,tunniste,tyo,tyonlaji,voimassa" .
     withInfinity
 
 
 
-luotujaPoistuneitaInfraUrl :: Text -> Text -> CalendarDiffTime -> Maybe ElementtiTypeName -> JSM URI
-luotujaPoistuneitaInfraUrl cql p dur typeN = (`fmap` baseInfraAPIUrl True) $ asJson .
+luotujaPoistuneitaInfraUrl :: Text -> Text -> CalendarDiffTime -> Maybe ElementtiTypeName -> JSM (APIResponse (Map OID [a]))
+luotujaPoistuneitaInfraUrl cql p dur typeN = fmap APIResponse $ (`fmap` baseInfraAPIUrl True) $ asJson .
     path p .
     cqlFilter cql .
     duration dur .
     propertyName "objektinVoimassaoloaika,tunniste" .
     maybe id (typeNames . toURIFragment) typeN
 
-luotujaInfraUrl :: Text -> CalendarDiffTime -> Maybe ElementtiTypeName -> JSM URI
+luotujaInfraUrl :: Text -> CalendarDiffTime -> Maybe ElementtiTypeName -> JSM (APIResponse (Map OID [a]))
 luotujaInfraUrl = luotujaPoistuneitaInfraUrl "start(objektinVoimassaoloaika)>=start(time) AND start(objektinVoimassaoloaika)<end(time)"
 
-poistuneitaInfraUrl :: Text -> CalendarDiffTime -> Maybe ElementtiTypeName -> JSM URI
+poistuneitaInfraUrl :: Text -> CalendarDiffTime -> Maybe ElementtiTypeName -> JSM (APIResponse (Map OID [a]))
 poistuneitaInfraUrl = luotujaPoistuneitaInfraUrl "end(objektinVoimassaoloaika)>=start(time) AND end(objektinVoimassaoloaika)<end(time)"
 
-data Muutokset = Muutokset {
+data Muutokset a = Muutokset {
     nimi :: Text,
-    luotuja :: URI,
-    poistuneita :: URI
+    luotuja :: APIResponse a,
+    poistuneita :: APIResponse a
 }
 
-instance ToJSVal Muutokset where
+instance ToJSVal (Muutokset a) where
     toJSVal (Muutokset{..}) = do
         o <- create
         o <# ("nimi" :: JSString) $ toJSVal nimi
@@ -606,13 +612,13 @@ instance ToJSVal Muutokset where
         o <# ("poistuneita" :: JSString) $ toJSVal poistuneita
         toJSVal o
 
-infraMuutoksetUrl :: Text -> Text -> Maybe ElementtiTypeName -> CalendarDiffTime -> JSM Muutokset
+infraMuutoksetUrl :: Text -> Text -> Maybe ElementtiTypeName -> CalendarDiffTime -> JSM (Muutokset (Map OID [a]))
 infraMuutoksetUrl name p typeN dur = do
     luotuja <- luotujaInfraUrl p dur typeN
     poistuneita <- poistuneitaInfraUrl p dur typeN
     pure $ Muutokset name luotuja poistuneita
 
-muutoksetInfra :: CalendarDiffTime -> JSM [Muutokset]
+muutoksetInfra :: CalendarDiffTime -> JSM [Muutokset (Map OID [a])]
 muutoksetInfra d = traverse ($ d)
     [ infraMuutoksetUrl "Ratapihapalvelut" "ratapihapalvelut" Nothing
     , infraMuutoksetUrl "Toimialueet" "toimialueet" Nothing
@@ -660,27 +666,27 @@ muutoksetInfra d = traverse ($ d)
     , infraMuutoksetUrl "Kytkentäryhmät" "kytkentaryhmat" Nothing
     ]
 
-muutoksetEtj2 :: CalendarDiffTime -> JSM [Muutokset]
+muutoksetEtj2 :: CalendarDiffTime -> JSM [Muutokset [a]]
 muutoksetEtj2 d = traverse ($ d)
     [ etj2MuutoksetUrl "Ennakkoilmoitukset" "ennakkoilmoitukset"
     , etj2MuutoksetUrl "Ennakkosuunnitelmat" "ennakkosuunnitelmat"
     , etj2MuutoksetUrl "Vuosisuunnitelmat" "vuosisuunnitelmat"
     ]
 
-luotujaPoistuneitaEtj2Url :: Text -> Text -> CalendarDiffTime -> JSM URI
-luotujaPoistuneitaEtj2Url cql p dur = (`fmap` baseEtj2APIUrl True) $ asJson .
+luotujaPoistuneitaEtj2Url :: Text -> Text -> CalendarDiffTime -> JSM (APIResponse [a])
+luotujaPoistuneitaEtj2Url cql p dur = fmap APIResponse $ (`fmap` baseEtj2APIUrl True) $ asJson .
     path p .
     cqlFilter cql .
     duration dur .
     propertyName "objektinVoimassaoloaika,tunniste"
 
-luotujaEtj2Url :: Text -> CalendarDiffTime -> JSM URI
+luotujaEtj2Url :: Text -> CalendarDiffTime -> JSM (APIResponse [a])
 luotujaEtj2Url = luotujaPoistuneitaEtj2Url "start(voimassa)>=start(time)+AND+start(voimassa)<end(time)"
 
-poistuneitaEtj2Url :: Text -> CalendarDiffTime -> JSM URI
+poistuneitaEtj2Url :: Text -> CalendarDiffTime -> JSM (APIResponse [a])
 poistuneitaEtj2Url = luotujaPoistuneitaEtj2Url "end(voimassa)>=start(time)+AND+end(voimassa)<end(time)"
 
-etj2MuutoksetUrl :: Text -> Text -> CalendarDiffTime -> JSM Muutokset
+etj2MuutoksetUrl :: Text -> Text -> CalendarDiffTime -> JSM (Muutokset [a])
 etj2MuutoksetUrl name p dur = do
     luotuja <- luotujaEtj2Url p dur
     poistuneita <- poistuneitaEtj2Url p dur
@@ -690,30 +696,30 @@ etj2MuutoksetUrl name p dur = do
 
 
 
-junasijainnitUrl :: URI
-junasijainnitUrl = [uri|https://rata.digitraffic.fi/api/v1/train-locations/latest/|]
+junasijainnitUrl :: APIResponse [a]
+junasijainnitUrl = APIResponse [uri|https://rata.digitraffic.fi/api/v1/train-locations/latest/|]
 
-junasijainnitGeojsonUrl :: URI
-junasijainnitGeojsonUrl = [uri|https://rata.digitraffic.fi/api/v1/train-locations/latest.geojson/|]
-
-
+junasijainnitGeojsonUrl :: APIResponse [a]
+junasijainnitGeojsonUrl = APIResponse [uri|https://rata.digitraffic.fi/api/v1/train-locations/latest.geojson/|]
 
 
-koordinaattiUrl :: Maybe SRSName -> Point -> JSM URI
-koordinaattiUrl srs c = infraAPIJson $
+
+
+koordinaattiUrl :: Maybe SRSName -> Point -> JSM (APIResponse [a])
+koordinaattiUrl srs c = fmap APIResponse $ infraAPIJson $
     path "koordinaatit" .
     path (toURIFragment c) .
     maybe id srsName srs
 
-ratakmMuunnosUrl :: Point -> JSM URI
-ratakmMuunnosUrl c = infraAPIJson $
+ratakmMuunnosUrl :: Point -> JSM (APIResponse [a])
+ratakmMuunnosUrl c = fmap APIResponse $ infraAPIJson $
     path "koordinaatit" .
     path (toURIFragment c) .
     propertyName "ratakmsijainnit,haetunDatanVoimassaoloaika" .
     srsName CRS84
 
-koordinaattiMuunnosUrl :: Ratakmetaisyys -> JSM URI
-koordinaattiMuunnosUrl (Ratakmetaisyys ratanumero kme) = (`fmap` infraAPIUrl) $ withExtension "geojson" .
+koordinaattiMuunnosUrl :: Ratakmetaisyys -> JSM (APIResponse [a])
+koordinaattiMuunnosUrl (Ratakmetaisyys ratanumero kme) = fmap APIResponse $ (`fmap` infraAPIUrl) $ withExtension "geojson" .
     path "radat" .
     path (toURIFragment ratanumero) .
     path (toURIFragment kme) .
@@ -727,31 +733,31 @@ rtUrl tila = rumaAPIJson $
     path "trackwork-notifications" .
     maybe id (state . toURIFragment) tila
 
-rtGeojsonUrl :: Maybe RTTila -> JSM URI
-rtGeojsonUrl = fmap (withExtension "geojson") . rtUrl
+rtGeojsonUrl :: Maybe RTTila -> JSM (APIResponse [a])
+rtGeojsonUrl = fmap (APIResponse . withExtension "geojson") . rtUrl
 
-rtSingleUrl :: OID -> JSM URI
-rtSingleUrl tunniste = rumaAPIJson $
+rtSingleUrl :: OID -> JSM (APIResponse a)
+rtSingleUrl tunniste = fmap APIResponse $ rumaAPIJson $
     path "trackwork-notifications" .
     path (toURIFragment tunniste) .
     path "latest"
 
-lrUrl :: Maybe RTTila -> JSM URI
-lrUrl tila = rumaAPIJson $
+lrUrl :: Maybe RTTila -> JSM (APIResponse [a])
+lrUrl tila = fmap APIResponse $ rumaAPIJson $
     path "trafficrestriction-notifications" .
     maybe id (state . toURIFragment) tila
 
-lrGeojsonUrl :: Maybe RTTila -> JSM URI
-lrGeojsonUrl = fmap (withExtension "geojson") . rtUrl
+lrGeojsonUrl :: Maybe RTTila -> JSM (APIResponse [a])
+lrGeojsonUrl = fmap (APIResponse . withExtension "geojson") . rtUrl
 
-lrSingleUrl :: OID -> JSM URI
-lrSingleUrl tunniste = rumaAPIJson $
+lrSingleUrl :: OID -> JSM (APIResponse a)
+lrSingleUrl tunniste = fmap APIResponse $ rumaAPIJson $
     path "trafficrestriction-notifications" .
     path (toURIFragment tunniste) .
     path "latest"
 
-infraObjektityypitUrl :: JSM URI
-infraObjektityypitUrl = (`fmap` baseInfraAPIUrl True) $ asJson .
+infraObjektityypitUrl :: JSM (APIResponse (NonEmpty a))
+infraObjektityypitUrl = fmap APIResponse $ (`fmap` baseInfraAPIUrl True) $ asJson .
     path "objektityypit"
 
 hakuUrlitInfra :: JSM [URI]
@@ -827,14 +833,14 @@ match x p f = case p x of
 -- "https://rata.digitraffic.fi/infra-api/0.7/1.2.246.586.1.40.3.json"
 luoInfraAPIUrl :: Text -> JSM (Maybe URI)
 luoInfraAPIUrl x = sequence $
-    match x (onkoOID >=> onkoInfraOID) (const $ infraAPIJson $ path x) <|>
-    match x  onkoRatakmSijainti         ratakmSijaintiUrl              <|>
-    match x  onkoRatakmVali             ratakmValiUrl                  <|>
-    match x  onkoRatanumero             ratanumeroUrl                  <|>
-    match x  onkoPmSijainti             pmSijaintiUrl                  <|>
-    match x  onkoReitti                 reittiUrl                      <|>
-    match x  onkoKoordinaatti           (koordinaattiUrl Nothing)      <|>
-    match x (onkoOID >=> onkoTREXOID)   (const $ infraAPIJson $ path x)
+    match x (onkoOID >=> onkoInfraOID) (const $ infraAPIJson $ path x)         <|>
+    match x  onkoRatakmSijainti        (fmap unwrap . ratakmSijaintiUrl)       <|>
+    match x  onkoRatakmVali            (fmap unwrap . ratakmValiUrl)           <|>
+    match x  onkoRatanumero            (fmap unwrap . ratanumeroUrl)           <|>
+    match x  onkoPmSijainti            (fmap unwrap . pmSijaintiUrl)           <|>
+    match x  onkoReitti                (fmap unwrap . reittiUrl)               <|>
+    match x  onkoKoordinaatti          (fmap unwrap . koordinaattiUrl Nothing) <|>
+    match x (onkoOID >=> onkoTREXOID)  (const $ infraAPIJson $ path x)
 
 luoEtj2APIUrl :: Text -> JSM (Maybe URI)
 luoEtj2APIUrl x = sequence $
@@ -842,8 +848,8 @@ luoEtj2APIUrl x = sequence $
 
 luoRumaUrl :: Text -> JSM (Maybe URI)
 luoRumaUrl x = sequence $
-    match x (onkoOID >=> (\oid -> if onkoRT x then Just oid else Nothing)) rtSingleUrl <|>
-    match x (onkoOID >=> (\oid -> if onkoLR x then Just oid else Nothing)) lrSingleUrl
+    match x (onkoOID >=> (\oid -> if onkoRT x then Just oid else Nothing)) (fmap unwrap . rtSingleUrl) <|>
+    match x (onkoOID >=> (\oid -> if onkoLR x then Just oid else Nothing)) (fmap unwrap . lrSingleUrl)
 
-luoAikatauluUrl :: Text -> Maybe URI
+luoAikatauluUrl :: Text -> Maybe (APIResponse [a])
 luoAikatauluUrl = fmap junaUrl . onkoJuna

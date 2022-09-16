@@ -6,7 +6,6 @@
 module Browser.Browser (
     getElementById,
     setTimeout,
-    debug,
     withDebug,
     locationHash,
     setLocationHash,
@@ -18,7 +17,7 @@ module Browser.Browser (
 ) where
 
 import Universum hiding (drop,get,Element)
-import FFI (procedure)
+import FFI (procedure, debug)
 import Language.Javascript.JSaddle (JSM, jsg2, JSString, (!), FromJSVal (fromJSVal), (<#), JSVal, ghcjsPure, jsUndefined, MakeObject)
 import JSDOM (currentDocument, currentWindow)
 import qualified JSDOM.Types as JSDOM (Element)
@@ -53,22 +52,16 @@ instance HasField "title" Progress (JSM (Maybe Text)) where
 __loggingEnabled :: Bool
 __loggingEnabled = False
 
-debug :: Text -> JSM ()
-debug t = if __loggingEnabled
-  then SC.debug @Show t
-  else pure ()
-
-
 withDebug :: Text -> JSM b -> JSM b
 withDebug x f = do
-  debug x
+  _ <- debug x
   ret <- f
-  debug $ x <> " end"
+  _ <- debug $ x <> " end"
   pure ret
 
 getElementById :: Text -> JSM (Maybe JSDOM.Element)
 getElementById id_ = do
-  debug "getElementById"
+  _ <- debug @Text "getElementById"
   doc <- currentDocument
   if isNothing doc
     then pure Nothing
@@ -76,7 +69,7 @@ getElementById id_ = do
 
 setTimeout :: NominalDiffTime -> JSM () -> JSM ()
 setTimeout timeout callback = do
-  debug "setTimeout"
+  _ <- debug @Text "setTimeout"
   _ <- jsg2 @JSString "setTimeout" (procedure callback) $ round @NominalDiffTime @Int (timeout * 1000)
   pure ()
 
