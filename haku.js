@@ -1,9 +1,6 @@
 
 setTimeout(() => {
-    window.objektityypitDS = luoDatasource(["Infra", "Objektityyppi"], infraObjektityypitUrl, (ret, x) => {
-        ret[x.tyyppinumero] = {fi: x.nimi, en: x.name};
-    });
-    objektityypitDS.load();
+    
 
     let hakudataHandler = (ret, x) => {
         ret.hakudata = ret.hakudata || [];
@@ -570,7 +567,7 @@ let normalisoiRyhma = ryhma => ryhma.toLowerCase().replaceAll(' ', '').replaceAl
 
 let parsiInfraNimi = (ryhma, row) => {
     let a = {tyyppi: (row.tyyppi && normalisoiRyhma(row.tyyppi) != normalisoiRyhma(ryhma) ? row.tyyppi[0].toUpperCase() + row.tyyppi.slice(1) : undefined)};
-    let b = {lyhenne: row.lyhenne, numero: row.numero, UICkoodi: (row.uicKoodi && row.uicKoodi != 0 ? row.uicKoodi : undefined), siltakoodi: row.siltakoodi, opastintyyppi: row.opastin ? opastintyypit.find(x => x.tyyppi == row.opastin.tyyppi).nimi : undefined, vaihdetyyppi: row.vaihde ? row.vaihde.tyyppi : undefined};
+    let b = {lyhenne: row.lyhenne, numero: row.numero, UICkoodi: (row.uicKoodi && row.uicKoodi != 0 ? row.uicKoodi : undefined), siltakoodi: row.siltakoodi, opastintyyppi: row.opastin ? opastintyypitDS.data.find(x => x.tyyppi == row.opastin.tyyppi).nimi : undefined, vaihdetyyppi: row.vaihde ? row.vaihde.tyyppi : undefined};
     let c = row.ratanumero && row.ratakm ? {ratakm: '(' + row.ratanumero + ') ' + row.ratakm} : row.ratanumero ? {ratanumero: '(' + row.ratanumero + ')'} : undefined;
     let d = {tunnus: row.tunnus, kuvaus: row.kuvaus, tyyppi: row.baliisi ? row.baliisi.tyyppi : row.opastin ? row.opastin.tyyppi : row.vaihde ? row.vaihde.tyyppi : undefined };
     let e = {nimi: row.nimi, linjaraidetunnukset: row.linjaraidetunnukset, turvalaitenimi: row.turvalaiteNimi};
@@ -601,7 +598,7 @@ let parsiInfraRyhma = row => {
     }
     let ryhma = row.tunniste.replace('1.2.246.586.1.', '').replaceAll(/[.].*/g,'');
     let d = objektityypitDS.data[ryhma];
-    return d ? d.fi : '?';
+    return d ? d.nimi : '?';
 };
 
 let parsiJetiRyhma = row =>

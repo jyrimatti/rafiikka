@@ -15,7 +15,7 @@ import JSDOM.Types (ToJSVal(toJSVal))
 import Data.Text (pack)
 
 propFromJSVal :: FromJSVal a => Text -> JSVal -> MaybeT JSM a
-propFromJSVal property = MaybeT . (fromJSVal <=< tryReadProperty property)
+propFromJSVal property = MaybeT . (fromJSVal <=< readProperty property)
 
 tryPropFromJSVal :: FromJSVal a => Text -> JSVal -> JSM (Maybe a)
 tryPropFromJSVal property jsval = do
@@ -24,8 +24,8 @@ tryPropFromJSVal property jsval = do
     Nothing  -> pure Nothing
     Just val -> fromJSVal val
 
-tryReadProperty :: (MakeObject this, ToJSVal this) => Text -> this -> JSM JSVal
-tryReadProperty fieldname this = do
+readProperty :: (MakeObject this, ToJSVal this) => Text -> this -> JSM JSVal
+readProperty fieldname this = do
   jval <- this ! fieldname
   isUndef <- ghcjsPure $ isUndefined jval
   if isUndef

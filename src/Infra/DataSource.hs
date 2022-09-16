@@ -15,21 +15,21 @@
 module Infra.DataSource where
     
 import Universum hiding (get)
-import Amcharts.DataSource (luoDatasource, DataType (InfraData), DataSource, mkDataSource)
-import Infra.Types ( InfraType(Rata, Liikennepaikkavali, Rautatieliikennepaikka, LiikennepaikanOsa, Raideosuus, Laituri, Elementti, LiikenteenohjauksenRaja), RautatieliikennepaikkaTyyppi, UICCode, RaideosuusTyyppi, LaituriTyyppi, AikataulupaikkaTyyppi (APLiikennepaikanOsa, APRautatieliikennepaikka) )
-import URI (ratanumerotUrl, liikennepaikkavalitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl, elementitUrl, lorajatUrl)
+import Amcharts.DataSource (luoDatasource, DataType (InfraData, Other), DataSource, mkDataSource)
+import Infra.Types ( InfraType(Rata, Liikennepaikkavali, Rautatieliikennepaikka, LiikennepaikanOsa, Raideosuus, Laituri, Elementti, LiikenteenohjauksenRaja, Kunnossapitoalue, Liikenteenohjausalue, Kayttokeskus, Liikennesuunnittelualue), RautatieliikennepaikkaTyyppi, UICCode, RaideosuusTyyppi, LaituriTyyppi, AikataulupaikkaTyyppi (APLiikennepaikanOsa, APRautatieliikennepaikka) )
+import URI (ratanumerotUrl, liikennepaikkavalitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl, elementitUrl, lorajatUrl, ratapihapalveluTyypitUrl, opastinTyypitUrl, vaihdeTyypitUrl, kunnossapitoalueetMetaUrl, liikenteenohjausalueetMetaUrl, kayttokeskuksetMetaUrl, liikennesuunnittelualueetMetaUrl, infraObjektityypitUrl)
 import JSDOM.Types (JSM, FromJSVal (fromJSVal), ToJSVal)
-import Types (Ratakmvali(Ratakmvali), Kmetaisyys (Kmetaisyys), Distance (Distance), OID, Ratakmetaisyys (ratanumero), Point, fromListWithTunniste, MultiLineString, kmetaisyys, ratanumero)
+import Types (Ratakmvali(Ratakmvali), Kmetaisyys (Kmetaisyys), Distance (Distance), OID, Ratakmetaisyys (ratanumero), Point, fromListWithTunniste, MultiLineString, kmetaisyys, ratanumero, FintrafficSystem (Infra))
 import qualified Data.Map as Map
 import Time (Interval)
 import Language.Javascript.JSaddle (toJSVal_aeson, JSVal, (!))
 import Language.Javascript.JSaddle.Classes (ToJSVal(toJSVal))
 import Data.Aeson (ToJSON)
 import GHCJS.Marshal.Internal (fromJSVal_generic)
-import Monadic (doFromJSVal, tryReadProperty, propFromJSVal)
+import Monadic (doFromJSVal, readProperty, propFromJSVal)
 import Control.Lens ((?~))
 import GHC.Records (getField)
-import Amcharts.Events (Done (Done, target), on1)
+import Amcharts.Events (Done (Done, target), on1, dispatch)
 import Control.Lens.Action ((^!))
 import GetSet (get, setVal)
 import Data.Maybe (fromJust)
@@ -376,23 +376,164 @@ aikataulupaikatDS = do
     Just dat :: Maybe (Map OID RautatieliikennepaikkaDto) <- fromJSVal datJSVal
     js <- toJSVal (rauConverter <$> Map.filter (\RautatieliikennepaikkaDto{..} -> isNothing uicKoodi) dat)
     ds ^! setVal @"data" js
+    dispatch @Done ds js
   
   on1 osa $ \(Done{target}) -> do
     datJSVal <- target ^! get @"data"
     Just dat :: Maybe (Map OID LiikennepaikanOsaDto) <- fromJSVal datJSVal
     js <- toJSVal (osaConverter <$> dat)
     ds ^! setVal @"data" js
+    dispatch @Done ds js
   
   on1 rai $ \(Done{target}) -> do
     datJSVal <- target ^! get @"data"
     Just dat :: Maybe (Map OID RaideosuusDto) <- fromJSVal datJSVal
     js <- toJSVal (raiConverter <$> Map.filter (\RaideosuusDto{..} -> isNothing uicKoodi) dat)
     ds ^! setVal @"data" js
+    dispatch @Done ds js
   
   on1 lai $ \(Done{target}) -> do
     datJSVal <- target ^! get @"data"
     Just dat :: Maybe (Map OID LaituriDto) <- fromJSVal datJSVal
     js <- toJSVal (laiConverter <$> Map.filter (\LaituriDto{..} -> isNothing uicKoodi) dat)
     ds ^! setVal @"data" js
+    dispatch @Done ds js
   
   pure ds
+
+ratatyoElementitDS :: JSM Amcharts.DataSource.DataSource
+ratatyoElementitDS = do
+  ds <- mkDataSource
+  e <- elementitDS
+  r <- lorajatDS
+
+  on1 e $ \(Done{target}) -> do
+    datJSVal <- target ^! get @"data"
+    Just dat :: Maybe (Map OID ElementtiDto) <- fromJSVal datJSVal
+    js <- toJSVal dat
+    ds ^! setVal @"data" js
+    dispatch @Done ds js
+  
+  on1 r $ \(Done{target}) -> do
+    datJSVal <- target ^! get @"data"
+    Just dat :: Maybe (Map OID LiikenteenohjauksenRajaDto) <- fromJSVal datJSVal
+    js <- toJSVal dat
+    ds ^! setVal @"data" js
+    dispatch @Done ds js
+  
+  pure ds
+
+ratapihapalveluTyypitDS :: JSM Amcharts.DataSource.DataSource
+ratapihapalveluTyypitDS = luoDatasource (Other "Ratapihapalvelutyypit") (ratapihapalveluTyypitUrl @[Text]) id
+
+data OpastintyyppiDto = OpastintyyppiDto {
+  tyyppi :: Text,
+  nimi :: Text,
+  kulkutienPaatekohta :: Bool
+} deriving (Show,Generic)
+instance ToJSON OpastintyyppiDto
+instance ToJSVal OpastintyyppiDto where
+  toJSVal = toJSVal_aeson
+instance FromJSVal OpastintyyppiDto where
+  fromJSVal = doFromJSVal "OpastintyyppiDto" $
+    liftA3 OpastintyyppiDto <$> propFromJSVal "tyyppi"
+                            <*> propFromJSVal "nimi"
+                            <*> propFromJSVal "kulkutienPaatekohta"
+
+opastintyypitDS :: JSM Amcharts.DataSource.DataSource
+opastintyypitDS = luoDatasource (Other "Opastintyypit") (opastinTyypitUrl @[OpastintyyppiDto]) id
+
+data VaihdetyyppiDto = VaihdetyyppiDto {
+  tyyppi :: Text,
+  lyhenne :: Text
+} deriving (Show,Generic)
+instance ToJSON VaihdetyyppiDto
+instance ToJSVal VaihdetyyppiDto where
+  toJSVal = toJSVal_aeson
+instance FromJSVal VaihdetyyppiDto where
+  fromJSVal = doFromJSVal "VaihdetyyppiDto" $
+    liftA2 VaihdetyyppiDto <$> propFromJSVal "tyyppi"
+                           <*> propFromJSVal "lyhenne"
+
+vaihdetyypitDS :: JSM Amcharts.DataSource.DataSource
+vaihdetyypitDS = luoDatasource (Other "Vaihdetyypit") (vaihdeTyypitUrl @[VaihdetyyppiDto]) id
+
+
+data KunnossapitoalueDto = KunnossapitoalueDto {
+  nimi :: Text,
+  objektinVoimassaoloaika :: Interval,
+  tunniste :: OID
+} deriving (Show, Generic)
+instance ToJSON KunnossapitoalueDto
+instance FromJSVal KunnossapitoalueDto where
+  fromJSVal = doFromJSVal "KunnossapitoalueDto" $
+    liftA3 KunnossapitoalueDto <$> propFromJSVal "nimi"
+                               <*> propFromJSVal "objektinVoimassaoloaika"
+                               <*> propFromJSVal "tunniste"
+
+kpalueetDS :: JSM Amcharts.DataSource.DataSource
+kpalueetDS = luoDatasource (InfraData Kunnossapitoalue) (kunnossapitoalueetMetaUrl @KunnossapitoalueDto) id
+
+data LiikenteenohjausalueDto = LiikenteenohjausalueDto {
+  nimi :: Text,
+  objektinVoimassaoloaika :: Interval,
+  tunniste :: OID
+} deriving (Show, Generic)
+instance ToJSON LiikenteenohjausalueDto
+instance FromJSVal LiikenteenohjausalueDto where
+  fromJSVal = doFromJSVal "LiikenteenohjausalueDto" $
+    liftA3 LiikenteenohjausalueDto <$> propFromJSVal "nimi"
+                                   <*> propFromJSVal "objektinVoimassaoloaika"
+                                   <*> propFromJSVal "tunniste"
+
+ohjausalueetDS :: JSM Amcharts.DataSource.DataSource
+ohjausalueetDS = luoDatasource (InfraData Liikenteenohjausalue) (liikenteenohjausalueetMetaUrl @LiikenteenohjausalueDto) id
+
+data KayttokeskusDto = KayttokeskusDto {
+  nimi :: Text,
+  objektinVoimassaoloaika :: Interval,
+  tunniste :: OID
+} deriving (Show, Generic)
+instance ToJSON KayttokeskusDto
+instance FromJSVal KayttokeskusDto where
+  fromJSVal = doFromJSVal "KayttokeskusDto" $
+    liftA3 KayttokeskusDto <$> propFromJSVal "nimi"
+                           <*> propFromJSVal "objektinVoimassaoloaika"
+                           <*> propFromJSVal "tunniste"
+
+kayttokeskuksetDS :: JSM Amcharts.DataSource.DataSource
+kayttokeskuksetDS = luoDatasource (InfraData Kayttokeskus) (kayttokeskuksetMetaUrl @KayttokeskusDto) id
+
+
+data LiikennesuunnittelualueDto = LiikennesuunnittelualueDto {
+  nimi :: Text,
+  objektinVoimassaoloaika :: Interval,
+  tunniste :: OID
+} deriving (Show, Generic)
+instance ToJSON LiikennesuunnittelualueDto
+instance FromJSVal LiikennesuunnittelualueDto where
+  fromJSVal = doFromJSVal "LiikennesuunnittelualueDto" $
+    liftA3 LiikennesuunnittelualueDto <$> propFromJSVal "nimi"
+                                      <*> propFromJSVal "objektinVoimassaoloaika"
+                                      <*> propFromJSVal "tunniste"
+
+lisualueetDS :: JSM Amcharts.DataSource.DataSource
+lisualueetDS = luoDatasource (InfraData Liikennesuunnittelualue) (liikennesuunnittelualueetMetaUrl @LiikennesuunnittelualueDto) id
+
+data ObjektityyppiDto = ObjektityyppiDto {
+  tyyppinumero :: Natural,
+  nimi :: Text,
+  name :: Text
+} deriving (Show,Generic)
+instance ToJSON ObjektityyppiDto
+instance FromJSVal ObjektityyppiDto where
+  fromJSVal = doFromJSVal "ObjektityyppiDto" $
+    liftA3 ObjektityyppiDto <$> propFromJSVal "tyyppinumero"
+                            <*> propFromJSVal "nimi"
+                            <*> propFromJSVal "name"
+
+parseObjektityyppiDto :: ObjektityyppiDto -> (Natural,ObjektityyppiDto)
+parseObjektityyppiDto = (,) <$> tyyppinumero <*> id
+
+objektityypitDS :: JSM Amcharts.DataSource.DataSource
+objektityypitDS = luoDatasource (Other "Objektityypit") (infraObjektityypitUrl @ObjektityyppiDto) $ Map.fromList . fmap parseObjektityyppiDto . toList

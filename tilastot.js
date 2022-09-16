@@ -1,9 +1,9 @@
 
 let names = x => Object.values(x).flat().filter(d => !d.nimi || d.nimi.indexOf('(väliaikainen)') == -1).map(d => d.nimi || d.kuvaus).sort();
 
-let luoTilastoPopupRatapihapalvelut          = () => luoTilastoPopup('Ratapihapalvelut',          ratapihapalvelutUrlTilasto(),          [''], ratapihapalveluTyypit, ['']);
-let luoTilastoPopupToimialueet               = () => luoTilastoPopup('Toimialueet',               toimialueetUrlTilasto(),               [''], names(ohjausalueet), ['']);
-let luoTilastoPopupTilirataosat              = () => luoTilastoPopup('Tilirataosat',              tilirataosatUrlTilasto(),              [''], names(kpalueet), ['']);
+let luoTilastoPopupRatapihapalvelut          = () => luoTilastoPopup('Ratapihapalvelut',          ratapihapalvelutUrlTilasto(),          [''], ratapihapalveluTyypitDS.data, ['']);
+let luoTilastoPopupToimialueet               = () => luoTilastoPopup('Toimialueet',               toimialueetUrlTilasto(),               [''], names(ohjausalueetDS.data), ['']);
+let luoTilastoPopupTilirataosat              = () => luoTilastoPopup('Tilirataosat',              tilirataosatUrlTilasto(),              [''], names(kpalueetDS.data), ['']);
 let luoTilastoPopupLiikennesuunnittelualueet = () => luoTilastoPopup('Liikennesuunnittelualueet', liikennesuunnittelualueetUrlTilasto(), [''], [''], ['']);
 let luoTilastoPopupPaikantamismerkit         = () => luoTilastoPopup('Paikantamismerkit',         paikantamismerkitUrlTilasto(),         [''], [''], ['']);
 let luoTilastoPopupKilometrimerkit           = () => luoTilastoPopup('Kilometrimerkit',           kilometrimerkitUrlTilasto(),           [''], [''], ['']);
@@ -17,7 +17,7 @@ let luoTilastoPopupAkselinlaskija                   = kk => luoTilastoPopup('Aks
 let luoTilastoPopupBaliisi                          = kk => luoTilastoPopup('Baliisit',                            elementitUrlTilasto("baliisi"),                          kk === true ? names(kayttokeskukset) : kk === false ? names(lisualueet) : [''], kk === undefined ? ['tavallinen', 'kiintea', 'toistopiste'] : [''], ['']);
 let luoTilastoPopupKuumakayntiilmaisin              = kk => luoTilastoPopup('Kuumakäynti-ilmaisimet',              elementitUrlTilasto("kuumakayntiilmaisin"),              names(kk ? kayttokeskukset : lisualueet), [''], ['']);
 let luoTilastoPopupLiikennepaikanraja               = kk => luoTilastoPopup('Liikennepaikan rajat',                elementitUrlTilasto("liikennepaikanraja"),               names(kk ? kayttokeskukset : lisualueet), [''], ['']);
-let luoTilastoPopupOpastin                          = kk => luoTilastoPopup('Opastimet',                           elementitUrlTilasto("opastin"),                          kk === true ? names(kayttokeskukset) : kk === false ? names(lisualueet) : [''], kk === undefined ? names(opastintyypit) : [''], ['']);
+let luoTilastoPopupOpastin                          = kk => luoTilastoPopup('Opastimet',                           elementitUrlTilasto("opastin"),                          kk === true ? names(kayttokeskukset) : kk === false ? names(lisualueet) : [''], kk === undefined ? names(DS.data) : [''], ['']);
 let luoTilastoPopupPuskin                           = kk => luoTilastoPopup('Puskimet',                            elementitUrlTilasto("puskin"),                           names(kk ? kayttokeskukset : lisualueet), [''], ['']);
 let luoTilastoPopupPyoravoimailmaisin               = kk => luoTilastoPopup('Pyörävoimailmaisimet',                elementitUrlTilasto("pyoravoimailmaisin"),               names(kk ? kayttokeskukset : lisualueet), [''], ['']);
 let luoTilastoPopupRaideeristys                     = kk => luoTilastoPopup('Raide-eristykset',                    elementitUrlTilasto("raideeristys"),                     names(kk ? kayttokeskukset : lisualueet), [''], ['']);
@@ -26,7 +26,7 @@ let luoTilastoPopupRfidlukija                       = kk => luoTilastoPopup('RFI
 let luoTilastoPopupRyhmityseristin                  = kk => luoTilastoPopup('Ryhmityseristimet',                   elementitUrlTilasto("ryhmityseristin"),                  names(kk ? kayttokeskukset : lisualueet), ['Nopeasti ajettava', 'Hitaasti ajettava'], ['']);
 let luoTilastoPopupSahkoistyspaattyy                = kk => luoTilastoPopup('Sähköistys päättyy',                  elementitUrlTilasto("sahkoistyspaattyy"),                names(kk ? kayttokeskukset : lisualueet), [''], ['']);
 let luoTilastoPopupSeislevy                         = kk => luoTilastoPopup('Seislevyt',                           elementitUrlTilasto("seislevy"),                         names(kk ? kayttokeskukset : lisualueet), [''], ['']);
-let luoTilastoPopupVaihde                           = kk => luoTilastoPopup('Vaihteet',                            elementitUrlTilasto("vaihde"),                           kk === true ? names(kayttokeskukset) : kk === false ? names(lisualueet) : [''], kk === undefined ? names(vaihdetyypit) : [''], ['']);
+let luoTilastoPopupVaihde                           = kk => luoTilastoPopup('Vaihteet',                            elementitUrlTilasto("vaihde"),                           kk === true ? names(kayttokeskukset) : kk === false ? names(lisualueet) : [''], kk === undefined ? names(vaihdetyypitDS.data) : [''], ['']);
 let luoTilastoPopupVirroitinvalvontakamera          = kk => luoTilastoPopup('Virroitinvalvontakamerat',            elementitUrlTilasto("virroitinvalvontakamera"),          names(kk ? kayttokeskukset : lisualueet), [''], ['']);
 let luoTilastoPopupErotusjakso                      = kk => luoTilastoPopup('Erotusjaksot',                        elementitUrlTilasto("erotusjakso"),                      names(kk ? kayttokeskukset : lisualueet), [''], ['']);
 let luoTilastoPopupErotuskentta                     = kk => luoTilastoPopup('Erotuskentät',                        elementitUrlTilasto("erotuskentta"),                     names(kk ? kayttokeskukset : lisualueet), [''], ['']);
@@ -187,12 +187,12 @@ let luoTilastoPopup_ = (nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari
                         tunniste:      x.tunniste.replace('1.2.246.586.', ''),
                         tyyppi:        (x.tyyppi || 
                                         (x.baliisi ? x.baliisi.tyyppi : undefined) ||
-                                        (x.opastin ? opastintyypit.find(y => y.tyyppi == x.opastin.tyyppi).nimi : undefined) ||
-                                        (x.vaihde ? vaihdetyypit.find(y => y.tyyppi == x.vaihde.tyyppi).kuvaus : undefined) ||
+                                        (x.opastin ? opastintyypitDS.data.find(y => y.tyyppi == x.opastin.tyyppi).nimi : undefined) ||
+                                        (x.vaihde ? vaihdetyypitDS.data.find(y => y.tyyppi == x.vaihde.tyyppi).kuvaus : undefined) ||
                                         (x.pysaytyslaite ? (x.pysaytyslaite.kasinAsetettava === true ? 'Käsin asetettava' : x.pysaytyslaite.kasinAsetettava === false ? 'Keskitetty' : undefined) : undefined) ||
                                         (x.ryhmityseristin ? (x.ryhmityseristin.nopeastiAjettava === true ? 'Nopeasti ajettava' : x.ryhmityseristin.nopeastiAjettava === false ? 'Hitaasti ajettava' : undefined) : undefined) ||
-                                        (x.kunnossapitoalue ? kpalueet[x.kunnossapitoalue].filter(y => intervalsIntersect(voimassaolo,y.objektinVoimassaoloaika)).map(y => y.nimi)[0] : undefined) ||
-                                        (x.liikenteenohjausalue ? ohjausalueet[x.liikenteenohjausalue].filter(y => intervalsIntersect(voimassaolo,y.objektinVoimassaoloaika)).map(y => y.nimi)[0] : undefined) ||
+                                        (x.kunnossapitoalue ? kpalueetDS.data[x.kunnossapitoalue].filter(y => intervalsIntersect(voimassaolo,y.objektinVoimassaoloaika)).map(y => y.nimi)[0] : undefined) ||
+                                        (x.liikenteenohjausalue ? ohjausalueetDS.data[x.liikenteenohjausalue].filter(y => intervalsIntersect(voimassaolo,y.objektinVoimassaoloaika)).map(y => y.nimi)[0] : undefined) ||
                                         x.kayttotarkoitus ||
                                         x.varoituslaitos ||
                                         (x.ensimmaisenLuokanAlueidenRaja === true ? '1./1.' : x.ensimmaisenLuokanAlueidenRaja === false ? '1./2.' : undefined) ||

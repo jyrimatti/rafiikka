@@ -16,7 +16,7 @@ import FFI (function1, function2, functionPure1, warn, functionPure2)
 import Amcharts.Amcharts ( AmchartsObject, HasEvent )
 import GHC.Records (HasField (getField))
 import GetSet (getVal, typeBaseName, TypeBaseName, Constant)
-import Monadic (tryReadProperty, doFromJSVal, propFromJSVal)
+import Monadic (readProperty, doFromJSVal, propFromJSVal)
 import Browser.Browser (withDebug)
 import Language.Javascript.JSaddle.Classes (FromJSVal(fromJSVal))
 
@@ -63,7 +63,7 @@ instance FromJSVal Error where
   fromJSVal = doFromJSVal "Error" $
     liftA3 Error <$> propFromJSVal @Int "code"
                  <*> propFromJSVal @Text "message"
-                 <*> lift . tryReadProperty "target"
+                 <*> lift . readProperty "target"
 
 newtype EventDispatcher = EventDispatcher { unEventDispatcher :: JSVal }
   deriving (Generic, ToJSVal, MakeObject)
@@ -71,9 +71,14 @@ instance FromJSVal EventDispatcher where
   fromJSVal = pure . pure . EventDispatcher
 
 
+dispatch :: forall ev obj. (AmchartsObject obj, TypeBaseName ev, HasEvent obj ev ~ ()) => obj -> JSVal -> JSM ()
+dispatch obj dat = do
+  _ <- obj # ("dispatch" :: Text) $ (typeBaseName @ev, dat)
+  pure ()
+
 
 events :: AmchartsObject obj => obj -> JSM EventDispatcher
-events obj = EventDispatcher <$> tryReadProperty "events" obj
+events obj = EventDispatcher <$> readProperty "events" obj
 
 cbPure1 :: (MakeObject obj, FromJSVal a, ToJSVal ret) => JSString -> obj -> Text -> (a -> ret) -> JSM ()
 cbPure1 name obj event f = void $ obj # name $ (event, functionPure1 f)

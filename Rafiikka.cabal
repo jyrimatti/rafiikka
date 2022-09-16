@@ -69,6 +69,7 @@ executable Rafiikka
                , Amcharts.Adapter
                , Infra.Types
                , Infra.DataSource
+               , Jeti.DataSource
                , Jeti.Types
                , Ruma.Types
                , Trex.Types

@@ -35,7 +35,7 @@ import Control.Lens.Action (act)
 import Control.Lens.Action.Type (IndexPreservingAction)
 import Data.Text (tail, init)
 import Shpadoinkle.Console (warn)
-import Monadic (tryReadProperty)
+import Monadic (readProperty)
 
 
 instance {-# INCOHERENT #-} HasField x r a => IsLabel x (r -> a) where
@@ -71,7 +71,7 @@ get = act (get_ @fieldname)
 
 getObj :: (MakeObject this, ToJSVal this, FromJSVal jsval) => (jsval -> res) -> Text -> this -> JSM res
 getObj c fieldname this = do
-  jval <- tryReadProperty fieldname this
+  jval <- readProperty fieldname this
   res <- fromJSVal jval
   case res of
     Nothing -> do

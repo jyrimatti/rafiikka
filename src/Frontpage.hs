@@ -14,7 +14,6 @@ scripts =
   , script' [("src", "popup.js")]
   , script' [("src", "haku.js")]
   , script' [("src", "infra.js")]
-  , script' [("src", "infraData.js")]
   , script' [("src", "ennakkotiedot.js")]
   , script' [("src", "ratatyot.js")]
   , script' [("src", "junat.js")]

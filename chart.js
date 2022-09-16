@@ -674,12 +674,7 @@ am4core.ready(() => {
             yAxis.axisBreaks.clear();
             yAxis.axisRanges.clear();
 
-            if (valittunaRatanumero()) {
-                rautatieliikennepaikatDS.load();
-                liikennepaikanOsatDS.load();
-                raideosuudetDS.load();
-                laituritDS.load();
-            } else if (valittunaAikataulupaikka()) {
+            if (valittunaAikataulupaikka()) {
                 luoRanget();
             }
         });

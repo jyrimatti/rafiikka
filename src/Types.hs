@@ -24,6 +24,9 @@ import GHC.Records (HasField (getField))
 instance ToJSON a => ToJSVal (Map.Map Text a) where
   toJSVal = toJSVal_aeson
 
+instance ToJSON a => ToJSVal (Map.Map Natural a) where
+  toJSVal = toJSVal_aeson
+
 instance ToJSON a => ToJSVal (Map.Map OID a) where
   toJSVal = toJSVal_aeson
 instance FromJSVal a => FromJSVal (Map.Map OID a) where

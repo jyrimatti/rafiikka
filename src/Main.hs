@@ -27,7 +27,7 @@ import JSDOM.Types (Callback(Callback), JSVal, Function, FromJSVal (fromJSVal), 
 import Text.URI (URI, render)
 import Data.Aeson ( Value, Result(Error, Success), fromJSON )
 import Language.Javascript.JSaddle ((#), call, global, ToJSVal (toJSVal), jsg, liftJSM, (!), (<#), JSString, MakeArgs)
-import Amcharts.DataSource (monitor, DataType (Other, Revisions), initDS, luoDatasource, DataSource)
+import Amcharts.DataSource (monitor, DataType (Other, Revisions), initDS, luoDatasource, DataSource, load)
 import URI (infraAPIUrl, etj2APIUrl, aikatauluAPIUrl, graphQLUrl, mqttPort, mqttHost, mqttTopic, infraAPIrevisionsUrl, etj2APIrevisionsUrl, withTime, baseInfraAPIUrl, baseEtj2APIUrl, ratanumeroUrl, ratanumerotUrl, ratakmSijaintiUrl, pmSijaintiUrl, ratakmValiUrl, liikennepaikkavalitUrl, reittiUrl, reittihakuUrl, vaihdeTyypitUrl, opastinTyypitUrl, ratapihapalveluTyypitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl, elementitUrl, lorajatUrl, raiteenKorkeudetUrl, eiUrlRatanumero, esUrlRatanumero, vsUrlRatanumero, loUrlRatanumero, eiUrlAikataulupaikka, esUrlAikataulupaikka, vsUrlAikataulupaikka, loUrlAikataulupaikka, kunnossapitoalueetMetaUrl, liikenteenohjausalueetMetaUrl, kayttokeskuksetMetaUrl, liikennesuunnittelualueetMetaUrl, ratapihapalvelutUrlTilasto, toimialueetUrlTilasto, tilirataosatUrlTilasto, liikennesuunnittelualueetUrlTilasto, paikantamismerkitUrlTilasto, kilometrimerkitUrlTilasto, radatUrlTilasto, liikennepaikanOsatUrlTilasto, rautatieliikennepaikatUrlTilasto, liikennepaikkavalitUrlTilasto, raideosuudetUrlTilasto, elementitUrlTilasto, raiteensulutUrlTilasto, raiteetUrlTilasto, liikenteenohjauksenrajatUrlTilasto, tunnelitUrlTilasto, sillatUrlTilasto, laituritUrlTilasto, tasoristeyksetUrlTilasto, kayttokeskuksetUrlTilasto, kytkentaryhmatUrlTilasto, asiatUrl, esTyypitUrl, loUrlTilasto, eiUrlTilasto, esUrlTilasto, vsUrlTilasto, muutoksetInfra, muutoksetEtj2, koordinaattiUrl, ratakmMuunnosUrl, koordinaattiMuunnosUrl, rtUrl, rtSingleUrl, rtGeojsonUrl, lrUrl, lrSingleUrl, lrGeojsonUrl, infraObjektityypitUrl, hakuUrlitInfra, hakuUrlitEtj2, hakuUrlitRuma, luoInfraAPIUrl, luoEtj2APIUrl, luoRumaUrl, luoAikatauluUrl, junasijainnitGeojsonUrl, junasijainnitUrl, APIResponse (APIResponse))
 import JSDOM (currentWindow)
 import Jeti.Types ( eiTilat, esTilat, vsTilat, loiTilat )
@@ -40,7 +40,8 @@ import Control.Lens.Action ( (^!), act )
 import GetSet
 import Control.Lens.Action.Type (IndexPreservingAction)
 import GHC.Records (getField)
-import Infra.DataSource (ratanumerotDS, liikennepaikkavalitDS, liikennepaikanOsatDS, raideosuudetDS, laituritDS, elementitDS, lorajatDS, aikataulupaikatDS, rautatieliikennepaikatDS)
+import Infra.DataSource (ratanumerotDS, liikennepaikkavalitDS, liikennepaikanOsatDS, raideosuudetDS, laituritDS, elementitDS, lorajatDS, aikataulupaikatDS, rautatieliikennepaikatDS, ratatyoElementitDS, ratapihapalveluTyypitDS, opastintyypitDS, vaihdetyypitDS, kpalueetDS, ohjausalueetDS, kayttokeskuksetDS, lisualueetDS, objektityypitDS)
+import Jeti.DataSource
 
 main :: IO ()
 main = do
@@ -224,6 +225,17 @@ app = do
   registerGlobalFunctionPure "elementitDS" elementitDS
   registerGlobalFunctionPure "lorajatDS" lorajatDS
   registerGlobalFunctionPure "aikataulupaikatDS" aikataulupaikatDS
+  registerGlobalFunctionPure "ratatyoElementitDS" ratatyoElementitDS
+  registerGlobalFunctionPure "ratapihapalveluTyypitDS" ratapihapalveluTyypitDS
+  registerGlobalFunctionPure "opastintyypitDS" opastintyypitDS
+  registerGlobalFunctionPure "vaihdetyypitDS" vaihdetyypitDS
+  registerGlobalFunctionPure "kpalueetDS" kpalueetDS
+  registerGlobalFunctionPure "ohjausalueetDS" ohjausalueetDS
+  registerGlobalFunctionPure "kayttokeskuksetDS" kayttokeskuksetDS
+  registerGlobalFunctionPure "lisualueetDS" lisualueetDS
+  registerGlobalFunctionPure "objektityypitDS" objektityypitDS
+  registerGlobalFunctionPure "estyypitDS" estyypitDS
+  registerGlobalFunctionPure "asiatDS" asiatDS
 
   addMeta [("charset", "UTF-8")]
   setTitle "Rafiikka"
@@ -244,6 +256,28 @@ app = do
   setTimeout (secondsToNominalDiffTime 2) $ (do debug @Show ("cb!" :: [Char]); getElementById "palkki") >>= \x -> do
     debug @Show ("acting!" :: [Char]);
     initTooltips $ fromJust x
+  
+  setTimeout (secondsToNominalDiffTime 20) $ do
+    ratanumerotDS >>= load
+    liikennepaikkavalitDS >>= load
+    rautatieliikennepaikatDS >>= load
+    liikennepaikanOsatDS >>= load
+    raideosuudetDS >>= load
+    laituritDS >>= load
+    elementitDS >>= load
+    lorajatDS >>= load
+    aikataulupaikatDS >>= load
+    ratatyoElementitDS >>= load
+    ratapihapalveluTyypitDS >>= load
+    opastintyypitDS >>= load
+    vaihdetyypitDS >>= load
+    kpalueetDS >>= load
+    ohjausalueetDS >>= load
+    kayttokeskuksetDS >>= load
+    lisualueetDS >>= load
+    objektityypitDS >>= load
+    estyypitDS >>= load
+    asiatDS >>= load
 
 getRevision :: Text -> APIResponse (NonEmpty Revision) -> JSM ()
 getRevision api (APIResponse url) = getJson Revisions url Nothing (debug @Show) $ \x -> do

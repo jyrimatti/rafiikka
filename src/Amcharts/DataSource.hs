@@ -14,7 +14,7 @@
 module Amcharts.DataSource where
 
 import Universum (Generic,Int,Text,Show,NonEmpty,Maybe(..), (<$>), ($), MaybeT (MaybeT), hoistMaybe, readMaybe, Applicative ((<*>), pure, liftA2), whenM, (.), show, Semigroup ((<>)), Num ((+)), when, Eq ((==)), Enum (succ), Functor (fmap), Alternative ((<|>)), not, flip, MonadTrans (lift), (=<<))
-import Language.Javascript.JSaddle (JSM, JSString, FromJSVal (fromJSVal), JSVal (JSVal), ToJSVal (toJSVal), MakeObject, jsg1, MakeArgs, ghcjsPure, (!))
+import Language.Javascript.JSaddle (JSM, JSString, FromJSVal (fromJSVal), JSVal (JSVal), ToJSVal (toJSVal), MakeObject, jsg1, MakeArgs, ghcjsPure, (!), (#))
 import JSDOM (currentWindow)
 import JSDOM.Generated.Element (removeAttribute)
 import Amcharts.Events ( on1, Done, ParseEnded (..), Started, Ended, Error (Error), message, Target (Target))
@@ -23,7 +23,7 @@ import Jeti.Types (JetiType)
 import Ruma.Types (RumaType)
 import Infra.Types (InfraType)
 import Trex.Types (TrexType)
-import Monadic (doFromJSVal, tryReadProperty, propFromJSVal)
+import Monadic (doFromJSVal, readProperty, propFromJSVal)
 import Types (FintrafficSystem)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.List (head)
@@ -58,6 +58,11 @@ mkDataSource :: JSM DataSource
 mkDataSource = do
   a <- am4core
   a ^! get @"DataSource" . new DataSource ()
+
+load :: DataSource -> JSM ()
+load ds = do
+  _ <- ds # ("load" :: Text) $ ()
+  pure ()
 
 data ReqHeader = ReqHeader {
   key   :: Text,
@@ -134,7 +139,7 @@ luoDatasource dataType urlF converter = do
   initDS ds
   monitor ds dataType
   on1 ds $ \(ParseEnded target@(Target tar) :: ParseEnded (Maybe result)) -> do
-    datJSVal <- tryReadProperty "data" tar
+    datJSVal <- readProperty "data" tar
     dat <- flip (doFromJSVal $ show dataType) datJSVal $ \x -> do
       datType <- lift $ ghcjsPure $ jsTypeOf x
       MaybeT $ fromJSVal x

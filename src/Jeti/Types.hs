@@ -3,6 +3,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Jeti.Types where
 
@@ -76,6 +78,20 @@ instance FromJSVal ESTila where
             "peruttu"         -> pure ESPeruttu
             "poistettu"       -> pure ESPoistettu
             _                 -> mzero
+
+data ESTyyppi = Kunnossapito | Rakentaminen
+    deriving (Show, Enum, Bounded, Generic)
+instance ToJSVal ESTyyppi where
+    toJSVal Kunnossapito = toJSVal @Text "Kunnossapito"
+    toJSVal Rakentaminen = toJSVal @Text "Rakentaminen"
+
+instance FromJSVal ESTyyppi where
+    fromJSVal = doFromJSVal "ESTyyppi" $ \x -> do
+        xx :: Text <- MaybeT $ fromJSVal x
+        case xx of
+            "Kunnossapito" -> pure Kunnossapito
+            "Rakentaminen" -> pure Rakentaminen
+            _              -> mzero
 
 data VSTila = VSAlustava | VSVuosiohjelmissa | VSToteutuu | VSKaynnissa | VSTehty | VSPoistettu
     deriving (Show, Enum, Bounded)

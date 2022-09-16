@@ -26,6 +26,10 @@ data InfraType =
     | Raideosuus
     | Rata
     | Rautatieliikennepaikka
+    | Kunnossapitoalue
+    | Liikenteenohjausalue
+    | Kayttokeskus
+    | Liikennesuunnittelualue
   deriving (Show, Enum, Bounded, Read)
 
 instance ToJSVal InfraType where
@@ -47,6 +51,10 @@ infraType Raide                   = Just 44
 infraType Raideosuus              = Just 36
 infraType Rata                    = Just 45
 infraType Rautatieliikennepaikka  = Just 39
+infraType Kunnossapitoalue        = Just 28
+infraType Liikenteenohjausalue    = Just 30
+infraType Kayttokeskus            = Just 72
+infraType Liikennesuunnittelualue = Just 29
 
 infraTypes :: [InfraType]
 infraTypes = [minBound ..]
