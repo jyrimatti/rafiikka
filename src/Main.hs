@@ -239,9 +239,9 @@ app = do
 
   addMeta [("charset", "UTF-8")]
   setTitle "Rafiikka"
-  addStyle "https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.15.1/css/ol.css"
-  addStyle "https://unpkg.com/ol-layerswitcher@3.5.0/src/ol-layerswitcher.css"
-  addStyle "https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/css/selectize.default.min.css"
+  addStyle "ol.css"
+  addStyle "ol-layerswitcher.css"
+  addStyle "selectize.min.css"
   addStyle "style.css"
 
   addScriptSrc "DragDropTouch.js"
