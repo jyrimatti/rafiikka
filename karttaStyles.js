@@ -180,7 +180,7 @@ setTimeout(() => {
     window.lorajaStyle      = feature => styles.icon(baseInfraAPIUrl(true) + 'icons/liikenteenohjauksenraja.svg', undefined, feature.getProperties().rotaatio);
     window.raiteensulkuStyle = feature => styles.icon(baseInfraAPIUrl(true) + 'icons/raiteensulku' + (feature.getProperties().suistosuunta === 'vasen' ? 'Vasen' : 'Oikea') + (feature.getProperties().kasinAsetettava === true ? 'Kasin' : '') + '.svg', undefined, feature.getProperties().rotaatio);
     window.nraStyle = styles.line(1.0, 'rgb(89,161,183)');
-}, 100);
+}, 1);
 
 let eristysosuusStyle = styles.line(1.0, 'rgba(0, 0, 255, 0.5)');
 let akselinlaskentaStyle = styles.line(1.0, 'rgba(0, 255, 0, 0.5)');

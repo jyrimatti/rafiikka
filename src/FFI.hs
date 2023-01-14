@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE CPP, ScopedTypeVariables, TypeApplications, OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
@@ -37,7 +37,7 @@ import GHCJS.Foreign (jsTypeOf)
 import JSDOM (currentWindow)
 import Data.Maybe (fromJust)
 #else
-import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, JSString, ToJSString(..), JSVal, MonadJSM, liftJSM, Object (Object), MakeArgs, jsg, (#), ghcjsPure)
+import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, JSString, ToJSString(..), JSVal, MonadJSM, liftJSM, Object (Object), MakeArgs, jsg, (#), ghcjsPure, syncPoint)
 import GHCJS.Foreign.Callback (Callback, syncCallback', syncCallback1', syncCallback2', syncCallback3', asyncCallback, asyncCallback1, asyncCallback2, asyncCallback3)
 import Data.Data (typeOf)
 import GHCJS.Foreign (jsTypeOf)
@@ -68,13 +68,15 @@ debug args = do
 deserializationFailure_ :: JSVal -> Text -> JSM ()
 deserializationFailure_ val resultType = do
   jsType <- ghcjsPure $ jsTypeOf val
+  putStrLn $ "Error deserializing type " <> resultType <> " from " <> show jsType
   _ <- warn ("Error deserializing type " <> resultType <> " from " <> show jsType <> " value: ",val)
   pure ()
 
 deserializationFailureUnsafe :: JSVal -> Text -> JSM a
 deserializationFailureUnsafe val resultType = do
   _ <- deserializationFailure_ val resultType
-  pure undefined
+  jsType <- ghcjsPure $ jsTypeOf val
+  error $ "Error deserializing type " <> resultType <> " from " <> show jsType
 
 deserializationFailure :: JSVal -> Text -> JSM (Maybe a)
 deserializationFailure val resultType = do

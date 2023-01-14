@@ -1,10 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, GADTs, DataKinds, ScopedTypeVariables, DuplicateRecordFields, OverloadedStrings #-}
 
 module Ruma.Types where
 

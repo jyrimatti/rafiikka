@@ -1,6 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications, FlexibleInstances, ScopedTypeVariables, OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Time (
@@ -30,7 +28,7 @@ import Data.Time.Lens(modL, month, minutes, setL, seconds, hours, day)
 import Data.Time.Calendar.MonthDay ()
 import Data.Time.Calendar.OrdinalDate ()
 import Language.Javascript.JSaddle (JSString, jsg, new)
-import Monadic (doFromJSVal, guardP, isDefined, invoke)
+import Monadic (doFromJSVal, invoke)
 import GHCJS.Marshal.Internal ( FromJSVal(fromJSVal), ToJSVal(toJSVal) )
 import Data.Fixed (mod', Fixed (MkFixed))
 import Data.Aeson (ToJSON (toJSON))

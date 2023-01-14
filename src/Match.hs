@@ -1,8 +1,6 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TypeApplications, QuasiQuotes, OverloadedStrings, PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE TypeApplications #-}
 module Match where
 
 import Universum hiding (takeWhile)

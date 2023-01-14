@@ -7,7 +7,7 @@ let luoRaidePopup = tunniste => {
     }
 };
 let luoRaidePopup_ = tunniste => {
-    let [container, elemHeader] = luoIkkuna(tunniste);
+    let [container, elemHeader] = luoIkkuna(tunniste, {left: undefined, top: undefined, right: undefined, bottom: undefined}, undefined);
     container.setAttribute("class", "popupContainer raidePopup");
 
     let open = document.createElement("div");

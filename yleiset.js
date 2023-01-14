@@ -133,28 +133,6 @@ window.on   = (obj, event, f) => obj.on(event,   loggingDelegate(f));
 window.once = (obj, event, f) => obj.once(event, loggingDelegate(f));
 window.add  = (obj, name,  f) => obj.add(name,   loggingDelegate(f));
 
-let luoDatasource = (type, urlF, f) => {
-    let ds = new am4core.DataSource();
-    if (!onkoSeed()) {
-        ds.url = urlF();
-        add(ds.adapter, "url", () => urlF());
-    }
-    initDS(ds);
-    monitor(ds, type);
-    on(ds.events, "parseended", ev => {
-        if (ev.target.data) {
-            logDiff("Parsitaan", type, () => {
-                var ret = {};
-                Object.values(ev.target.data).flat().forEach(x => f(ret, x));
-                ev.target.data = ret;
-            });
-        } else {
-            console.error("Ei dataa!");
-        }
-    });
-    return ds;
-};
-
 // charts ei piirrä näkyviin laatikoita, jotka ovat 0-mittaisia suuntaan tai toiseen.
 let fixPoints = x => {
     if (x.alkuX == x.loppuX) {
@@ -165,16 +143,6 @@ let fixPoints = x => {
     }
     return x;
 };
-
-let onAttributeMutation = (attr) => (elem, callback) => {
-    let observer = new MutationObserver(mutations => {
-        mutations.forEach(callback);    
-    });
-    observer.observe(elem, { attributes : true, attributeFilter : [attr] });
-};
-
-let onStyleChange = onAttributeMutation('style');
-//let onTitleChange = onAttributeMutation('title');
 
 let withoutProp = (obj, unwantedProp) => {
     var ret = {};

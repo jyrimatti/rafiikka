@@ -1,18 +1,9 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs, DataKinds, FlexibleContexts, FlexibleInstances, TypeApplications, MultiParamTypeClasses, ScopedTypeVariables, DuplicateRecordFields, DeriveGeneric, RecordWildCards, OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE FlexibleContexts #-}
 
 module Types where
 import Universum
-import Language.Javascript.JSaddle (FromJSVal(fromJSVal), (!), ToJSVal, JSString, toJSVal_aeson, Object, listProps, FromJSString (fromJSString), JSM, getProp, MakeObject (makeObject))
+import Language.Javascript.JSaddle (FromJSVal(fromJSVal), ToJSVal, JSString, toJSVal_aeson, Object, listProps, FromJSString (fromJSString), JSM, getProp, MakeObject (makeObject))
 import Monadic (doFromJSVal, propFromJSVal)
 import Data.Time.Calendar (Day)
 import Language.Javascript.JSaddle.Classes (ToJSVal(toJSVal))
@@ -192,9 +183,9 @@ instance ToJSON Ratakmetaisyys
 
 instance FromJSVal Ratakmetaisyys where
     fromJSVal = doFromJSVal "Ratakmetaisyys" $ \x -> do
-        r  <- MaybeT $ fromJSVal =<< x ! ("ratanumero" :: Text)
-        km <- MaybeT $ fromJSVal =<< x ! ("ratakm" :: Text)
-        e  <- MaybeT $ fromJSVal =<< x ! ("etaisyys" :: Text)
+        r  <- propFromJSVal "ratanumero" x
+        km <- propFromJSVal "ratakm" x
+        e  <- propFromJSVal "etaisyys" x
         pure $ Ratakmetaisyys r (Kmetaisyys km e)
 
 instance ToJSVal Ratakmetaisyys where

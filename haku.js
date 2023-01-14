@@ -1,20 +1,4 @@
 
-setTimeout(() => {
-    
-
-    let hakudataHandler = (ret, x) => {
-        ret.hakudata = ret.hakudata || [];
-        if (x instanceof Array) {
-            ret.hakudata = ret.hakudata.concat(x);
-        } else {
-            ret.hakudata.push(x);
-        }
-    };
-    window.hakuUrlitInfraDS = hakuUrlitInfra().map( (url,i) => luoDatasource(["Search","Infra",i], () => url, hakudataHandler));
-    window.hakuUrlitEtj2DS  = hakuUrlitEtj2() .map( (url,i) => luoDatasource(["Search","Jeti",i],  () => url, hakudataHandler));
-    window.hakuUrlitRumaDS  = hakuUrlitRuma   .map( (url,i) => luoDatasource(["Search","Ruma",i],  () => url, hakudataHandler));
-}, 100);
-
 let initSearch = (elem, lisaaPopuppiin, poistaPopupista, vainJunat, eiPoistoa) => {
     let search = $(elem).selectize({
         plugins: eiPoistoa ? [] : ['remove_button'],

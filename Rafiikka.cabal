@@ -38,6 +38,7 @@ executable Rafiikka
    , data-foldapp
    , containers
    , utility-ht
+   , clay
   
   if impl(ghcjs)
     build-depends: ghcjs-base
@@ -45,7 +46,7 @@ executable Rafiikka
   hs-source-dirs:      src
   default-language:    Haskell2010
 
-  default-extensions: NoImplicitPrelude, OverloadedStrings, TypeFamilies
+  default-extensions: NoImplicitPrelude
 
   other-modules: FFI
                , Browser.Tooltips
@@ -53,6 +54,7 @@ executable Rafiikka
                , Browser.Tippy
                , Browser.Browser
                , Browser.Fetch
+               , Browser.Popup
                , Frontpage
                , Yleiset
                , Time
@@ -74,6 +76,7 @@ executable Rafiikka
                , Ruma.Types
                , Trex.Types
                , GetSet
+               , Search
   ghc-options:
     -Wall
     -Werror
@@ -83,9 +86,6 @@ executable Rafiikka
     -fwarn-tabs
     -fwarn-incomplete-record-updates
     -fwarn-identities
-    
-    -Wno-unused-imports
-    -Wno-redundant-constraints
     -Wno-unused-matches
 
   ghcjs-options:

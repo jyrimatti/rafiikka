@@ -1,7 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, FlexibleContexts, OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleContexts #-}
 
 module Yleiset where
 
@@ -21,7 +19,11 @@ import Data.FoldApp (FoldrApp, foldrApp)
 
 instance FromJSVal Natural where
   fromJSVal = doFromJSVal "Natural" $
-    MaybeT . fromJSVal
+    MaybeT . fmap (>>= parseNatural) . fromJSVal @Int
+
+parseNatural :: Int -> Maybe Natural
+parseNatural i | i >= 0 = Just $ fromIntegral i
+parseNatural _          = Nothing
 
 instance ToJSVal Natural where
   toJSVal = toJSVal @Int . fromIntegral

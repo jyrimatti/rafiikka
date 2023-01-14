@@ -1,17 +1,14 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, TypeApplications, DeriveGeneric, DerivingVia, OverloadedStrings #-}
 module State where
 
 import Universum
 import Data.Maybe (fromJust)
 import Data.Time ( UTCTime, getCurrentTime, CalendarDiffTime )
 import Time (showISO, parseISO, Interval (Interval), removeDuration, addDuration, roundToPreviousHour, roundToPreviousDay, roundCalendarDiffTimeToPreviousDay)
-import Language.Javascript.JSaddle (new, jsg, ToJSVal (toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, (!), (<#), obj, jsUndefined)
+import Language.Javascript.JSaddle (new, jsg, ToJSVal (toJSVal), JSString, FromJSVal (fromJSVal), ghcjsPure, (<#), obj, jsUndefined)
 import JSDOM.Types (JSM)
 import Browser.Browser (withDebug)
-import Monadic (doFromJSVal, isDefined, propFromJSVal, tryPropFromJSVal)
+import Monadic (doFromJSVal, isDefined, propFromJSVal)
 import Control.Lens.Traversal (both)
 import Data.Time.Lens (modL, hours)
 import Control.Applicative.HT (lift5)
@@ -162,4 +159,4 @@ instance FromJSVal AppState where
                    <*> fmap Degrees . propFromJSVal "rotaatio"
                    <*> (fmap . fmap) Layer . propFromJSVal "tasot"
                    <*> propFromJSVal "aika"
-                   <*> lift . (fmap . fmap) Location . tryPropFromJSVal "sijainti"
+                   <*> (fmap . fmap) Location . propFromJSVal "sijainti"

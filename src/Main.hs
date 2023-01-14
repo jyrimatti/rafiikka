@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables, TypeApplications #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# LANGUAGE DataKinds, OverloadedLabels #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Main where
 
@@ -23,13 +24,13 @@ import Shpadoinkle.Console (debug, warn, info)
 import StateAccessor (getStates, getState, getMainState, setState, setMainState, removeSubState)
 import State (defaultState, TimeSetting, AppState (location))
 import Browser.Fetch (getJson, headJson)
-import JSDOM.Types (Callback(Callback), JSVal, Function, FromJSVal (fromJSVal), Window)
+import JSDOM.Types (Callback(Callback), JSVal, Function, FromJSVal (fromJSVal), Window, HTMLElement)
 import Text.URI (URI, render)
 import Data.Aeson ( Value, Result(Error, Success), fromJSON )
 import Language.Javascript.JSaddle ((#), call, global, ToJSVal (toJSVal), jsg, liftJSM, (!), (<#), JSString, MakeArgs)
 import Amcharts.DataSource (monitor, DataType (Other, Revisions), initDS, luoDatasource, DataSource, load)
 import URI (infraAPIUrl, etj2APIUrl, aikatauluAPIUrl, graphQLUrl, mqttPort, mqttHost, mqttTopic, infraAPIrevisionsUrl, etj2APIrevisionsUrl, withTime, baseInfraAPIUrl, baseEtj2APIUrl, ratanumeroUrl, ratanumerotUrl, ratakmSijaintiUrl, pmSijaintiUrl, ratakmValiUrl, liikennepaikkavalitUrl, reittiUrl, reittihakuUrl, vaihdeTyypitUrl, opastinTyypitUrl, ratapihapalveluTyypitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl, elementitUrl, lorajatUrl, raiteenKorkeudetUrl, eiUrlRatanumero, esUrlRatanumero, vsUrlRatanumero, loUrlRatanumero, eiUrlAikataulupaikka, esUrlAikataulupaikka, vsUrlAikataulupaikka, loUrlAikataulupaikka, kunnossapitoalueetMetaUrl, liikenteenohjausalueetMetaUrl, kayttokeskuksetMetaUrl, liikennesuunnittelualueetMetaUrl, ratapihapalvelutUrlTilasto, toimialueetUrlTilasto, tilirataosatUrlTilasto, liikennesuunnittelualueetUrlTilasto, paikantamismerkitUrlTilasto, kilometrimerkitUrlTilasto, radatUrlTilasto, liikennepaikanOsatUrlTilasto, rautatieliikennepaikatUrlTilasto, liikennepaikkavalitUrlTilasto, raideosuudetUrlTilasto, elementitUrlTilasto, raiteensulutUrlTilasto, raiteetUrlTilasto, liikenteenohjauksenrajatUrlTilasto, tunnelitUrlTilasto, sillatUrlTilasto, laituritUrlTilasto, tasoristeyksetUrlTilasto, kayttokeskuksetUrlTilasto, kytkentaryhmatUrlTilasto, asiatUrl, esTyypitUrl, loUrlTilasto, eiUrlTilasto, esUrlTilasto, vsUrlTilasto, muutoksetInfra, muutoksetEtj2, koordinaattiUrl, ratakmMuunnosUrl, koordinaattiMuunnosUrl, rtUrl, rtSingleUrl, rtGeojsonUrl, lrUrl, lrSingleUrl, lrGeojsonUrl, infraObjektityypitUrl, hakuUrlitInfra, hakuUrlitEtj2, hakuUrlitRuma, luoInfraAPIUrl, luoEtj2APIUrl, luoRumaUrl, luoAikatauluUrl, junasijainnitGeojsonUrl, junasijainnitUrl, APIResponse (APIResponse))
-import JSDOM (currentWindow)
+import JSDOM (currentWindow, currentDocument)
 import Jeti.Types ( eiTilat, esTilat, vsTilat, loiTilat )
 import Time (startOfTime, endOfTime, roundToPreviousDay, roundToPreviousMonth, intervalsIntersect, limitInterval, toISOStringNoMillis)
 import URISerialization (fromURIFragment, ToURIFragment (toURIFragment))
@@ -42,6 +43,11 @@ import Control.Lens.Action.Type (IndexPreservingAction)
 import GHC.Records (getField)
 import Infra.DataSource (ratanumerotDS, liikennepaikkavalitDS, liikennepaikanOsatDS, raideosuudetDS, laituritDS, elementitDS, lorajatDS, aikataulupaikatDS, rautatieliikennepaikatDS, ratatyoElementitDS, ratapihapalveluTyypitDS, opastintyypitDS, vaihdetyypitDS, kpalueetDS, ohjausalueetDS, kayttokeskuksetDS, lisualueetDS, objektityypitDS)
 import Jeti.DataSource
+import Browser.Popup (createPopup, Offset)
+import JSDOM.Generated.Element (setAttribute)
+import System.Time.Extra (sleep)
+import Search (searchInfraDS, searchJetiDS, searchRumaDS)
+import Browser.MutationObserver (onStyleChange)
 
 main :: IO ()
 main = do
@@ -51,8 +57,12 @@ main = do
 
 dev :: IO ()
 dev = do
-  --bs <- B.readFile "./index-debug.html"
   bs <- B.readFile "./index-dev.html"
+  liveWithStaticAndIndex bs 8080 app "./"
+
+devDebug :: IO ()
+devDebug = do
+  bs <- B.readFile "./index-debug.html"
   liveWithStaticAndIndex bs 8080 app "./"
 
 getJson_ :: URI -> JSVal -> Maybe JSVal -> JSM ()
@@ -67,9 +77,18 @@ headJson_ uri fa signal = do
       cb aa = void $ call fa global aa
   headJson (Other $ render uri) uri signal (debug @Show) cb
 
+createPopup_ :: Maybe Text -> Offset -> Maybe JSVal -> JSM (HTMLElement,HTMLElement)
+createPopup_ titleText offset onClose = do
+  cb <- case onClose of
+          Nothing -> pure Nothing
+          Just c -> pure $ Just $ do
+            _ <- call c global ()
+            pure ()
+  createPopup titleText offset cb
+
 app :: JSM ()
 app = do
-  enableLogging True
+  enableLogging False
 
   --registerGlobalFunction "onkoSeed" isSeed
 
@@ -95,6 +114,7 @@ app = do
   registerGlobalFunction3 "getJson" getJson_
   registerGlobalFunction3 "headJson" headJson_
   registerGlobalFunction1 "errorHandler" errorHandler
+  registerGlobalFunction3 "luoIkkuna" createPopup_
 
   registerGlobalFunction1 "baseInfraAPIUrl" baseInfraAPIUrl
   registerGlobalFunction1 "baseEtj2APIUrl" baseEtj2APIUrl
@@ -237,47 +257,73 @@ app = do
   registerGlobalFunctionPure "estyypitDS" estyypitDS
   registerGlobalFunctionPure "asiatDS" asiatDS
 
+  registerGlobalFunctionPure "hakuUrlitInfraDS" searchInfraDS
+  registerGlobalFunctionPure "hakuUrlitEtj2DS" searchJetiDS
+  registerGlobalFunctionPure "hakuUrlitRumaDS" searchRumaDS
+
+  registerGlobalFunction "loadTooltips" loadTooltips
+  registerGlobalFunction "loadRevisions" loadRevisions
+  registerGlobalFunction "loadData" loadData
+
   addMeta [("charset", "UTF-8")]
   setTitle "Rafiikka"
-  addStyle "ol.css"
-  addStyle "ol-layerswitcher.css"
-  addStyle "selectize.min.css"
+  addStyle "lib/ol.css"
+  addStyle "lib/ol-layerswitcher.css"
+  addStyle "lib/selectize.min.css"
   addStyle "style.css"
 
-  addScriptSrc "DragDropTouch.js"
-  addScriptSrc "datefns.js"
+  addScriptSrc "lib/DragDropTouch.js"
+  addScriptSrc "lib/datefns.js"
   addScriptSrc "drag.js"
 
   simple runSnabbdom () Frontpage.view stage
 
+  --setTimeout (secondsToNominalDiffTime 1) loadTooltips
+  --setTimeout (secondsToNominalDiffTime 2) loadRevisions
+  --setTimeout (secondsToNominalDiffTime 3) loadData
+
+loadTooltips :: JSM ()
+loadTooltips = (do getElementById "palkki") >>= \x -> do
+  info @Show ("Initializing tooltips" :: Text)
+  initTooltips $ fromJust x
+
+loadRevisions :: JSM ()
+loadRevisions = do
+  info @Show ("Loading revisions" :: Text)
   infraAPIrevisionsUrl >>= getRevision "infra"
   etj2APIrevisionsUrl >>= getRevision "etj2"
 
-  setTimeout (secondsToNominalDiffTime 2) $ (do debug @Show ("cb!" :: [Char]); getElementById "palkki") >>= \x -> do
-    debug @Show ("acting!" :: [Char]);
-    initTooltips $ fromJust x
-  
-  setTimeout (secondsToNominalDiffTime 20) $ do
-    ratanumerotDS >>= load
-    liikennepaikkavalitDS >>= load
-    rautatieliikennepaikatDS >>= load
-    liikennepaikanOsatDS >>= load
-    raideosuudetDS >>= load
-    laituritDS >>= load
-    elementitDS >>= load
-    lorajatDS >>= load
-    aikataulupaikatDS >>= load
-    ratatyoElementitDS >>= load
-    ratapihapalveluTyypitDS >>= load
-    opastintyypitDS >>= load
-    vaihdetyypitDS >>= load
-    kpalueetDS >>= load
-    ohjausalueetDS >>= load
-    kayttokeskuksetDS >>= load
-    lisualueetDS >>= load
-    objektityypitDS >>= load
-    estyypitDS >>= load
-    asiatDS >>= load
+loadWithDelay :: DataSource -> JSM ()
+loadWithDelay ds = do
+  liftIO (sleep 1)
+  load ds
+
+loadData :: JSM ()
+loadData = do
+  info @Show ("Loading all datasources" :: Text)
+  ds <- sequence [
+    ratanumerotDS,
+    liikennepaikkavalitDS,
+    rautatieliikennepaikatDS,
+    liikennepaikanOsatDS,
+    raideosuudetDS,
+    laituritDS,
+    elementitDS,
+    lorajatDS,
+    aikataulupaikatDS,
+    ratatyoElementitDS,
+    ratapihapalveluTyypitDS,
+    opastintyypitDS,
+    vaihdetyypitDS,
+    kpalueetDS,
+    ohjausalueetDS,
+    kayttokeskuksetDS,
+    lisualueetDS,
+    objektityypitDS,
+    estyypitDS,
+    asiatDS
+   ]
+  traverse_ loadWithDelay ds
 
 getRevision :: Text -> APIResponse (NonEmpty Revision) -> JSM ()
 getRevision api (APIResponse url) = getJson Revisions url Nothing (debug @Show) $ \x -> do

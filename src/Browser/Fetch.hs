@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Browser.Fetch (

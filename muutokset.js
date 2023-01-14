@@ -7,7 +7,7 @@ let luoMuutoksetPopup = (luotuja, duration, muutokset, title) => {
     }
 };
 let luoMuutoksetPopup_ = (luotuja, duration, muutokset, title) => {
-    let [container, elemHeader] = luoIkkuna(title || (luotuja ? 'Ilmaantuvat: ' : 'Poistuvat: ') + prettyPrint(duration));
+    let [container, elemHeader] = luoIkkuna(title || (luotuja ? 'Ilmaantuvat: ' : 'Poistuvat: ') + prettyPrint(duration), {left: undefined, top: undefined, right: undefined, bottom: undefined}, undefined);
     container.setAttribute("class", "popupContainer muutoksetContainer");
 
     let content = document.createElement("div");

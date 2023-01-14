@@ -1,6 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, FlexibleInstances, NamedFieldPuns, OverloadedStrings #-}
 
 module URISerialization (
     ToURIFragment(toURIFragment),

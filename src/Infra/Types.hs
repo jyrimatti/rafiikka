@@ -1,9 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, GADTs, DataKinds, ScopedTypeVariables, DuplicateRecordFields, DeriveGeneric, OverloadedStrings #-}
 
 module Infra.Types where
     

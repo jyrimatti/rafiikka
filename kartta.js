@@ -1,12 +1,12 @@
 
 let luoKarttaElementti = (tunniste, title, offsetX1, offsetY1, offsetX2, offsetY2, onClose) => {
-    let [container, elemHeader] = luoIkkuna(title, offsetX1, offsetY1, offsetX2, offsetY2, onClose);
+    let [container, elemHeader] = luoIkkuna(title, {left: offsetX1, top: offsetY1, right: offsetX2, bottom: offsetY2}, onClose);
     container.setAttribute("class", "popupContainer karttaPopup");
 
     let schema = document.createElement("label");
     schema.setAttribute("class", "schema");
     schema.setAttribute("title", "Kaavionäkymä päälle/pois");
-    schema.innerText = 'kaavio';
+    schema.innerText = 'diagram';
     elemHeader.appendChild(schema);
 
     let check = document.createElement("input");
@@ -380,7 +380,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         }
     });
 
-    kaavioCheck.checked = persistState && getState(kartanIndeksi(map)).moodi == 'kaavio';
+    kaavioCheck.checked = persistState && getState(kartanIndeksi(map)).moodi == 'diagram';
 
     if (persistState) {
         map.getView().setRotation(getState(kartanIndeksi(map)).rotaatio);
@@ -436,7 +436,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
     kaavioCheck.onchange = _ => {
         if (persistState) {
             let st = getState(kartanIndeksi(map));
-            st.moodi = onkoKaavio() ? 'kaavio' : 'kartta';
+            st.moodi = onkoKaavio() ? 'diagram' : 'map';
             setState(kartanIndeksi(map), st);
         }
         taustaLayer.setVisible(!onkoKaavio());
@@ -496,7 +496,7 @@ let kartta_ = (tunniste, title, time, persistState, offsetX1, offsetY1, offsetX2
         });
     };
 
-    onStyleChange(elem.parentElement, () => setTimeout(() => map.updateSize(), 200));
+    //onStyleChange(elem.parentElement, _ => setTimeout(() => map.updateSize(), 200));
 
     map.highlightLayers = {};
 
@@ -742,7 +742,7 @@ let select = map => {
                 korostusPois(map, feature);
                 selectInteraction.getFeatures().remove(feature);
             };
-            let [container,header] = luoIkkuna(tunniste, undefined, undefined, undefined, undefined, onClose);
+            let [container,header] = luoIkkuna(tunniste, {left: undefined, top: undefined, right: undefined, bottom: undefined}, onClose);
             container.setAttribute("class", "popupContainer karttaInfoPopup");
             createPopupContent(tunniste, container);
 
@@ -805,7 +805,7 @@ let select = map => {
                 let centerPixel = [overlayPixel[0] + overlay.getElement().offsetWidth/2, overlayPixel[1] + overlay.getElement().offsetHeight/2];
                 return map.getCoordinateFromPixel(centerPixel);
             };
-            onStyleChange(container, () => line.getGeometry().setCoordinates([coordinate, centerCoordinate(overlay.getPosition())]));
+            //onStyleChange(container, _ => line.getGeometry().setCoordinates([coordinate, centerCoordinate(overlay.getPosition())]));
 
             line = new ol.Feature(new ol.geom.LineString([coordinate, centerCoordinate(coordinate)]));
 

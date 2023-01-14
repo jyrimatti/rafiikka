@@ -1,11 +1,5 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DeriveGeneric, LambdaCase, DataKinds, ScopedTypeVariables, QuasiQuotes, OverloadedStrings, RecordWildCards, NamedFieldPuns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# LANGUAGE DeriveGeneric #-}
 module URI where
 
 import Universum hiding (whenM, local, state)
@@ -15,7 +9,7 @@ import Text.URI.QQ ( uri )
 import Browser.Browser ( isLocal, isSafari, isSeed )
 import JSDOM.Types (JSM)
 import JSDOM (currentWindow)
-import Language.Javascript.JSaddle ((!), create, (<#))
+import Language.Javascript.JSaddle ((!), create, (<#), isUndefined, ghcjsPure)
 import Language.Javascript.JSaddle.Classes (FromJSVal(fromJSVal))
 import Data.Maybe (fromJust)
 import Types (Train (Train, departureDate, trainNumber), Revisions (infra, etj2), Ratakmetaisyys (Ratakmetaisyys, kmetaisyys, ratanumero), Pmsijainti, Ratakmvali (Ratakmvali), OID, SRSName (CRS84), Point, Route (Route))
@@ -117,7 +111,12 @@ baseUrl api revision = do
     win <- currentWindow
     revs <- if isNothing win
         then pure Nothing 
-        else fromJSVal =<< fromJust win ! ("revisions" :: Text)
+        else do
+            revisions <- fromJust win ! ("revisions" :: Text)
+            isUndef <- ghcjsPure $ isUndefined revisions
+            if isUndef
+              then pure Nothing
+              else fromJSVal revisions
 
     let suffix = if isNothing revs || isNothing revision
         then "/"
@@ -300,14 +299,14 @@ raideosuudetUrl :: JSM (APIResponse (Map OID [a]))
 raideosuudetUrl = fmap APIResponse $ infraAPIJson $
     path "aikataulupaikat" .
     cqlFilter "tyyppi='raideosuus'" .
-    propertyName "geometria,tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tyyppi,uicKoodi,objektinVoimassaoloaika" .
+    propertyName "geometria,tunniste.tunniste,tunniste.ratakmvalit,tunniste.turvalaiteNimi,tunniste.tyyppi,uicKoodi,objektinVoimassaoloaika" .
     srsName CRS84
 
 laituritUrl :: JSM (APIResponse (Map OID [a]))
 laituritUrl = fmap APIResponse $ infraAPIJson $
     path "aikataulupaikat" .
     cqlFilter "tyyppi='laituri'" .
-    propertyName "geometria,tunniste.tunniste,tunniste.kuvaus,tunniste.ratakmvalit,tunniste.tunnus,tyyppi,uicKoodi,objektinVoimassaoloaika" .
+    propertyName "geometria,tunniste.tunniste,tunniste.kuvaus,tunniste.ratakmvalit,tunniste.tunnus,tunniste.tyyppi,uicKoodi,objektinVoimassaoloaika" .
     srsName CRS84
 
 

@@ -123,7 +123,7 @@ let luoJunaPopup = (lahtopaiva, junanumero) => {
 let luoJunaPopup_ = (lahtopaiva, junanumero) => {
     let tunniste = !lahtopaiva ? undefined : lahtopaiva + ' (' + junanumero + ')';
 
-    let [container, elemHeader] = luoIkkuna(tunniste);
+    let [container, elemHeader] = luoIkkuna(tunniste, {left: undefined, top: undefined, right: undefined, bottom: undefined}, undefined);
     container.setAttribute("class", "popupContainer infoPopup aikatauluPopup");
 
     let open = document.createElement("div");

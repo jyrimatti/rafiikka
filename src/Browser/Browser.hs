@@ -1,9 +1,8 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, TypeApplications, OverloadedStrings, DataKinds #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Browser.Browser (
+    createHTMLElement,
     getElementById,
     setTimeout,
     withDebug,
@@ -18,18 +17,18 @@ module Browser.Browser (
 
 import Universum hiding (drop,get,Element)
 import FFI (procedure, debug)
-import Language.Javascript.JSaddle (JSM, jsg2, JSString, (!), FromJSVal (fromJSVal), (<#), JSVal, ghcjsPure, jsUndefined, MakeObject)
+import Language.Javascript.JSaddle (JSM, jsg2, JSString, (!), FromJSVal (fromJSVal), (<#), JSVal, ghcjsPure, jsUndefined, MakeObject, ToJSVal (toJSVal))
 import JSDOM (currentDocument, currentWindow)
 import qualified JSDOM.Types as JSDOM (Element)
 import JSDOM.Generated.ParentNode (querySelector)
 import Data.Time (NominalDiffTime)
-import qualified Shpadoinkle.Console as SC (debug)
 import Data.Text (drop, isInfixOf, isSuffixOf)
 import Data.Maybe (fromJust)
 import Monadic (isDefined)
 import GHC.Records (HasField (getField))
 import GetSet (getObj,getVal)
-import JSDOM.Types (Window,Element)
+import JSDOM.Types (Window,Element, HTMLElement)
+import JSDOM.Generated.Document (createElement)
 
 newtype Location = Location JSVal deriving MakeObject
 instance HasField "location" Window (JSM Location) where
@@ -58,6 +57,11 @@ withDebug x f = do
   ret <- f
   _ <- debug $ x <> " end"
   pure ret
+
+createHTMLElement :: Text -> JSM HTMLElement
+createHTMLElement name = do
+  Just doc <- currentDocument 
+  fmap fromJust . fromJSVal =<< toJSVal =<< createElement doc name
 
 getElementById :: Text -> JSM (Maybe JSDOM.Element)
 getElementById id_ = do

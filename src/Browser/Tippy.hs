@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
 
 module Browser.Tippy (
     setContent, tippy, interactive, placement, offset, content

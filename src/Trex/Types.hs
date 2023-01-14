@@ -1,10 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE GADTs, MultiParamTypeClasses, DataKinds, ScopedTypeVariables, DuplicateRecordFields, OverloadedStrings #-}
 
 module Trex.Types where
 

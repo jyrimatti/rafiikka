@@ -3,6 +3,17 @@
 module Frontpage where
 
 import Universum
+    ( ($),
+      Functor(fmap),
+      IsString,
+      Semigroup((<>)),
+      Bool(True),
+      Int,
+      Text,
+      concatMap,
+      (<$>),
+      (.),
+      show )
 import Shpadoinkle
 import Shpadoinkle.Html as H
 
@@ -19,7 +30,7 @@ scripts =
   , script' [("src", "junat.js")]
   , script' [("src", "aikataulut.js")]
   , script' [("src", "raide.js")]
-  , script' [("src", "chart.js")]
+  --, script' [("src", "chart.js")]
   , script' [("src", "karttaStyles.js")]
   , script' [("src", "karttaLayers.js")]
   , script' [("src", "lista.js")]

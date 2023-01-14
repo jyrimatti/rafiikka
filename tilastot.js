@@ -81,7 +81,7 @@ let luoTilastoPopup_ = (nimi, url, tilat, tyypit, tyonlajit, eiPoistumista, vari
         tilat = [nimi];
     }
 
-    let [container, elemHeader] = luoIkkuna(nimi);
+    let [container, elemHeader] = luoIkkuna(nimi, {left: undefined, top: undefined, right: undefined, bottom: undefined}, undefined);
     container.setAttribute("class", "popupContainer infoPopup tilastoContainer");
 
     let content = document.createElement("div");

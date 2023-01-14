@@ -8,13 +8,14 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TypeFamilies #-}
 module Amcharts.DataSource where
 
-import Universum (Generic,Int,Text,Show,NonEmpty,Maybe(..), (<$>), ($), MaybeT (MaybeT), hoistMaybe, readMaybe, Applicative ((<*>), pure, liftA2), whenM, (.), show, Semigroup ((<>)), Num ((+)), when, Eq ((==)), Enum (succ), Functor (fmap), Alternative ((<|>)), not, flip, MonadTrans (lift), (=<<))
-import Language.Javascript.JSaddle (JSM, JSString, FromJSVal (fromJSVal), JSVal (JSVal), ToJSVal (toJSVal), MakeObject, jsg1, MakeArgs, ghcjsPure, (!), (#))
+import Universum (Generic,Int,Text,Show,NonEmpty,Maybe(..), (<$>), ($), MaybeT (MaybeT), hoistMaybe, readMaybe, Applicative ((<*>), pure, liftA2), whenM, (.), show, Semigroup ((<>)), Num ((+)), when, Eq ((==)), Enum (succ), Functor (fmap), Alternative ((<|>)), not, flip)
+import Language.Javascript.JSaddle (JSM, JSString, FromJSVal (fromJSVal), JSVal, ToJSVal (toJSVal), MakeObject, jsg1, MakeArgs, (#))
 import JSDOM (currentWindow)
 import JSDOM.Generated.Element (removeAttribute)
 import Amcharts.Events ( on1, Done, ParseEnded (..), Started, Ended, Error (Error), message, Target (Target))
@@ -36,8 +37,7 @@ import GHC.Records (HasField (getField))
 import GetSet (setJson, getObj, getVal, new, get, setVal)
 import Control.Lens.Action ((^!))
 import Text.URI (URI)
-import FFI (debug, warn)
-import GHCJS.Foreign ( jsTypeOf )
+import FFI (warn)
 import URI (APIResponse (APIResponse))
 
 newtype DataSource = DataSource JSVal
@@ -128,7 +128,7 @@ monitor ds dataType = do
 
   pure ()
 
-luoDatasource :: forall result eventData. (Show result, FromJSVal result, ToJSVal eventData) => DataType -> JSM (APIResponse result) -> (result -> eventData) -> JSM DataSource
+luoDatasource :: forall result eventData. ( FromJSVal result, ToJSVal eventData) =>DataType -> JSM (APIResponse result) -> (result -> eventData) -> JSM DataSource
 luoDatasource dataType urlF converter = do
   ds <- mkDataSource
   whenM (not <$> isSeed) $ do
@@ -138,10 +138,9 @@ luoDatasource dataType urlF converter = do
     add1 ad "url" $ \(_::JSVal) -> urlF
   initDS ds
   monitor ds dataType
-  on1 ds $ \(ParseEnded target@(Target tar) :: ParseEnded (Maybe result)) -> do
+  on1 ds $ \(ParseEnded (Target tar) :: ParseEnded (Maybe result)) -> do
     datJSVal <- readProperty "data" tar
     dat <- flip (doFromJSVal $ show dataType) datJSVal $ \x -> do
-      datType <- lift $ ghcjsPure $ jsTypeOf x
       MaybeT $ fromJSVal x
     case dat of
       Just dd -> do

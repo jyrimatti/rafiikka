@@ -22,19 +22,18 @@ module GetSet (
   Constant(..)
 ) where
 
-import Language.Javascript.JSaddle  (MakeObject, ToJSVal, JSVal, JSM, JSString, (!), (<#), toJSVal_aeson, FromJSVal (fromJSVal), FromJSString (fromJSString), MakeArgs, ghcjsPure, jsUndefined, isUndefined, syncPoint)
+import Language.Javascript.JSaddle  (MakeObject, ToJSVal, JSVal, JSM, (!), (<#), toJSVal_aeson, FromJSVal (fromJSVal), MakeArgs)
 import qualified Language.Javascript.JSaddle as JSaddle
 import GHC.OverloadedLabels (IsLabel (fromLabel))
-import Universum ((>>=), Applicative (pure), ($), (<$>), error, Text, show, Semigroup ((<>)), whenM, Bool (True), undefined)
+import Universum ((>>=), Applicative (pure), ($), (<$>), Text, show)
 import GHC.Records (HasField (getField))
 import Data.Aeson (ToJSON)
 import Data.Typeable (Typeable, Proxy (Proxy), typeRep)
-import FFI (deserializationFailure_, deserializationFailureUnsafe)
+import FFI (deserializationFailureUnsafe)
 import Data.Maybe ( Maybe(Just, Nothing) )
 import Control.Lens.Action (act)
 import Control.Lens.Action.Type (IndexPreservingAction)
 import Data.Text (tail, init)
-import Shpadoinkle.Console (warn)
 import Monadic (readProperty)
 
 
@@ -75,7 +74,7 @@ getObj c fieldname this = do
   res <- fromJSVal jval
   case res of
     Nothing -> do
-      deserializationFailureUnsafe jval fieldname
+      FFI.deserializationFailureUnsafe jval fieldname
     Just r  -> do
       pure $ c r
 
@@ -84,7 +83,7 @@ getVal fieldname this = do
     jval <- this ! fieldname
     res <- fromJSVal jval
     case res of
-      Nothing -> deserializationFailureUnsafe jval fieldname
+      Nothing -> FFI.deserializationFailureUnsafe jval fieldname
       Just r  -> pure r
 
 setVal_ :: forall fieldname this val. (TypeBaseName fieldname, MakeObject this, HasField fieldname this (JSM val), ToJSVal val) => val -> this -> JSM ()

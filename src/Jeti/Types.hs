@@ -1,10 +1,4 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DeriveGeneric, TypeApplications, MultiParamTypeClasses, GADTs, DataKinds, ScopedTypeVariables, DuplicateRecordFields, OverloadedStrings #-}
 
 module Jeti.Types where
 

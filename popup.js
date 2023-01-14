@@ -1,63 +1,3 @@
-let luoIkkuna = (title, offsetX1, offsetY1, offsetX2, offsetY2, onClose) => {
-    let container = document.createElement("div");
-    document.body.appendChild(container);
-
-    if (offsetX1) {
-        container.style.left = offsetX1;
-    }
-    if (offsetY1) {
-        container.style.top = offsetY1;
-    }
-    if (offsetX2) {
-        container.style.right = offsetX2;
-        container.style.width = 'auto';
-    }
-    if (offsetY2) {
-        container.style.bottom = offsetY2;
-        container.style.height = 'auto';
-    }
-
-    let elemHeader = document.createElement("div");
-    elemHeader.setAttribute("class", "header draghandle");
-    container.appendChild(elemHeader);
-
-    let elemTitle = document.createElement("div");
-    elemTitle.setAttribute("class", "title");
-    elemTitle.innerText = title || '';
-    elemHeader.appendChild(elemTitle);
-
-    let close = document.createElement("div");
-    close.setAttribute("class", "close");
-    close.setAttribute("title", "Sulje ikkuna");
-    close.innerText = "x";
-    close.addEventListener('click', () => {
-        if (onClose) {
-            onClose();
-        }
-        container.parentElement.removeChild(container);
-        container.remove();
-    });
-    elemHeader.appendChild(close);
-
-    //container.addEventListener('dragstart', () => moveToBottom(container));
-    container.addEventListener('dragend', () => moveToTop(container));
-
-    return [container, elemHeader];
-};
-
-let moveToBottom = container => {
-    if (container.parentNode) {
-        let popups = container.parentNode.childNodes;
-        popups[0].before(container);
-    }
-}
-let moveToTop = container => {
-    if (container.parentNode) {
-        let popups = container.parentNode.childNodes;
-        popups[popups.length-1].after(container);
-    }
-}
-
 let avaaInfo = (tunniste, offsetX, offsetY, time) => {
     let url = onkoInfra(tunniste) || onkoTREX(tunniste) ? luoInfraAPIUrl(tunniste, time) :
               onkoJeti(tunniste)                        ? luoEtj2APIUrl(tunniste, time) :
@@ -66,7 +6,7 @@ let avaaInfo = (tunniste, offsetX, offsetY, time) => {
               undefined;
               //TODO aikataulut jotenkin
     if (url) {
-        let [container, elemHeader] = luoIkkuna(tunniste, offsetX, offsetY);
+        let [container, elemHeader] = luoIkkuna(tunniste, {left: offsetX, top: offsetY, right: undefined, bottom: undefined}, undefined);
         container.setAttribute("class", "popupContainer infoPopup");
 
         let open = document.createElement("div");

@@ -1,24 +1,38 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Monadic where
 
 import Universum hiding (unlessM, whenM, unless, when)
 import Data.Time.Calendar.MonthDay ()
 import Data.Time.Calendar.OrdinalDate ()
-import Language.Javascript.JSaddle (JSM, JSVal, GHCJSPure, ghcjsPure, isUndefined, ghcjsPureMap, liftJSM, js0, (!), MonadJSM, MakeObject, FromJSVal (fromJSValListOf), ToJSVal, JSString, (#), jsg, ToJSString (toJSString), syncPoint, FromJSString (fromJSString))
+import Language.Javascript.JSaddle (JSM, JSVal, GHCJSPure, ghcjsPure, isUndefined, ghcjsPureMap, liftJSM, js0, (!), MonadJSM, MakeObject, ToJSVal, JSString, (#), jsg, SomeJSArray (SomeJSArray))
 import FFI (deserializationFailure, warn)
 import GHCJS.Foreign (isFunction, isTruthy)
 import Language.Javascript.JSaddle.Classes (FromJSVal(fromJSVal))
 import qualified Data.List.NonEmpty as NonEmpty
 import JSDOM.Types (ToJSVal(toJSVal))
-import Data.Text (pack)
+import JavaScript.Array (toListIO)
 
-propFromJSVal :: FromJSVal a => Text -> JSVal -> MaybeT JSM a
-propFromJSVal property = MaybeT . (fromJSVal <=< readProperty property)
+class PropReader a where
+  readProp :: Text -> JSVal -> MaybeT JSM a
 
-tryPropFromJSVal :: FromJSVal a => Text -> JSVal -> JSM (Maybe a)
-tryPropFromJSVal property jsval = do
+instance {-# OVERLAPPABLE #-} FromJSVal a => PropReader a where
+  readProp = propFromJSVal_
+
+instance FromJSVal a => PropReader (Maybe a) where
+  readProp = lift ... tryPropFromJSVal_
+
+propFromJSVal :: PropReader a => Text -> JSVal -> MaybeT JSM a
+propFromJSVal = readProp
+
+propFromJSVal_ :: FromJSVal a => Text -> JSVal -> MaybeT JSM a
+propFromJSVal_ property = MaybeT . (fromJSVal <=< readProperty property)
+
+tryPropFromJSVal_ :: FromJSVal a => Text -> JSVal -> JSM (Maybe a)
+tryPropFromJSVal_ property jsval = do
   mval <- tryReadProperty_ property jsval
   case mval of
     Nothing  -> pure Nothing
@@ -31,11 +45,10 @@ readProperty fieldname this = do
   if isUndef
     then do
       _ <- warn ("Error reading '" <> fieldname <> "' from ", this)
-      
       error $ "Error reading " <> fieldname
     else pure jval
 
-tryReadProperty_ :: (MakeObject this, ToJSVal this) => Text -> this -> JSM (Maybe JSVal)
+tryReadProperty_ :: MakeObject this => Text -> this -> JSM (Maybe JSVal)
 tryReadProperty_ fieldname this = do
   jval <- this ! fieldname
   isUndef <- ghcjsPure $ isUndefined jval
@@ -50,9 +63,20 @@ tryArray :: FromJSVal a => Text -> JSVal -> JSM (Maybe [a])
 tryArray resultType jsval = do
     isArr <- isArray jsval
     if isArr
-      then fromJSValListOf jsval
-      else deserializationFailure jsval resultType
-      
+      then do
+        fromJSValListOf_ jsval
+      else do
+        deserializationFailure jsval resultType
+
+fromJSValListOf_ :: FromJSVal a => JSVal -> JSM (Maybe [a])
+fromJSValListOf_ x = do
+  aa <- toListIO $ SomeJSArray x
+  bb <- mapM (doFromJSVal "NonEmpty-element" $ MaybeT . fromJSVal) aa
+  let cc = catMaybes bb
+  if length cc == length aa
+    then pure $ Just cc
+    else pure Nothing
+
 instance FromJSVal a => FromJSVal (NonEmpty a) where
   fromJSVal = doFromJSVal "NonEmpty" $ \x -> do
     arr <- MaybeT $ tryArray "NonEmpty" x
@@ -77,7 +101,7 @@ guardP :: (MonadTrans m, MonadPlus (m JSM)) => GHCJSPure Bool -> m JSM ()
 guardP f = lift (ghcjsPure f) >>= guard
 
 doFromJSVal :: Text -> (JSVal -> MaybeT JSM a) -> JSVal -> JSM (Maybe a)
-doFromJSVal msg f jsval = runMaybeT (unlessP (isUndefined jsval) (f jsval)) >>= \case
+doFromJSVal msg f jsval = runMaybeT (f jsval) >>= \case
   Nothing -> deserializationFailure jsval msg
   x       -> pure x
 

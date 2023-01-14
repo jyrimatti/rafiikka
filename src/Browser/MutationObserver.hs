@@ -1,6 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, TypeApplications #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Browser.MutationObserver (
     onTitleChange,

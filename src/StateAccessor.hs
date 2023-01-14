@@ -1,5 +1,4 @@
-{-# LANGUAGE DataKinds, OverloadedLabels #-}
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DataKinds, OverloadedLabels, DerivingVia, OverloadedStrings #-}
 module StateAccessor where
 
 import Universum

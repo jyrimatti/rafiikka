@@ -8,16 +8,17 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Amcharts.Events where
 
-import Universum ( ($), Generic, Int, Text, (.), (<$>), void, (^.), Semigroup ((<>)), Applicative (pure, (<*>)), MaybeT (MaybeT), MonadTrans (lift), (=<<), Maybe (Just), (<=<), Functor (fmap), liftA3 )
-import Language.Javascript.JSaddle (JSVal, JSM, JSString, jsg3, FromJSVal, ToJSVal, (!), MakeObject, js1, (#))
-import FFI (function1, function2, functionPure1, warn, functionPure2)
-import Amcharts.Amcharts ( AmchartsObject, HasEvent )
+import Universum ( ($), Generic, Int, Text, (.), (<$>), void, Applicative (pure, (<*>)), MonadTrans (lift), Functor (fmap), liftA3 )
+import Language.Javascript.JSaddle (JSVal, JSM, JSString, FromJSVal, ToJSVal, MakeObject, (#))
+import FFI (function1, function2, functionPure1, functionPure2)
+import Amcharts.Amcharts ( AmchartsObject )
 import GHC.Records (HasField (getField))
 import GetSet (getVal, typeBaseName, TypeBaseName, Constant)
 import Monadic (readProperty, doFromJSVal, propFromJSVal)
-import Browser.Browser (withDebug)
 import Language.Javascript.JSaddle.Classes (FromJSVal(fromJSVal))
 
 
@@ -71,7 +72,7 @@ instance FromJSVal EventDispatcher where
   fromJSVal = pure . pure . EventDispatcher
 
 
-dispatch :: forall ev obj. (AmchartsObject obj, TypeBaseName ev, HasEvent obj ev ~ ()) => obj -> JSVal -> JSM ()
+dispatch :: forall ev obj. (AmchartsObject obj, TypeBaseName ev) => obj -> JSVal -> JSM ()
 dispatch obj dat = do
   _ <- obj # ("dispatch" :: Text) $ (typeBaseName @ev, dat)
   pure ()
@@ -92,14 +93,14 @@ cb1 name obj event f = void $ obj # name $ (event, function1 f)
 cb2 :: (MakeObject obj, FromJSVal a1, FromJSVal a2, ToJSVal ret) => JSString -> obj -> Text -> (a1 -> a2 -> JSM ret) -> JSM ()
 cb2 name obj event f = void $ obj # name $ (event, function2 f)
 
-on1 :: forall ev obj ret. (FromJSVal ev, ToJSVal ret, TypeBaseName ev, AmchartsObject obj, HasEvent obj ev ~ ()) => obj -> (ev -> JSM ret) -> JSM ()
+on1 :: forall ev obj ret. (FromJSVal ev, ToJSVal ret, TypeBaseName ev, AmchartsObject obj) => obj -> (ev -> JSM ret) -> JSM ()
 on1 obj x = do
     e <- events obj
-    cb1 "on" e (typeBaseName @ev) $ \ev -> withDebug ("On: " <> typeBaseName @ev) $
+    cb1 "on" e (typeBaseName @ev) $ \ev ->
       x ev
 
-once1 :: forall ev obj ret. (FromJSVal ev, ToJSVal ret, TypeBaseName ev, AmchartsObject obj, HasEvent obj ev ~ ()) => obj -> (ev -> JSM ret) -> JSM ()
+once1 :: forall ev obj ret. (FromJSVal ev, ToJSVal ret, TypeBaseName ev, AmchartsObject obj) => obj -> (ev -> JSM ret) -> JSM ()
 once1 obj x = do
     e <- events obj
-    cb1 "once" e (typeBaseName @ev) $ \ev -> withDebug ("Once: " <> typeBaseName @ev) $
+    cb1 "once" e (typeBaseName @ev) $ \ev ->
       x ev

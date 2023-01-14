@@ -8,7 +8,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
@@ -18,24 +18,20 @@ import Universum hiding (get)
 import Amcharts.DataSource (luoDatasource, DataType (InfraData, Other), DataSource, mkDataSource)
 import Infra.Types ( InfraType(Rata, Liikennepaikkavali, Rautatieliikennepaikka, LiikennepaikanOsa, Raideosuus, Laituri, Elementti, LiikenteenohjauksenRaja, Kunnossapitoalue, Liikenteenohjausalue, Kayttokeskus, Liikennesuunnittelualue), RautatieliikennepaikkaTyyppi, UICCode, RaideosuusTyyppi, LaituriTyyppi, AikataulupaikkaTyyppi (APLiikennepaikanOsa, APRautatieliikennepaikka) )
 import URI (ratanumerotUrl, liikennepaikkavalitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl, elementitUrl, lorajatUrl, ratapihapalveluTyypitUrl, opastinTyypitUrl, vaihdeTyypitUrl, kunnossapitoalueetMetaUrl, liikenteenohjausalueetMetaUrl, kayttokeskuksetMetaUrl, liikennesuunnittelualueetMetaUrl, infraObjektityypitUrl)
-import JSDOM.Types (JSM, FromJSVal (fromJSVal), ToJSVal)
-import Types (Ratakmvali(Ratakmvali), Kmetaisyys (Kmetaisyys), Distance (Distance), OID, Ratakmetaisyys (ratanumero), Point, fromListWithTunniste, MultiLineString, kmetaisyys, ratanumero, FintrafficSystem (Infra))
+import JSDOM.Types (JSM, ToJSVal)
+import Types (Ratakmvali(Ratakmvali), Kmetaisyys (Kmetaisyys), Distance (Distance), OID, Ratakmetaisyys (ratanumero), Point, MultiLineString, kmetaisyys, ratanumero)
 import qualified Data.Map as Map
 import Time (Interval)
-import Language.Javascript.JSaddle (toJSVal_aeson, JSVal, (!))
-import Language.Javascript.JSaddle.Classes (ToJSVal(toJSVal))
+import Language.Javascript.JSaddle (toJSVal_aeson)
+import Language.Javascript.JSaddle.Classes (ToJSVal(toJSVal),FromJSVal (fromJSVal))
 import Data.Aeson (ToJSON)
-import GHCJS.Marshal.Internal (fromJSVal_generic)
-import Monadic (doFromJSVal, readProperty, propFromJSVal)
-import Control.Lens ((?~))
-import GHC.Records (getField)
+import Monadic (doFromJSVal, propFromJSVal)
 import Amcharts.Events (Done (Done, target), on1, dispatch)
 import Control.Lens.Action ((^!))
 import GetSet (get, setVal)
 import Data.Maybe (fromJust)
-import Data.List.NonEmpty (singleton)
-import Data.Map (mapKeys, mapWithKey)
-import Control.Applicative.HT (liftA5, lift5, lift3, lift4)
+import Data.List.NonEmpty ()
+import Control.Applicative.HT (lift5, lift4)
 
 
 data RataDto = RataDto {
@@ -61,7 +57,7 @@ parseRataDto RataDto{..} = (ratanumero, Ratakmvali ratanumero (Kmetaisyys (minim
 data LiikennepaikkavaliDto = LiikennepaikkavaliDto {
   alkuliikennepaikka :: OID,
   loppuliikennepaikka :: OID,
-  ratakmvalit :: NonEmpty Ratakmvali,
+  ratakmvalit :: [Ratakmvali],
   objektinVoimassaoloaika :: Interval,
   tunniste :: OID
 } deriving (Generic, Show)
@@ -154,19 +150,20 @@ liikennepaikanOsatDS = luoDatasource (InfraData LiikennepaikanOsa) (liikennepaik
 data RaideosuusTunnisteDto = RaideosuusTunnisteDto {
   tunniste :: OID,
   ratakmvalit :: NonEmpty Ratakmvali,
-  turvalaiteNimi :: Text
+  turvalaiteNimi :: Text,
+  tyyppi :: RaideosuusTyyppi
 } deriving (Generic, Show)
 instance ToJSON RaideosuusTunnisteDto
 instance FromJSVal RaideosuusTunnisteDto where
   fromJSVal = doFromJSVal "RaideosuusTunnisteDto" $
-    lift3 RaideosuusTunnisteDto <$> propFromJSVal "tunniste"
+    lift4 RaideosuusTunnisteDto <$> propFromJSVal "tunniste"
                                 <*> propFromJSVal "ratakmvalit"
                                 <*> propFromJSVal "turvalaiteNimi"
+                                <*> propFromJSVal "tyyppi"
 
 data RaideosuusDto = RaideosuusDto {
   geometria :: MultiLineString,
   tunniste :: NonEmpty RaideosuusTunnisteDto,
-  tyyppi :: RaideosuusTyyppi,
   uicKoodi :: Maybe UICCode,
   objektinVoimassaoloaika :: Interval,
 
@@ -180,10 +177,9 @@ instance FromJSVal RaideosuusDto where
   fromJSVal = doFromJSVal "RaideosuusDto" $ \x -> do
     a <- propFromJSVal "geometria" x
     b <- propFromJSVal "tunniste" x
-    c <- propFromJSVal "tyyppi" x
-    d <- propFromJSVal "uicKoodi" x
-    e <- propFromJSVal "objektinVoimassaoloaika" x
-    pure $ RaideosuusDto a b c d e
+    c <- propFromJSVal "uicKoodi" x
+    d <- propFromJSVal "objektinVoimassaoloaika" x
+    pure $ RaideosuusDto a b c d
             Nothing
             (Just $ turvalaiteNimi $ head b)
             (Just $ turvalaiteNimi $ head b)
@@ -198,20 +194,21 @@ data LaituriTunnisteDto = LaituriTunnisteDto {
   tunniste :: OID,
   kuvaus :: Text,
   ratakmvalit :: NonEmpty Ratakmvali,
-  tunnus :: Text
+  tunnus :: Text,
+  tyyppi :: LaituriTyyppi
 } deriving (Generic, Show)
 instance ToJSON LaituriTunnisteDto
 instance FromJSVal LaituriTunnisteDto where
   fromJSVal = doFromJSVal "LaituriTunnisteDto" $
-    lift4 LaituriTunnisteDto <$> propFromJSVal "tunniste"
+    lift5 LaituriTunnisteDto <$> propFromJSVal "tunniste"
                              <*> propFromJSVal "kuvaus"
                              <*> propFromJSVal "ratakmvalit"
                              <*> propFromJSVal "tunnus"
+                             <*> propFromJSVal "tyyppi"
 
 data LaituriDto = LaituriDto {
   geometria :: MultiLineString,
   tunniste :: NonEmpty LaituriTunnisteDto,
-  tyyppi :: LaituriTyyppi,
   uicKoodi :: Maybe UICCode,
   objektinVoimassaoloaika :: Interval,
 
@@ -224,10 +221,9 @@ instance FromJSVal LaituriDto where
   fromJSVal = doFromJSVal "LaituriDto" $ \x -> do
     a <- propFromJSVal "geometria" x
     b <- propFromJSVal "tunniste" x
-    c <- propFromJSVal "tyyppi" x
-    d <- propFromJSVal "uicKoodi" x
-    e <- propFromJSVal "objektinVoimassaoloaika" x
-    pure $ LaituriDto a b c d e
+    c <- propFromJSVal "uicKoodi" x
+    d <- propFromJSVal "objektinVoimassaoloaika" x
+    pure $ LaituriDto a b c d
             Nothing
             (Just $ tunnus $ head b)
             (Just $ kuvaus $ head b)
@@ -323,7 +319,7 @@ osaConverter LiikennepaikanOsaDto{..} = AikataulupaikkaDto
   (Just lyhenne)
   muutRatakmsijainnit
   (Just nimi)
-  (singleton $ Ratakmvali (Types.ratanumero $ fromJust virallinenRatakmsijainti) (kmetaisyys $ fromJust virallinenRatakmsijainti) (kmetaisyys $ fromJust virallinenRatakmsijainti))
+  (fromJust $ nonEmpty [Ratakmvali (Types.ratanumero $ fromJust virallinenRatakmsijainti) (kmetaisyys $ fromJust virallinenRatakmsijainti) (kmetaisyys $ fromJust virallinenRatakmsijainti)])
   tunniste
   APLiikennepaikanOsa
   uicKoodi
