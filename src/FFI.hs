@@ -26,6 +26,7 @@ module FFI(
   deserializationFailure,
   deserializationFailureUnsafe,
   warn,
+  warn_,
   debug
 ) where
 
@@ -36,6 +37,7 @@ import Data.Data (typeOf)
 import GHCJS.Foreign (jsTypeOf)
 import JSDOM (currentWindow)
 import Data.Maybe (fromJust)
+import Data.Text (pack)
 #else
 import Language.Javascript.JSaddle (ToJSVal(..), FromJSVal(..), JSM, JSString, ToJSString(..), JSVal, MonadJSM, liftJSM, Object (Object), MakeArgs, jsg, (#), ghcjsPure, syncPoint)
 import GHCJS.Foreign.Callback (Callback, syncCallback', syncCallback1', syncCallback2', syncCallback3', asyncCallback, asyncCallback1, asyncCallback2, asyncCallback3)
@@ -53,15 +55,21 @@ registerGlobalFunction1     :: (FromJSVal a,                           ToJSVal r
 registerGlobalFunction2     :: (FromJSVal a, FromJSVal b,              ToJSVal r) => Text -> (a -> b      -> JSM r) -> JSM ()
 registerGlobalFunction3     :: (FromJSVal a, FromJSVal b, FromJSVal c, ToJSVal r) => Text -> (a -> b -> c -> JSM r) -> JSM ()
 
-warn :: MakeArgs a => a -> JSM JSVal
+warn :: ToString t => t -> JSM JSVal
 warn args = do
-  ret <- jsg @JSString "console" # ("warn" :: JSString) $ args
+  ret <- jsg @JSString "console" # ("warn" :: JSString) $ pack $ toString args
   syncPoint
   pure ret
 
-debug :: MakeArgs a => a -> JSM JSVal
+warn_ :: MakeArgs a => a -> JSM JSVal
+warn_ args = do
+  ret <- jsg @JSString "console" # ("warn" :: JSString) $ args
+  syncPoint
+  pure ret
+  
+debug :: ToString t => t -> JSM JSVal
 debug args = do
-  ret <- jsg @JSString "console" # ("debug" :: JSString) $ args
+  ret <- jsg @JSString "console" # ("debug" :: JSString) $ pack $ toString args
   syncPoint
   pure ret
 
@@ -69,7 +77,7 @@ deserializationFailure_ :: JSVal -> Text -> JSM ()
 deserializationFailure_ val resultType = do
   jsType <- ghcjsPure $ jsTypeOf val
   putStrLn $ "Error deserializing type " <> resultType <> " from " <> show jsType
-  _ <- warn ("Error deserializing type " <> resultType <> " from " <> show jsType <> " value: ",val)
+  _ <- warn_ ("Error deserializing type " <> resultType <> " from " <> show jsType <> " value: ",val)
   pure ()
 
 deserializationFailureUnsafe :: JSVal -> Text -> JSM a
@@ -83,6 +91,10 @@ deserializationFailure val resultType = do
   _ <- deserializationFailure_ val resultType
   pure Nothing
 
+deserializationFailureArgs :: Int -> Int -> JSM ()
+deserializationFailureArgs expected actual = deserializationFailure_ undefined $ "(wrong num of args, expected " <> show expected <> ", got: " <> show actual <> ")"
+
+
 -- Procedures don't return a value, and can thus be executed asynchronously
 -- TODO: asyncFunction does not seem to work for non-GHCJS, so have to separate non-GHCJS to use a synchronous approach for now...
 #ifndef ghcjs_HOST_OS
@@ -94,32 +106,41 @@ procedure3 :: (FromJSVal a1, FromJSVal a2, FromJSVal a3) => (a1 -> a2 -> a3 -> J
 procedure f = function $ fun $ \_ _ _ -> do
   f
 
-procedure1 f = function $ fun $ \_ _ [a1] -> do
-  v1 <- fromJSVal a1
-  case v1 of
-    Nothing -> deserializationFailure_ a1 ""
-    Just x1 -> f x1
+procedure1 f = function $ fun $ \_ _ as -> do
+  case as of
+    [a1] -> do
+      v1 <- fromJSVal a1
+      case v1 of
+        Nothing -> deserializationFailure_ a1 ""
+        Just x1 -> f x1
+    x -> deserializationFailureArgs 1 $ length x
 
-procedure2 f = function $ fun $ \_ _ [a1, a2] -> do
-  v1 <- fromJSVal a1
-  v2 <- fromJSVal a2
-  case v1 of
-    Nothing -> deserializationFailure_ a1 ""
-    Just x1 -> case v2 of
-      Nothing -> deserializationFailure_ a2 $ show (typeOf a2)
-      Just x2  -> f x1 x2
+procedure2 f = function $ fun $ \_ _ as -> do
+  case as of
+    [a1, a2] -> do
+      v1 <- fromJSVal a1
+      v2 <- fromJSVal a2
+      case v1 of
+        Nothing -> deserializationFailure_ a1 ""
+        Just x1 -> case v2 of
+          Nothing -> deserializationFailure_ a2 $ show (typeOf a2)
+          Just x2  -> f x1 x2
+    x -> deserializationFailureArgs 2 $ length x
 
-procedure3 f = function $ fun $ \_ _ [a1, a2, a3] -> do
-  v1 <- fromJSVal a1
-  v2 <- fromJSVal a2
-  v3 <- fromJSVal a3
-  case v1 of
-    Nothing -> deserializationFailure_ a1 ""
-    Just x1 -> case v2 of
-      Nothing -> deserializationFailure_ a2 $ show (typeOf a2)
-      Just x2  -> case v3 of
-        Nothing -> deserializationFailure_ a3 $ show (typeOf a3)
-        Just x3  -> f x1 x2 x3
+procedure3 f = function $ fun $ \_ _ as -> do
+  case as of
+    [a1, a2, a3] -> do
+      v1 <- fromJSVal a1
+      v2 <- fromJSVal a2
+      v3 <- fromJSVal a3
+      case v1 of
+        Nothing -> deserializationFailure_ a1 ""
+        Just x1 -> case v2 of
+          Nothing -> deserializationFailure_ a2 $ show (typeOf a2)
+          Just x2  -> case v3 of
+            Nothing -> deserializationFailure_ a3 $ show (typeOf a3)
+            Just x3  -> f x1 x2 x3
+    x -> deserializationFailureArgs 2 $ length x
 
 #else
 foreign import javascript unsafe "$r = $1"

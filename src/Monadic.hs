@@ -8,13 +8,12 @@ module Monadic where
 import Universum hiding (unlessM, whenM, unless, when)
 import Data.Time.Calendar.MonthDay ()
 import Data.Time.Calendar.OrdinalDate ()
-import Language.Javascript.JSaddle (JSM, JSVal, GHCJSPure, ghcjsPure, isUndefined, ghcjsPureMap, liftJSM, js0, (!), MonadJSM, MakeObject, ToJSVal, JSString, (#), jsg, SomeJSArray (SomeJSArray))
-import FFI (deserializationFailure, warn)
+import Language.Javascript.JSaddle (JSM, JSVal, GHCJSPure, ghcjsPure, isUndefined, ghcjsPureMap, liftJSM, js0, (!), MonadJSM, MakeObject, ToJSVal (toJSVal), JSString, (#), jsg, SomeJSArray (SomeJSArray), FromJSVal (fromJSVal))
+import FFI (deserializationFailure, warn_, warn)
 import GHCJS.Foreign (isFunction, isTruthy)
-import Language.Javascript.JSaddle.Classes (FromJSVal(fromJSVal))
 import qualified Data.List.NonEmpty as NonEmpty
-import JSDOM.Types (ToJSVal(toJSVal))
 import JavaScript.Array (toListIO)
+import Data.Text (pack)
 
 class PropReader a where
   readProp :: Text -> JSVal -> MaybeT JSM a
@@ -44,7 +43,7 @@ readProperty fieldname this = do
   isUndef <- ghcjsPure $ isUndefined jval
   if isUndef
     then do
-      _ <- warn ("Error reading '" <> fieldname <> "' from ", this)
+      _ <- warn_ ("Error reading '" <> fieldname <> "' from ", this)
       error $ "Error reading " <> fieldname
     else pure jval
 
@@ -61,12 +60,18 @@ isArray = ghcjsPure . isTruthy <=< jsg @JSString "Array" # ("isArray" :: JSStrin
 
 tryArray :: FromJSVal a => Text -> JSVal -> JSM (Maybe [a])
 tryArray resultType jsval = do
-    isArr <- isArray jsval
-    if isArr
-      then do
-        fromJSValListOf_ jsval
-      else do
-        deserializationFailure jsval resultType
+  isArr <- isArray jsval
+  if isArr
+    then do
+      fromJSValListOf_ jsval
+    else do
+      deserializationFailure jsval resultType
+
+tryValue :: ToString t => t -> Maybe a -> (a -> JSM ()) -> JSM ()
+tryValue description Nothing f = do
+  _ <- warn $ pack $ toString description
+  pure ()
+tryValue _ (Just x) f = f x
 
 fromJSValListOf_ :: FromJSVal a => JSVal -> JSM (Maybe [a])
 fromJSValListOf_ x = do

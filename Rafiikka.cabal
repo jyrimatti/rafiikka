@@ -39,6 +39,7 @@ executable Rafiikka
    , containers
    , utility-ht
    , clay
+   , random
   
   if impl(ghcjs)
     build-depends: ghcjs-base
@@ -49,10 +50,12 @@ executable Rafiikka
   default-extensions: NoImplicitPrelude
 
   other-modules: FFI
+               , Browser.Browser
+               , Browser.Drag
+               , Browser.Events
                , Browser.Tooltips
                , Browser.MutationObserver
                , Browser.Tippy
-               , Browser.Browser
                , Browser.Fetch
                , Browser.Popup
                , Frontpage

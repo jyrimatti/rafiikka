@@ -11,6 +11,7 @@ module Browser.Browser (
     isSeed,
     isSafari,
     isLocal,
+    generateId,
     Location(..),
     Progress(..)
 ) where
@@ -29,6 +30,7 @@ import GHC.Records (HasField (getField))
 import GetSet (getObj,getVal)
 import JSDOM.Types (Window,Element, HTMLElement)
 import JSDOM.Generated.Document (createElement)
+import System.Random (randomIO)
 
 newtype Location = Location JSVal deriving MakeObject
 instance HasField "location" Window (JSM Location) where
@@ -36,11 +38,11 @@ instance HasField "location" Window (JSM Location) where
 
 instance HasField "hash" Location (JSM Text) where
   getField = getVal "hash"
-  
+
 newtype Progress = Progress Element deriving MakeObject
 instance HasField "progress" Window (JSM Progress) where
   getField = getObj Progress "progress"
-  
+
 instance HasField "max" Progress (JSM Int) where
   getField = getVal "max"
 instance HasField "value" Progress (JSM (Maybe Int)) where
@@ -58,9 +60,12 @@ withDebug x f = do
   _ <- debug $ x <> " end"
   pure ret
 
+generateId :: JSM Text
+generateId :: JSM Text = fmap (("id" <>) . show . abs) $ randomIO @Int
+
 createHTMLElement :: Text -> JSM HTMLElement
 createHTMLElement name = do
-  Just doc <- currentDocument 
+  Just doc <- currentDocument
   fmap fromJust . fromJSVal =<< toJSVal =<< createElement doc name
 
 getElementById :: Text -> JSM (Maybe JSDOM.Element)

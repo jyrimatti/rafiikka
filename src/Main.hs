@@ -18,19 +18,20 @@ import qualified Data.ByteString.Lazy as B
 import Language.Javascript.JSaddle.Run (enableLogging)
 import Data.Maybe (fromJust)
 import Data.Time.Clock (secondsToNominalDiffTime)
-import Browser.Browser (setTimeout, getElementById, withDebug, isSeed, Location(..), setLocationHash)
+import Browser.Browser (setTimeout, getElementById, withDebug, isSeed, Location(..), setLocationHash, generateId)
 import Frontpage (view)
 import Shpadoinkle.Console (debug, warn, info)
 import StateAccessor (getStates, getState, getMainState, setState, setMainState, removeSubState)
 import State (defaultState, TimeSetting, AppState (location))
 import Browser.Fetch (getJson, headJson)
-import JSDOM.Types (Callback(Callback), JSVal, Function, FromJSVal (fromJSVal), Window, HTMLElement)
+import JSDOM.Types (Callback(Callback), JSVal, Function, FromJSVal (fromJSVal), Window, HTMLElement, Element)
 import Text.URI (URI, render)
 import Data.Aeson ( Value, Result(Error, Success), fromJSON )
 import Language.Javascript.JSaddle ((#), call, global, ToJSVal (toJSVal), jsg, liftJSM, (!), (<#), JSString, MakeArgs)
 import Amcharts.DataSource (monitor, DataType (Other, Revisions), initDS, luoDatasource, DataSource, load)
 import URI (infraAPIUrl, etj2APIUrl, aikatauluAPIUrl, graphQLUrl, mqttPort, mqttHost, mqttTopic, infraAPIrevisionsUrl, etj2APIrevisionsUrl, withTime, baseInfraAPIUrl, baseEtj2APIUrl, ratanumeroUrl, ratanumerotUrl, ratakmSijaintiUrl, pmSijaintiUrl, ratakmValiUrl, liikennepaikkavalitUrl, reittiUrl, reittihakuUrl, vaihdeTyypitUrl, opastinTyypitUrl, ratapihapalveluTyypitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl, elementitUrl, lorajatUrl, raiteenKorkeudetUrl, eiUrlRatanumero, esUrlRatanumero, vsUrlRatanumero, loUrlRatanumero, eiUrlAikataulupaikka, esUrlAikataulupaikka, vsUrlAikataulupaikka, loUrlAikataulupaikka, kunnossapitoalueetMetaUrl, liikenteenohjausalueetMetaUrl, kayttokeskuksetMetaUrl, liikennesuunnittelualueetMetaUrl, ratapihapalvelutUrlTilasto, toimialueetUrlTilasto, tilirataosatUrlTilasto, liikennesuunnittelualueetUrlTilasto, paikantamismerkitUrlTilasto, kilometrimerkitUrlTilasto, radatUrlTilasto, liikennepaikanOsatUrlTilasto, rautatieliikennepaikatUrlTilasto, liikennepaikkavalitUrlTilasto, raideosuudetUrlTilasto, elementitUrlTilasto, raiteensulutUrlTilasto, raiteetUrlTilasto, liikenteenohjauksenrajatUrlTilasto, tunnelitUrlTilasto, sillatUrlTilasto, laituritUrlTilasto, tasoristeyksetUrlTilasto, kayttokeskuksetUrlTilasto, kytkentaryhmatUrlTilasto, asiatUrl, esTyypitUrl, loUrlTilasto, eiUrlTilasto, esUrlTilasto, vsUrlTilasto, muutoksetInfra, muutoksetEtj2, koordinaattiUrl, ratakmMuunnosUrl, koordinaattiMuunnosUrl, rtUrl, rtSingleUrl, rtGeojsonUrl, lrUrl, lrSingleUrl, lrGeojsonUrl, infraObjektityypitUrl, hakuUrlitInfra, hakuUrlitEtj2, hakuUrlitRuma, luoInfraAPIUrl, luoEtj2APIUrl, luoRumaUrl, luoAikatauluUrl, junasijainnitGeojsonUrl, junasijainnitUrl, APIResponse (APIResponse))
 import JSDOM (currentWindow, currentDocument)
+import qualified JSDOM.Generated.Element as E (Element)
 import Jeti.Types ( eiTilat, esTilat, vsTilat, loiTilat )
 import Time (startOfTime, endOfTime, roundToPreviousDay, roundToPreviousMonth, intervalsIntersect, limitInterval, toISOStringNoMillis)
 import URISerialization (fromURIFragment, ToURIFragment (toURIFragment))
@@ -48,6 +49,7 @@ import JSDOM.Generated.Element (setAttribute)
 import System.Time.Extra (sleep)
 import Search (searchInfraDS, searchJetiDS, searchRumaDS)
 import Browser.MutationObserver (onStyleChange)
+import Browser.Drag (dragElement, moveElement)
 
 main :: IO ()
 main = do
@@ -86,6 +88,15 @@ createPopup_ titleText offset onClose = do
             pure ()
   createPopup titleText offset cb
 
+moveElement_ :: E.Element -> JSVal -> JSM ()
+moveElement_ element identifierF = do
+  {-let cb = do
+        jsval <- call identifierF global ()
+        Just ret <- fromJSVal jsval
+        pure ret-}
+  let cb = pure ("test" :: Text)
+  moveElement element cb
+
 app :: JSM ()
 app = do
   enableLogging False
@@ -115,6 +126,9 @@ app = do
   registerGlobalFunction3 "headJson" headJson_
   registerGlobalFunction1 "errorHandler" errorHandler
   registerGlobalFunction3 "luoIkkuna" createPopup_
+  registerGlobalFunction "generateId" generateId
+  registerGlobalFunction2 "dragElement" dragElement
+  registerGlobalFunction2 "moveElement" moveElement_
 
   registerGlobalFunction1 "baseInfraAPIUrl" baseInfraAPIUrl
   registerGlobalFunction1 "baseEtj2APIUrl" baseEtj2APIUrl
@@ -274,7 +288,6 @@ app = do
 
   addScriptSrc "lib/DragDropTouch.js"
   addScriptSrc "lib/datefns.js"
-  addScriptSrc "drag.js"
 
   simple runSnabbdom () Frontpage.view stage
 
