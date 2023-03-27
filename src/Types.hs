@@ -226,18 +226,24 @@ instance ToJSVal Pmsijainti where
 newtype Revision = Revision {
     revisio :: Natural
 } deriving (Show, Generic)
-
+instance ToJSON Revision
 instance FromJSON Revision
+instance FromJSVal Revision where
+    fromJSVal = doFromJSVal "Revision" $
+        fmap Revision . MaybeT . fromJSVal
 
 data Revisions = Revisions {
-    infra :: Text,
-    etj2 :: Text
-} deriving Show
-
+    infra :: Revision,
+    etj2 :: Revision
+} deriving (Show, Generic)
+instance ToJSON Revisions
 instance FromJSVal Revisions where
     fromJSVal = doFromJSVal "Revisions" $
       liftA2 Revisions <$> propFromJSVal "infra"
                        <*> propFromJSVal "etj2"
+
+instance ToJSVal Revisions where
+    toJSVal = toJSVal_aeson
 
 data Train = Train {
     departureDate :: Day,

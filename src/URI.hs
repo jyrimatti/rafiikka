@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric, LambdaCase, DataKinds, ScopedTypeVariables, QuasiQuotes, OverloadedStrings, RecordWildCards, NamedFieldPuns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# LANGUAGE TypeApplications #-}
 module URI where
 
 import Universum hiding (whenM, local, state)
@@ -12,7 +13,7 @@ import JSDOM (currentWindow)
 import Language.Javascript.JSaddle ((!), create, (<#), isUndefined, ghcjsPure)
 import Language.Javascript.JSaddle.Classes (FromJSVal(fromJSVal))
 import Data.Maybe (fromJust)
-import Types (Train (Train, departureDate, trainNumber), Revisions (infra, etj2), Ratakmetaisyys (Ratakmetaisyys, kmetaisyys, ratanumero), Pmsijainti, Ratakmvali (Ratakmvali), OID, SRSName (CRS84), Point, Route (Route))
+import Types (Train (Train, departureDate, trainNumber), Revisions (infra, etj2), Ratakmetaisyys (Ratakmetaisyys, kmetaisyys, ratanumero), Pmsijainti, Ratakmvali (Ratakmvali), OID, SRSName (CRS84), Point, Route (Route), Revision, revisio)
 import URISerialization (ToURIFragment(toURIFragment))
 import Time (Interval (Interval), roundToPreviousMonth, roundToNextMonth, roundToPreviousDay, infiniteInterval)
 import StateAccessor (getMainState)
@@ -102,8 +103,8 @@ etj2APIrevisionsUrl = fmap APIResponse $
                       over uriPath (<> mkPathPiece "revisions.json")
                       <$> baseEtj2APIUrl False
 
-baseUrl :: Text -> Maybe (Revisions -> Text) -> JSM URI
-baseUrl api revision = do
+baseUrl :: Text -> Maybe (Revisions -> Revision) -> JSM URI
+baseUrl api getRevision = do
     safari <- isSafari
     local <- isLocal
     seed <- isSeed
@@ -118,9 +119,9 @@ baseUrl api revision = do
               then pure Nothing
               else fromJSVal revisions
 
-    let suffix = if isNothing revs || isNothing revision
+    let suffix = if isNothing revs || isNothing getRevision
         then "/"
-        else maybe "" (("/" <>) . ($ fromJust revs)) revision
+        else maybe "" (("/" <>) . show . revisio . ($ fromJust revs)) getRevision
 
     pure $ 
         set uriTrailingSlash True $

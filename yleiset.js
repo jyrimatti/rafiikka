@@ -51,11 +51,6 @@ let logDiff = (msg1, msg2, msg3, msg4, msg5, msg6) => {
 window.ikkuna = () => getMainState().aika;
 window.rajat  = () => laajennaAikavali(getMainState().aika.slice(0, 2)); //[dateFns.dateFns.addDays(ikkuna()[0], -3), dateFns.dateFns.addDays(ikkuna()[1], 3)];
 
-window.revisions = {
-    infra: '',
-    etj2: ''
-};
-
 let loggingDelegate = f => (a, b, c) => {
     try {
         return f(a, b, c);
@@ -64,8 +59,6 @@ let loggingDelegate = f => (a, b, c) => {
         throw e;
     }
 };
-
-window.progress = document.getElementById('progress');
 
 let fetchJson = (url, opts, callback, errorCallback) => {
     let type = url.replace(/[?].*/,'')

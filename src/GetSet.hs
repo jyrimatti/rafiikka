@@ -17,6 +17,7 @@ module GetSet (
   setVal,
   setJson,
   new,
+  modify,
   typeBaseName,
   TypeBaseName,
   Constant(..)
@@ -103,6 +104,14 @@ new_ c args this = c <$> JSaddle.new this args
 
 new :: (MakeObject this, MakeArgs args) => (JSVal -> res) -> args -> IndexPreservingAction JSM this res
 new c args = act (new_ c args)
+
+modify_ :: forall fieldname this val. (TypeBaseName fieldname, MakeObject this, HasField fieldname this (JSM val), FromJSVal val, ToJSVal val) => (val -> val) -> this -> JSM ()
+modify_ f obj = do
+  oldVal <- getVal (typeBaseName @fieldname) obj
+  obj <# typeBaseName @fieldname $ f oldVal
+
+modify :: forall fieldname this val. (TypeBaseName fieldname, MakeObject this, HasField fieldname this (JSM val), FromJSVal val, ToJSVal val) => (val -> val) -> IndexPreservingAction JSM this ()
+modify f = act (modify_ @fieldname f)
 
 -- | typeBaseName
 -- >>> typeBaseName @Text

@@ -97,7 +97,7 @@ data DataType = InfraData InfraType
               | Search FintrafficSystem Int
               | Timetable Day
               | Statistics Text
-              | Revisions
+              | RevisionData
               | Other Text
   deriving Show
 
@@ -114,7 +114,7 @@ instance FromJSVal DataType where
       "Search"     -> Search <$> hoistMaybe (readMaybe $ unpack b) <*> hoistMaybe (readMaybe $ unpack c)
       "Timetable"  -> Timetable <$> hoistMaybe (readMaybe $ unpack b)
       "Statistics" -> pure $ Statistics b
-      "Revisions"  -> pure Revisions
+      "RevisionData" -> pure RevisionData
       aa           -> pure $ Other aa
 
 monitor :: DataSource -> DataType -> JSM ()

@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, TypeApplications, OverloadedStrings, DataKinds #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Browser.Browser (
     createHTMLElement,
@@ -31,6 +32,7 @@ import GetSet (getObj,getVal)
 import JSDOM.Types (Window,Element, HTMLElement)
 import JSDOM.Generated.Document (createElement)
 import System.Random (randomIO)
+import Types (Revisions)
 
 newtype Location = Location JSVal deriving MakeObject
 instance HasField "location" Window (JSM Location) where
@@ -39,9 +41,14 @@ instance HasField "location" Window (JSM Location) where
 instance HasField "hash" Location (JSM Text) where
   getField = getVal "hash"
 
-newtype Progress = Progress Element deriving MakeObject
+newtype Progress = Progress Element
+  deriving (MakeObject, Generic)
+instance ToJSVal Progress
 instance HasField "progress" Window (JSM Progress) where
   getField = getObj Progress "progress"
+
+instance HasField "revisions" Window (JSM Revisions) where
+  getField = getVal "revisions"
 
 instance HasField "max" Progress (JSM Int) where
   getField = getVal "max"

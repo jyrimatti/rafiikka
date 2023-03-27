@@ -4,10 +4,11 @@
 {-# LANGUAGE KindSignatures #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Main where
 
-import Universum
+import Universum hiding (modify, get)
 import FFI ( registerGlobalFunction1, registerGlobalFunction, registerGlobalFunctionPure1, registerGlobalFunction2, function1, procedure1, registerGlobalFunction3, registerGlobalFunctionPure, registerGlobalFunctionPure2 )
 import Browser.Tooltips ( initTooltips )
 import Shpadoinkle ( JSM )
@@ -18,7 +19,7 @@ import qualified Data.ByteString.Lazy as B
 import Language.Javascript.JSaddle.Run (enableLogging)
 import Data.Maybe (fromJust)
 import Data.Time.Clock (secondsToNominalDiffTime)
-import Browser.Browser (setTimeout, getElementById, withDebug, isSeed, Location(..), setLocationHash, generateId)
+import Browser.Browser (setTimeout, getElementById, withDebug, isSeed, Location(..), setLocationHash, generateId, Progress (Progress))
 import Frontpage (view)
 import Shpadoinkle.Console (debug, warn, info)
 import StateAccessor (getStates, getState, getMainState, setState, setMainState, removeSubState)
@@ -27,8 +28,8 @@ import Browser.Fetch (getJson, headJson)
 import JSDOM.Types (Callback(Callback), JSVal, Function, FromJSVal (fromJSVal), Window, HTMLElement, Element)
 import Text.URI (URI, render)
 import Data.Aeson ( Value, Result(Error, Success), fromJSON )
-import Language.Javascript.JSaddle ((#), call, global, ToJSVal (toJSVal), jsg, liftJSM, (!), (<#), JSString, MakeArgs)
-import Amcharts.DataSource (monitor, DataType (Other, Revisions), initDS, luoDatasource, DataSource, load)
+import Language.Javascript.JSaddle ((#), call, global, ToJSVal (toJSVal), jsg, liftJSM, (!), (<#), JSString, MakeArgs, isUndefined, ghcjsPure)
+import Amcharts.DataSource (monitor, DataType (Other, RevisionData), initDS, luoDatasource, DataSource, load)
 import URI (infraAPIUrl, etj2APIUrl, aikatauluAPIUrl, graphQLUrl, mqttPort, mqttHost, mqttTopic, infraAPIrevisionsUrl, etj2APIrevisionsUrl, withTime, baseInfraAPIUrl, baseEtj2APIUrl, ratanumeroUrl, ratanumerotUrl, ratakmSijaintiUrl, pmSijaintiUrl, ratakmValiUrl, liikennepaikkavalitUrl, reittiUrl, reittihakuUrl, vaihdeTyypitUrl, opastinTyypitUrl, ratapihapalveluTyypitUrl, rautatieliikennepaikatUrl, liikennepaikanOsatUrl, raideosuudetUrl, laituritUrl, elementitUrl, lorajatUrl, raiteenKorkeudetUrl, eiUrlRatanumero, esUrlRatanumero, vsUrlRatanumero, loUrlRatanumero, eiUrlAikataulupaikka, esUrlAikataulupaikka, vsUrlAikataulupaikka, loUrlAikataulupaikka, kunnossapitoalueetMetaUrl, liikenteenohjausalueetMetaUrl, kayttokeskuksetMetaUrl, liikennesuunnittelualueetMetaUrl, ratapihapalvelutUrlTilasto, toimialueetUrlTilasto, tilirataosatUrlTilasto, liikennesuunnittelualueetUrlTilasto, paikantamismerkitUrlTilasto, kilometrimerkitUrlTilasto, radatUrlTilasto, liikennepaikanOsatUrlTilasto, rautatieliikennepaikatUrlTilasto, liikennepaikkavalitUrlTilasto, raideosuudetUrlTilasto, elementitUrlTilasto, raiteensulutUrlTilasto, raiteetUrlTilasto, liikenteenohjauksenrajatUrlTilasto, tunnelitUrlTilasto, sillatUrlTilasto, laituritUrlTilasto, tasoristeyksetUrlTilasto, kayttokeskuksetUrlTilasto, kytkentaryhmatUrlTilasto, asiatUrl, esTyypitUrl, loUrlTilasto, eiUrlTilasto, esUrlTilasto, vsUrlTilasto, muutoksetInfra, muutoksetEtj2, koordinaattiUrl, ratakmMuunnosUrl, koordinaattiMuunnosUrl, rtUrl, rtSingleUrl, rtGeojsonUrl, lrUrl, lrSingleUrl, lrGeojsonUrl, infraObjektityypitUrl, hakuUrlitInfra, hakuUrlitEtj2, hakuUrlitRuma, luoInfraAPIUrl, luoEtj2APIUrl, luoRumaUrl, luoAikatauluUrl, junasijainnitGeojsonUrl, junasijainnitUrl, APIResponse (APIResponse))
 import JSDOM (currentWindow, currentDocument)
 import qualified JSDOM.Generated.Element as E (Element)
@@ -36,7 +37,7 @@ import Jeti.Types ( eiTilat, esTilat, vsTilat, loiTilat )
 import Time (startOfTime, endOfTime, roundToPreviousDay, roundToPreviousMonth, intervalsIntersect, limitInterval, toISOStringNoMillis)
 import URISerialization (fromURIFragment, ToURIFragment (toURIFragment))
 import Match (onkoOID, subsystemId, onkoInfraOID, onkoTREXOID, onkoJetiOID, onkoRumaOID, onkoKoordinaatti, onkoRatakmSijainti, onkoPmSijainti, onkoRatakmVali, onkoRatanumero, onkoReitti, onkoInfra, onkoJeti, onkoRuma, onkoJuna, onkoLOI, onkoEI, onkoES, onkoVS, onkoRT, onkoLR, onkoWKT)
-import Types (Revision(Revision))
+import Types (Revision(Revision), Revisions (Revisions), infra, etj2)
 import Yleiset (laajennaAikavali_, errorHandler)
 import Control.Lens.Action ( (^!), act )
 import GetSet
@@ -50,6 +51,7 @@ import System.Time.Extra (sleep)
 import Search (searchInfraDS, searchJetiDS, searchRumaDS)
 import Browser.MutationObserver (onStyleChange)
 import Browser.Drag (dragElement, moveElement)
+import Monadic (readProperty, tryReadProperty_, whenP, tryValue)
 
 main :: IO ()
 main = do
@@ -291,9 +293,20 @@ app = do
 
   simple runSnabbdom () Frontpage.view stage
 
+  initHiddenState
+
   --setTimeout (secondsToNominalDiffTime 1) loadTooltips
   --setTimeout (secondsToNominalDiffTime 2) loadRevisions
   --setTimeout (secondsToNominalDiffTime 3) loadData
+
+initHiddenState :: JSM ()
+initHiddenState = do
+  Just win <- currentWindow
+  win ^! setVal @"revisions" (Revisions (Revision 0) (Revision 0))
+
+  e <- getElementById "progress"
+  tryValue @Text "progress" e $ \x -> do
+    win ^! setVal @"progress" (Progress x)
 
 loadTooltips :: JSM ()
 loadTooltips = (do getElementById "palkki") >>= \x -> do
@@ -303,8 +316,8 @@ loadTooltips = (do getElementById "palkki") >>= \x -> do
 loadRevisions :: JSM ()
 loadRevisions = do
   info @Show ("Loading revisions" :: Text)
-  infraAPIrevisionsUrl >>= getRevision "infra"
-  etj2APIrevisionsUrl >>= getRevision "etj2"
+  infraAPIrevisionsUrl >>= getRevision (\r revs -> revs{infra = r})
+  etj2APIrevisionsUrl  >>= getRevision (\r revs -> revs{etj2 = r})
 
 loadWithDelay :: DataSource -> JSM ()
 loadWithDelay ds = do
@@ -338,15 +351,13 @@ loadData = do
    ]
   traverse_ loadWithDelay ds
 
-getRevision :: Text -> APIResponse (NonEmpty Revision) -> JSM ()
-getRevision api (APIResponse url) = getJson Revisions url Nothing (debug @Show) $ \x -> do
+getRevision :: (Revision -> Revisions -> Revisions) -> APIResponse (NonEmpty Revision) -> JSM ()
+getRevision f (APIResponse url) = getJson RevisionData url Nothing (debug @Show) $ \x -> do
   case fromJSON x of
-    Success [Revision rev] -> do
+    Success rev -> do
       Just win <- currentWindow
-      revs <- win ! ("revisions" :: Text)
-      revs <# api $ rev
-      info @Show $ "Got " <> api <> " revision " <> show rev
-    Success _ -> warn @Show ("whoops!" :: Text)
+      win ^! modify @"revisions" (f rev)
+      info @Show $ ("Got revision " <> show rev :: Text)
     Error msg -> warn @Show msg
 
 {- TODO
