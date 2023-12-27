@@ -47,7 +47,6 @@ noOffset :: Offset
 noOffset = Offset Nothing Nothing Nothing Nothing
 
 
--- TODO: popupss should be built in Shpadoinkle from a model...
 createPopup :: Maybe Text -> Offset -> Maybe (JSM ()) -> JSM (HTMLElement,HTMLElement)
 createPopup titleText Offset{..} onClose = do
   Just doc <- currentDocument

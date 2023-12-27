@@ -11,38 +11,36 @@ custom-setup
 
 executable Rafiikka
   main-is:             Main.hs
-  build-depends:       base
-   , universum
-   , Shpadoinkle
-   , Shpadoinkle-backend-snabbdom
-   , Shpadoinkle-backend-pardiff
-   , Shpadoinkle-html
-   , Shpadoinkle-console
-   , jsaddle
-   , jsaddle-dom
-   , jsaddle-warp
-   , text
-   , bytestring
-   , aeson
-   , lens
-   , lens-action
-   , time
-   , extra
-   , megaparsec
-   , generic-lens
-   , cabal-doctest
-   , modern-uri
-   , control-bool
-   , time-lens
-   , regex
-   , data-foldapp
-   , containers
-   , utility-ht
-   , clay
-   , random
   
-  if impl(ghcjs)
-    build-depends: ghcjs-base
+  build-depends:
+      base
+    , miso
+    , universum
+    , text
+    , bytestring
+    , aeson
+    , lens
+    , lens-action
+    , time
+    --, extra
+    , megaparsec
+    , generic-lens
+    , modern-uri
+    , control-bool
+    , time-lens
+    , regex
+    , data-foldapp
+    , containers
+    , utility-ht
+    , clay
+    , random
+  
+  if impl(ghc)
+    build-depends:
+        jsaddle
+      , jsaddle-dom
+      , jsaddle-warp
+      , cabal-doctest
 
   hs-source-dirs:      src
   default-language:    Haskell2010

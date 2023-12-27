@@ -1,0 +1,8 @@
+ignore-project: False
+with-compiler: javascript-unknown-ghcjs-ghc
+
+package *
+  ghc-pkg-location: javascript-unknown-ghcjs-ghc-pkg
+
+program-locations
+  ghc-pkg-location: javascript-unknown-ghcjs-ghc-pkg
