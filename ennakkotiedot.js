@@ -40,7 +40,7 @@ let ajankohtaAikavaleiksi = ajankohta => {
                 return true;
             } else if (aloitusViikot == 'jokatoinen') {
                 return (dateFns.dateFns.differenceInCalendarISOWeeks(paiva, ensimmainenAloitusPaiva)) % 2 == 0;
-            } else if (aloitusViikot == 'jokaneljas') {
+            } else if (aloitusViikot == 'jokaneljäs') {
                 return (dateFns.dateFns.differenceInCalendarISOWeeks(paiva, ensimmainenAloitusPaiva)) % 4 == 0;
             } else {
                 throw 'Virheellinen aloitusViikot: ' + aloitusViikot;
