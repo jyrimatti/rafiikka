@@ -45,16 +45,22 @@ window.addEventListener('hashchange', () => {
     }
 });
 
-window.ratanumeroChanged = val => {
+window.ratanumeroChanged = (val, postMessage) => {
     if (!ratanumerotDS.data || ratanumerotDS.data.length == 0) {
         log("odotellaan ratanumeroiden latautumista...");
         return false;
     }
-    val = '(' + val + ')';
-    if (val != valittuDS.data) {
-        log("Valittiin ratanumero: " + val);
-        valittuDS.data = val;
+    var ratanumero = '(' + val + ')';
+    if (ratanumero != valittuDS.data) {
+        log("Valittiin ratanumero: " + ratanumero);
+        valittuDS.data = ratanumero;
         valittuDS.dispatch("done", {target: {data: valittuDS.data}});
+    }
+    if (postMessage !== false) {
+        const parentWindow = window.opener || window.parent;
+        if (parentWindow && parentWindow !== window) {
+            parentWindow.postMessage({selected: {rata: val}}, "*");
+        }
     }
 };
 

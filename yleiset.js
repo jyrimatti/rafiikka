@@ -30,7 +30,7 @@ let logDiff = (msg1, msg2, msg3, msg4, msg5, msg6) => {
     return ret;
 };
 
-let onkoSeed = window.location.hash == '#seed' || window.location.hash.endsWith('&seed');
+let onkoSeed = window.location.hash == '#seed' || window.location.hash.endsWith('&seed');
 
 // https://stackoverflow.com/a/31732310
 let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
@@ -164,7 +164,7 @@ let rumaAikavali  = () => 'start=' + getMainState('aika').slice(0,2).map(startOf
 let junienEsitysaikavali = 1000*60*60*24*5;
 
 let ratanumeroUrl             = (ratanumero, time) => infraAPIUrl() + "radat.json?cql_filter=ratanumero='" + ratanumero + "'&" + (time ? 'time=' + time : infraAikavali());
-let ratanumerotUrl            = () => infraAPIUrl() + "radat.json?propertyName=ratakilometrit,ratanumero,objektinVoimassaoloaika&" + infraAikavali();
+let ratanumerotUrl            = () => infraAPIUrl() + "radat.json?propertyName=ratakilometrit,ratanumero,objektinVoimassaoloaika,tunniste&" + infraAikavali();
 let ratakmSijaintiUrl         = (ratanumero, ratakm, etaisyys, time) => infraAPIUrl() + 'radat/' + ratanumero + '/' + ratakm + '+' + etaisyys + '.json?' + (time ? 'time=' + time : infraAikavali());
 let pmSijaintiUrl             = (numero, suunta, etaisyys, time) => infraAPIUrl() + 'paikantamismerkit/' + numero + suunta + etaisyys + '.json?' + (time ? 'time=' + time : infraAikavali());
 let ratakmValiUrl             = (ratanumero, alkuratakm, alkuetaisyys, loppuratakm, loppuetaisyys, time) => infraAPIUrl() + 'radat/' + ratanumero + '/' + alkuratakm + '+' + alkuetaisyys + '-' + loppuratakm + '+' + loppuetaisyys + '.json?' + (time ? 'time=' + time : infraAikavali());

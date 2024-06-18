@@ -11,6 +11,34 @@
     <link rel="stylesheet" href="selectize.min.css" />
     <link rel="stylesheet" href="style.css" />
 
+    <script>
+        window.addEventListener("message", ev => {
+            if (ev.data === 'container: ping') {
+                ev.source.postMessage(document.title + ": pong", "*");
+            }
+
+            if (ev.data.selected && ev.data.selected.tunniste && ev.data.selected.tunniste.startsWith('1.2.246.586.1.45.')) {
+                const ratanumero = window.radatDS.data[ev.data.selected.tunniste];
+                ratanumeroChanged(ratanumero, false);
+                ev.source.postMessage(document.title + ": Valittu rata: " + ratanumero, "*");
+            } else if (ev.data.selected && ev.data.selected.rata) {
+                ratanumeroChanged(ev.data.selected.rata, false);
+                ev.source.postMessage(document.title + ": Valittu rata: " + ev.data.selected.rata, "*");
+            } else if (ev.data.selected && ev.data.selected.juna) {
+                valitseJuna({departureDate: ev.data.selected.juna.lahtopaiva, trainNumber: ev.data.selected.juna.junanumero});
+                ev.source.postMessage(document.title + ": Valittu juna: " + JSON.stringify(ev.data.selected.juna), "*");
+            } else if (ev.data.interval) {
+                let aikaNyt = getMainState('aika');
+                setMainState('aika', ev.data.interval.end <= aikaNyt[0] ? [dateFns.dateFns.add(ev.data.interval.end, {hours: -4}), ev.data.interval.end]
+                                                                        : [ev.data.interval.start, dateFns.dateFns.add(ev.data.interval.start, {hours: 4})]);
+                window.dispatchEvent(new HashChangeEvent("hashchange"));
+                ev.source.postMessage(document.title + ": Valittu yhtäjaksoinen aikaväli: " + JSON.stringify(ev.data.interval), "*");
+            } else {
+                // TODO?
+            }
+        }, false);
+    </script>
+
     <!-- TODO
         - grafiikan tasojen järjestys (piirto-z-index) jotenkin valittavaksi
         - columneille vastaava 2-portainen aktiivisuus kuin junille
@@ -33,7 +61,7 @@
 </head>
 
 <body class="fi">
-    <a href="https://github.com/jyrimatti/rafiikka/"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
+    <a href="https://github.com/jyrimatti/rafiikka/"><img decoding="async" width="149" height="149"  style="position: absolute; top: 0; right: 0; border: 0;" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_gray_6d6d6d.png?resize=149%2C149" class="attachment-full size-full" alt="Fork me on GitHub" loading="lazy" data-recalc-dims="1"></a>
     <progress id="progress" max="1"></progress>
     <h1><a href="">Rafiikka</a> - Rataverkon reaaliaikagrafiikka, työrakografiikka, karttakäyttöliittymä ja tilastopalvelu</h1>
 

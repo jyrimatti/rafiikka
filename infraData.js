@@ -5,6 +5,11 @@ window.ratanumerotDS = luoDatasource("Ratanumerot", ratanumerotUrl, (ret, x) => 
 });
 window.ratanumerotDS.load();
 
+window.radatDS = luoDatasource("Radat", ratanumerotUrl, (ret, x) => {
+    ret[x.tunniste] = x.ratanumero;
+});
+window.radatDS.load();
+
 window.liikennepaikkavalitDS = luoDatasource("Liikennepaikkavalit", liikennepaikkavalitUrl, (ret, x) => {
     ret[x.tunniste] = {
         alkuliikennepaikka:  x.alkuliikennepaikka,

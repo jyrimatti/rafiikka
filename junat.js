@@ -104,7 +104,7 @@ let onJunasijaintiArrived = series => message => {
     series.dataSource.dispatchImmediately("done", {data: series.dataSource.data});
 };
 
-let valitseJuna = juna => {
+let valitseJuna = (juna, postMessage) => {
     if (onkoAktiivinen(juna)) {
         log("Valittiin pois juna", juna.departureDate, juna.trainNumber);
         delete aktiivisetJunatDS.data[juna.departureDate][juna.trainNumber];
@@ -115,6 +115,13 @@ let valitseJuna = juna => {
         }
         aktiivisetJunatDS.data[juna.departureDate][juna.trainNumber] = true;
         junasijainnitPaalle(juna);
+
+        if (postMessage !== false) {
+            const parentWindow = window.opener || window.parent;
+            if (parentWindow && parentWindow !== window) {
+                parentWindow.postMessage({selected: {juna: {junanumero: juna.trainNumber, lahtopaiva: juna.departureDate}}}, "*");
+            }
+        }
     }
     aktiivisetJunatDS.dispatchImmediately("done", {departureDate: juna.departureDate, trainNumber: juna.trainNumber});
 };
