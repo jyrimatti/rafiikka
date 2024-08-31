@@ -121,13 +121,7 @@ let fetchJson = (url, opts, callback, errorCallback) => {
                   .replace(/[.][^/]+$/, '')
                   .replace(/.*\/([^\/]+)$/, '$1');
     progressStart(type);
-    return fetch(url, {
-        ...opts,
-        headers: {
-            'Content-Type': 'application/json',
-            'Digitraffic-User': 'Rafiikka'
-        }
-    }).then(response => opts.method == 'HEAD' ? response.text() : response.json())
+    return fetch(url, opts).then(response => opts.method == 'HEAD' ? response.text() : response.json())
       .then(x => {
           progressEnd(type);
           return callback(x);
@@ -390,12 +384,7 @@ let hakuUrlitEtj2  = () => [ etj2APIUrl() + "vuosisuunnitelmat.json?propertyName
 let hakuUrlitRT    = () => ['https://rata.digitraffic.fi/api/v1/trackwork-notifications.json'];
 let hakuUrlitLR    = () => ['https://rata.digitraffic.fi/api/v1/trafficrestriction-notifications.json'];
 
-let initDS = ds => {
-    ds.requestOptions.requestHeaders = [{
-        "key": "Digitraffic-User",
-        "value": "Rafiikka"
-    }];
-}
+let initDS = ds => ds
 
 let eiTilat = ['hyväksytty', 'luonnos', 'poistettu'];
 let esTilat = ['hyväksytty', 'lähetetty', 'lisätietopyyntö', 'luonnos', 'peruttu', 'poistettu'];
