@@ -32,6 +32,11 @@ let logDiff = (msg1, msg2, msg3, msg4, msg5, msg6) => {
 
 let onkoSeed = window.location.hash == '#seed' || window.location.hash.endsWith('&seed');
 
+// https://stackoverflow.com/a/31732310
+let isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
+               navigator.userAgent &&
+               navigator.userAgent.indexOf('CriOS') == -1 &&
+               navigator.userAgent.indexOf('FxiOS') == -1;
 let isLocal = window.location.protocol == 'file:';
 
 let toISOStringNoMillis = (d) => {
@@ -70,8 +75,8 @@ window.revisions = {
 };
 
 // safari bugittaa cross-origin-redirectien kanssa, joten proxytetään safari oman palvelimen kautta.
-let infraAPIUrl = skipRevision => 'https://' + (isLocal || onkoSeed ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/' + (skipRevision === true ? '' : window.revisions.infra);
-let etj2APIUrl  = skipRevision => 'https://' + (isLocal || onkoSeed ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/' + (skipRevision === true ? '' : window.revisions.etj2);
+let infraAPIUrl = skipRevision => 'https://' + (isSafari || isLocal || onkoSeed ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/infra-api/0.7/' + (skipRevision === true ? '' : window.revisions.infra);
+let etj2APIUrl  = skipRevision => 'https://' + (isSafari || isLocal || onkoSeed ? 'rafiikka.lahteenmaki.net' : 'rata.digitraffic.fi') + '/jeti-api/0.7/' + (skipRevision === true ? '' : window.revisions.etj2);
 let aikatauluAPIUrl = 'https://rata.digitraffic.fi/api/v1/trains/';
 let graphQLUrl = 'https://rata.digitraffic.fi/api/v1/graphql/graphiql/?';
 
@@ -116,7 +121,7 @@ let fetchJson = (url, opts, callback, errorCallback) => {
                   .replace(/[.][^/]+$/, '')
                   .replace(/.*\/([^\/]+)$/, '$1');
     progressStart(type);
-    return fetch(url, {...opts, mode: 'no-cors'}).then(response => opts.method == 'HEAD' ? response.text() : response.json())
+    return fetch(url, opts).then(response => opts.method == 'HEAD' ? response.text() : response.json())
       .then(x => {
           progressEnd(type);
           return callback(x);
